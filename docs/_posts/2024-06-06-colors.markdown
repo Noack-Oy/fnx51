@@ -1,0 +1,169 @@
+---
+layout: post
+title:  "Color palette"
+date:   2024-06-06 02:40:00 +0300
+categories: graphics
+---
+
+The video hardware has a hardwired 8-bit palette that could best be
+described as RrGgBbIi. This means that two bits each are assigned to the
+red, green and blue color channels individually, and the remaining two
+bits are intensity bits that affect all three color channels at the same
+time. The letters in RrGgBbIi stand for those bits with R/r for red, G/g
+for green, B/b for blue and I/i for intensity, where capital letters
+stand for the more significant bits. Each color channel has a 4-bit R2R
+DAC that converts two color and two intensity bits to an analog value.
+The 4-bit value that is fed into the DAC is constructed with the
+intensity bits interleaved between the color bits, resulting in the
+following arrangement for each color channel:
+
+| Color	| Value	|
+| ----- | ----- |
+| Red	| RIri	|
+| Green	| GIgi	|
+| Blue	| BIbi	|
+
+This palette has some strenghts as well as some weaknesses. With only 256
+colors available, a compromise has to be made somewhere.
+
+**Pros**
+- 16 grayscale values
+- Variety of light and dark colors available
+- Superset of the commonly used RGBI 16 color scheme
+- Fast and lossless conversion to RGB24 possible (for emulation)
+
+**Cons**
+- Very limited options for orange
+- Hard to match diferrent hues with the same saturation and brightness
+
+Most of this is a direct consequence of all channels being treated
+equally, while the human eye is more sensitive in the green, and less so
+in the red part of the color spectrum with blue being a lot less
+sensitive. This results in colors that look the same numerically, with
+just the bits swapped between channels, ending up to be perceived as
+different in brightness. Any adjustment for compensation also affects hue
+or saturation in most situations. Nevertheless, this palette was chosen
+for its simplicity and numerical symmetry, leaving the problem of
+choosing a matching set of colors from within this palette as an
+interesting challenge for later.
+
+
+## Available colors by hue
+
+There are some colors that have no hue, because the Rr, Gg and Bb bits are
+identical, yielding a grayscale palette of 16 colors:
+
+| Brightness	| R=G=B	| I	| r=g=b	| i	| Hex	| Color	|
+| ---------:	| ----:	| -:	| -:	| -:	| ---	| -----	|
+| 0		| 0	| 0	| 0	| 0	| 0x00	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#000"></span> #000	|
+| 1		| 0	| 0	| 0	| 1	| 0x01	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#111"></span> #111	|
+| 2		| 0	| 0	| 1	| 0	| 0x54	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#222"></span> #222	|
+| 3		| 0	| 0	| 1	| 1	| 0x55	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#333"></span> #333	|
+| 4		| 0	| 1	| 0	| 0	| 0x02	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#444"></span> #444	|
+| 5		| 0	| 1	| 0	| 1	| 0x03	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#555"></span> #555	|
+| 6		| 0	| 1	| 1	| 0	| 0x56	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#666"></span> #666	|
+| 7		| 0	| 1	| 1	| 1	| 0x57	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#777"></span> #777	|
+| 8		| 1	| 0	| 0	| 0	| 0xa8	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#888"></span> #888	|
+| 9		| 1	| 0	| 0	| 1	| 0xa9	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#999"></span> #999	|
+| 10		| 1	| 0	| 1	| 0	| 0xfc	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#aaa"></span> #aaa	|
+| 11		| 1	| 0	| 1	| 1	| 0xfd	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#bbb"></span> #bbb	|
+| 12		| 1	| 1	| 0	| 0	| 0xaa	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#ccc"></span> #ccc	|
+| 13		| 1	| 1	| 0	| 1	| 0xab	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#ddd"></span> #ddd	|
+| 14		| 1	| 1	| 1	| 0	| 0xfe	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#eee"></span> #eee	|
+| 15		| 1	| 1	| 1	| 1	| 0xff	|<span style="display:inline-block;vertical-align:middle;width:1lh;height:1lh;background:#fff"></span> #fff	|
+
+The remaining 240 colors can be grouped by hue. For this we look at the
+relative strengths of the red green and blue channels. The intensity bits
+affect all of them equally, so we can ignore them for grouping and use
+them later to turn every color we find into four different shades.
+
+The first sets of colors are found by looking for colors where one of the
+channels is strongest while the other two channels have the same value.
+This way we find three groups of colors with a pure hue, one for each color
+channel:
+
+**Pure red hue**
+
+{% include_relative colorlist_red.md %}
+
+**Pure green hue**
+
+{% include_relative colorlist_green.md %}
+
+**Pure blue hue**
+
+{% include_relative colorlist_blue.md %}
+
+Next are colors where there is a tie between two channels being the
+strongest with the third one having a lower value. This yields three
+groups of colors, one for cyan (green + blue), one for magenta (red +
+blue) and one for yellow (red + green):
+
+**Pure cyan hue**
+
+{% include_relative colorlist_cyan.md %}
+
+**Pure magenta hue**
+
+{% include_relative colorlist_magenta.md %}
+
+**Pure yellow hue**
+
+{% include_relative colorlist_yellow.md %}
+
+Now there are 96 colors left where no two channels have the same value.
+They can be divided into six groups of 16 colors each, based on the order
+in which the channels appear when sorting them by strength:
+
+| Order	| Hue		|
+| -----	| ---		|
+| R>G>B	| Amber		|
+| R>B>G	| Pink		|
+| G>R>B	| Lime		|
+| G>B>R	| Turqoise	|
+| B>R>G	| Violet	|
+| B>G>R	| Azure		|
+
+Each of these groups contains three distinct hues. The first four colors
+have the strongest channel at the lowest possible value (2), the second
+strongest at 1 and the third one at 0. The second set of four colors are
+the same but with the strongest channel being at a higher value (3),
+shifting the hue slightly towards it, although the difference is barely
+noticable. The remaining eight colors have the primary channel at the max
+value (3) and the secondary value at 2, leaving two options for the third
+one, which in this case does not influence hue but instead just makes the
+color lighter and less saturated when set to 1.
+
+**Amber hues**
+
+{% include_relative colorlist_amber.md %}
+
+**Pink hues**
+
+{% include_relative colorlist_pink.md %}
+
+**Lime hues**
+
+{% include_relative colorlist_lime.md %}
+
+**Turqoise hues**
+
+{% include_relative colorlist_turqoise.md %}
+
+**Violet hues**
+
+{% include_relative colorlist_violet.md %}
+
+**Azure hues**
+
+{% include_relative colorlist_azure.md %}
+
+
+## List of all colors in mumerical order
+
+Here are all the colors again sorted by the byte representation used by
+the video hardware together with their "modern" representation as (short)
+HTML/CSS color codes for reference. Note that #fd7 for example is
+shorthand for #ffdd77.
+
+{% include_relative colorlist_all.md %}
