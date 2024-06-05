@@ -18,16 +18,18 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Your awesome title
-email: your-email@example.com
+title: FNX-51 Single-Board Computer
+email: stefan@noack.fi
 description: >- # this means to ignore newlines until "baseurl:"
-  Write an awesome description for your new site here. You can edit this
-  line in _config.yml. It will appear in your document head meta (for
-  Google search results) and in your feed.xml site description.
-baseurl: "" # the subpath of your site, e.g. /blog
-url: "" # the base hostname & protocol for your site, e.g. http://example.com
-twitter_username: jekyllrb
-github_username:  jekyll
+  The FNX-51 is a single board computer with VGA graphics that can be built from
+  off-the-shelf components and used without the need for external tools, that means
+  no EEPROM programmers, no FPGAs, etc. Video output is achieved by cleverly arranging
+  dual-port RAM and some 74 series logic. The software can be bootstrapped from
+  manually entered machine code.
+baseurl: "/fnx51" # the subpath of your site, e.g. /blog
+url: "https://noack-oy.github.com" # the base hostname & protocol for your site, e.g. http://example.com
+twitter_username:
+github_username: noack-oy
 
 # Build settings
 theme: minima
