@@ -1,3 +1,3 @@
 Test index in subdirectory
 
-{% include_relative ../../rom/test/test.lst %}
+{% include_relative test.lst %}
