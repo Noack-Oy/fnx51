@@ -1,4 +1,6 @@
-# 0x00: Bare Metal
+---
+title: "0x00: Bare Metal"
+---
 
 If you build the FNX-51 single board computer from off-the-shelf parts,
 it will be void of any software required to actually use it. This chapter
@@ -16,7 +18,7 @@ idea if you want to understand everything that is going on inside the
 computer.
 
 
-## The Serial Interface
+# The Serial Interface
 
 In the beginning, the computer does not know how to use the video
 hardware, nor can it understand signals from a keyboard. The only thing
@@ -67,7 +69,7 @@ this works, because getting access to the serial interface is actually
 the first challenge we need to solve in our own code.
 
 
-## Blank Check
+# Blank Check
 
 Before we can load our own code into the microcontroller, we need to make
 sure that there isn't any code in there already. This is because it uses
@@ -76,3 +78,6 @@ of memory can be written to multiple times, but writing can only change
 individual bits from 1 to 0. The only way to get back from 0 to 1 is to
 erase an entire page of memory all at once, which changes all bits back
 to 1, also known as the "blank" state.
+
+{% include_relative blank-check.ser %}
+
