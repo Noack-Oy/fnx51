@@ -16,7 +16,7 @@ idea if you want to understand everything that is going on inside the
 computer.
 
 
-# The serial interface
+## The Serial Interface
 
 In the beginning, the computer does not know how to use the video
 hardware, nor can it understand signals from a keyboard. The only thing
@@ -51,8 +51,28 @@ the readback from the other side. If your terminal has an option called
 "local echo", that needs to be turned off, or else everything appears
 twice.
 
+This is what such an exchange looks like. Lines starting with `>` show
+what you type on the keyboard. Lines starting with `<` are the response
+that is shown on the terminal screen. Lines that don't start with `<` or
+`>` are comments to explain what is going on. The `<` and `>` markers as
+well as any spaces in the messages are for readability only and don't
+belong to the actual communication.
+
+{% include_relative autobaud.ser %}
+
 There are additional parameters that change how the serial interface
 works. The defaults aussumed here are 1 start bit, 8 data bits, no parity
 and at least one stop bit. We will later go into detail about how all
 this works, because getting access to the serial interface is actually
 the first challenge we need to solve in our own code.
+
+
+## Blank Check
+
+Before we can load our own code into the microcontroller, we need to make
+sure that there isn't any code in there already. This is because it uses
+a special kind of memory called "flash ROM" to store the code. This kind
+of memory can be written to multiple times, but writing can only change
+individual bits from 1 to 0. The only way to get back from 0 to 1 is to
+erase an entire page of memory all at once, which changes all bits back
+to 1, also known as the "blank" state.

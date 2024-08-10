@@ -1,0 +1,9 @@
+0000:              .equ     BRL,    0x9A
+0000:              .equ     BDRCON,         0x9B
+                   ; serial/init.inc
+                   
+                   serial_init:
+0000: 43 87 80     orl      PCON,   #0x80   ; SMOD1 (2x baud rate)
+0003: 75 98 50     mov      SCON,   #0x50   ; SM1, REN
+0006: 75 9A F5     mov      BRL,    #245    ; 9600 @20MHz CLK
+0009: 75 9B 0E     mov      BDRCON,         #0x0e   ; RBCK, TBCK, SPD

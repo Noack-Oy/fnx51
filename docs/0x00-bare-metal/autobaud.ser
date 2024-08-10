@@ -1,0 +1,12 @@
+The host sends "U", which corresponds to the bit sequence "01010101":
+
+```
+> U
+```
+
+The microcontroller detects the baud rate automatically and reads back
+the original message:
+
+```
+< U
+```
