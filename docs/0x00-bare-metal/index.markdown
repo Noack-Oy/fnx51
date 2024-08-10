@@ -71,13 +71,11 @@ the first challenge we need to solve in our own code.
 
 # Blank Check
 
-Before we can load our own code into the microcontroller, we need to make
-sure that there isn't any code in there already. This is because it uses
-a special kind of memory called "flash ROM" to store the code. This kind
-of memory can be written to multiple times, but writing can only change
-individual bits from 1 to 0. The only way to get back from 0 to 1 is to
-erase an entire page of memory all at once, which changes all bits back
-to 1, also known as the "blank" state.
+Before we can load our own code into the microcontroller, we can make
+sure that there isn't any code in there already. This is not strictly
+necessary, because the writing new code automatically erases previous
+contents. However, it is a good sanity check to see if we can send
+complex commands to the bootloader and get the expected result.
 
 {% include_relative blank-check.ser %}
 
