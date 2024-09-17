@@ -1,2 +1,9 @@
-.equ	BRL,	0x9A
-.equ	BDRCON,	0x9B
+
+; *** serial/sfr.equ ***
+
+; Special function registers for serial interface.
+; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
+
+; Internal Baud Rate Generator (BRG), see datasheet page 52.
+	.equ	BRL,	0x9A	; baud rate reload value
+	.equ	BDRCON, 0x9B	; BRG control register

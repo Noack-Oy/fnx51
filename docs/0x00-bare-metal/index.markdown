@@ -71,8 +71,8 @@ the first challenge we need to solve in our own code.
 
 # Blank Check
 
-Before we can load our own code into the microcontroller, we can make
-sure that there isn't any code in there already. This is not strictly
+Before we load our own code into the microcontroller, we can make sure
+that there isn't any code in there already. This is not strictly
 necessary, because the writing new code automatically erases previous
 contents. However, it is a good sanity check to see if we can send
 complex commands to the bootloader and get the expected result.
