@@ -9,14 +9,14 @@
 ; **********************
 ; * Header Definitions *
 ; **********************
-.inc sfr.equ
+.inc ../serial/sfr.equ
 
 
 ; *************
 ; * Main Code *
 ; *************
 
-; *** serial/hello.asm ***
+; *** test/serial.asm ***
 
 	.org	0
 
@@ -42,5 +42,5 @@ hello_text:
 ; *********************
 ; * Library Functions *
 ; *********************
-.inc init.inc
-.inc tx.inc
+.inc ../serial/init.inc
+.inc ../serial/tx.inc

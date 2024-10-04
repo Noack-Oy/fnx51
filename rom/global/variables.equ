@@ -1,6 +1,9 @@
-; variables in internal ram
 
-.equ	COUT,	0x30	; pointer to output function
-.equ	CIN,	0x32	; pointer to input function
+; *** global/variables.equ ***
 
-.equ	STACK,	0x40	; beginning of stack
+	; variables in internal ram
+
+	.equ	COUT,	0x30	; pointer to output function
+;	.equ	CIN,	0x32	; pointer to input function
+
+	.equ	STACK,	0x40	; beginning of stack

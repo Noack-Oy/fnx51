@@ -3,15 +3,25 @@
 import serial, time, sys
 import pexpect.fdpexpect
 
-ser = serial.Serial()
+ser = None
+pe = None
 
-ser.dtr = False
-ser.rts = False
-ser.port = '/dev/ttyUSB0'
-ser.bytesize = serial.EIGHTBITS
-ser.parity = serial.PARITY_NONE
 
-ser.open()
+def open_serial():
+    global ser, pe
+    ser = serial.Serial()
+    ser.dtr = False
+    ser.rts = False
+    ser.port = '/dev/ttyUSB0'
+    ser.bytesize = serial.EIGHTBITS
+    ser.parity = serial.PARITY_NONE
+    ser.open()
+    pe = pexpect.fdpexpect.fdspawn(ser)
+    pe.timeout = 1
+    return pe
+
+def close_serial():
+    ser.close()
 
 
 class Logger:
@@ -25,6 +35,7 @@ class Logger:
 
     def flush(self):
         sys.stdout.flush()
+
 
 def cmd(function, data):
     length = "{:02X}".format(len(data)//2)
@@ -40,14 +51,16 @@ def cmd(function, data):
     pe.expect(line)
     pe.expect('.\r\n')
 
-try:
+
+def enter_bootloader():
+    print('BOOTLOADER')
+    ser.dtr = False
+    ser.rts = False
     time.sleep(0.1)
     ser.dtr = True
     time.sleep(0.2)
     ser.rts = True
 
-    pe = pexpect.fdpexpect.fdspawn(ser)
-    pe.timeout = 1
     pe.logfile_send = Logger('> ')
     pe.logfile_read = Logger('< ')
 
@@ -61,20 +74,32 @@ try:
     if (hsb & 0x80): # check X2 mode
         cmd('03', '0A0800') # enable X2 mode
 
+
+def write_hex_file(filename):
+    print(f'WRITE: {filename}')
     # write code
-    with open(sys.argv[1], 'r') as hexfile:
+    with open(filename, 'r') as hexfile:
         for line in hexfile:
             pe.send(line.strip())
             ser.flush()
             time.sleep(0.1)
             pe.expect(line.strip()+'.\r\n')
 
+
+def reset():
+    print('RESET')
     ser.dtr = False
     time.sleep(0.1)
     ser.dtr = True
     time.sleep(0.1)
 
-    pe.expect('Hello, world!')
 
-finally:
-    ser.close()
+if __name__ == '__main__':
+    try:
+        open_serial()
+        enter_bootloader()
+        write_hex_file(sys.argv[1])
+        reset()
+
+    finally:
+        close_serial()
