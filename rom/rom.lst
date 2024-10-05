@@ -1,9 +1,28 @@
-0000:              .equ     BRL,    0x9A
-0000:              .equ     BDRCON,         0x9B
-                   ; serial/init.inc
+                   
+                   ; *** serial/sfr.equ ***
+                   
+                   ; Special function registers for serial interface.
+                   ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
+                   
+                   ; Internal Baud Rate Generator (BRG), see datasheet page 52.
+0000:                       .equ    BRL,    0x9A    ; baud rate reload value
+0000:                       .equ    BDRCON, 0x9B    ; BRG control register
+                   
+                   ; *** serial/init.inc ***
+                   
+                   ; >> void serial_init() <<
+                   
+                   ; Initialize serial interface.
+                   ; - assumes 20MHz clock and X2 mode
+                   ; - uses internal baud rate generator
+                   ; - speed: 9600 bits per second
+                   ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
+                   ; ---
+                   ; See datasheet page 52 for details,
+                   ; also note oscillator diagram on page 16!
                    
                    serial_init:
-0000: 43 87 80     orl      PCON,   #0x80   ; SMOD1 (2x baud rate)
-0003: 75 98 50     mov      SCON,   #0x50   ; SM1, REN
-0006: 75 9A F5     mov      BRL,    #245    ; 9600 @20MHz CLK
-0009: 75 9B 0E     mov      BDRCON,         #0x0e   ; RBCK, TBCK, SPD
+0000: 75 98 52              mov     SCON,   #0x52   ; SM1, REN, TI
+0003: 75 9A BF              mov     BRL,    #191    ; 9600 @20MHz CLK
+0006: 75 9B 1E              mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+0009: 22                    ret

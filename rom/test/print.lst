@@ -1,0 +1,296 @@
+                   
+                   ; ***********************
+                   ; * Output Test Program *
+                   ; ***********************
+                   
+                   ; This program tests the print_* functions.
+                   
+                   ; text:    "Hello, World!"
+                   ; hex_8:   hex numbers 00..ff
+                   ; hex_16:  hex numbers 0000..ffff in steps of 55 (hex)
+                   ; hex_32:  fibonacci sequence (in hex)
+                   ; int_u8:  all integers from 0 to 255
+                   ; int_s8:  all integers from -128 to 127
+                   ; int_u16: integers from 0 to 65535 in steps of 51 (decimal)
+                   ; int_s16: start at -32768 and add 99 until positive
+                   ; int_u32: fibonacci sequence (in decimal)
+                   ; int_s32: start at -2147483648 and add 9999999 until > 0
+                   
+                   
+                   ; **********************
+                   ; * Header Definitions *
+                   ; **********************
+                   
+                   ; *** global/variables.equ ***
+                   
+                            ; variables in internal ram
+                   
+0000:                       .equ    COUT,   0x30    ; pointer to output code
+                   ;        .equ    CIN,    0x32    ; pointer to input code
+                   
+0000:                       .equ    STACK,  0x40    ; beginning of stack
+                   
+                   ; *** serial/sfr.equ ***
+                   
+                   ; Special function registers for serial interface.
+                   ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
+                   
+                   ; Internal Baud Rate Generator (BRG), see datasheet page 52.
+0000:                       .equ    BRL,    0x9A    ; baud rate reload value
+0000:                       .equ    BDRCON, 0x9B    ; BRG control register
+                   
+                   
+                   ; *************
+                   ; * Main Code *
+                   ; *************
+                   
+0000:                       .org    0
+                   
+                   ; *** global/init.inc ***
+                   
+                   ; Initialize stack pointer and global variables.
+                   ; This must be included early in the main program.
+                   
+0000: 75 81 40              mov     SP,     #STACK
+                   
+0003: 90 00 A1              mov     dptr,   #serial_tx
+0006: 85 82 30              mov     COUT,   DPL
+0009: 85 83 31              mov     COUT+1, DPH
+                   
+                   ;        mov     dptr,   #serial_rx
+                   ;        mov     CIN,    DPL
+                   ;        mov     CIN+1,  DPH
+                   
+                   ; *** test/print.asm ***
+                   
+000C: 11 97                 acall   serial_init
+                   
+                   ; test print_text
+000E: 90 00 85              mov     dptr,   #test__text
+0011: 11 AE                 acall   print_text
+                   
+                   ; test print_hex_8
+0013: 74 00                 mov     a,      #0
+                   test_hex_8__loop:
+0015: 11 C5                 acall   print_hex_8
+0017: 24 01                 add     a,      #1
+0019: 20 D6 07              jb      AC,     test_hex_8__newline
+001C: 90 00 95              mov     dptr,   #test__space
+001F: 11 AE                 acall   print_text
+0021: 80 F2                 sjmp    test_hex_8__loop
+                   test_hex_8__newline:
+0023: 90 00 92              mov     dptr,   #test__newline
+0026: 11 AE                 acall   print_text
+0028: 70 EB                 jnz     test_hex_8__loop
+                   
+                   ; test print_hex_16
+002A: 78 00                 mov     r0,     #0
+002C: 79 00                 mov     r1,     #0
+002E: 7B 0A                 mov     r3,     #10
+                   test_hex_16__loop:
+0030: 11 DA                 acall   print_hex_16
+0032: E8                    mov     a,      r0
+0033: 24 55                 add     a,      #0x55
+0035: F8                    mov     r0,     a
+0036: E9                    mov     a,      r1
+0037: 34 00                 addc    a,      #0
+0039: F9                    mov     r1,     a
+003A: 40 12                 jc      test_hex_16__end
+003C: DB 09                 djnz    r3,     test_hex_16__space
+003E: 7B 0A                 mov     r3,     #10
+0040: 90 00 92              mov     dptr,   #test__newline
+0043: 11 AE                 acall   print_text
+0045: 80 E9                 sjmp    test_hex_16__loop
+                   test_hex_16__space:
+0047: 90 00 95              mov     dptr,   #test__space
+004A: 11 AE                 acall   print_text
+004C: 80 E2                 sjmp    test_hex_16__loop
+                   test_hex_16__end:
+004E: 90 00 92              mov     dptr,   #test__newline
+0051: 11 AE                 acall   print_text
+                   
+                   ; test print_hex_32
+0053: 90 00 92              mov     dptr,   #test__newline
+0056: 74 00                 mov     a,      #0
+0058: F8                    mov     r0,     a
+0059: F9                    mov     r1,     a
+005A: FA                    mov     r2,     a
+005B: FB                    mov     r3,     a
+005C: 7C 01                 mov     r4,     #1
+005E: FD                    mov     r5,     a
+005F: FE                    mov     r6,     a
+0060: FF                    mov     r7,     a
+                   test_hex_32__loop:
+0061: 11 E5                 acall   print_hex_32
+0063: 11 AE                 acall   print_text
+                            ; r0-3 += r4-7
+0065: E8                    mov     a,      r0
+0066: 2C                    add     a,      r4
+0067: F8                    mov     r0,     a
+0068: E9                    mov     a,      r1
+0069: 3D                    addc    a,      r5
+006A: F9                    mov     r1,     a
+006B: EA                    mov     a,      r2
+006C: 3E                    addc    a,      r6
+006D: FA                    mov     r2,     a
+006E: EB                    mov     a,      r3
+006F: 3F                    addc    a,      r7
+0070: FB                    mov     r3,     a
+                            ; swap r0-3 with r4-7
+0071: EC                    mov     a,      r4
+0072: C8                    xch     a,      r0
+0073: FC                    mov     r4,     a
+0074: ED                    mov     a,      r5
+0075: C9                    xch     a,      r1
+0076: FD                    mov     r5,     a
+0077: EE                    mov     a,      r6
+0078: CA                    xch     a,      r2
+0079: FE                    mov     r6,     a
+007A: EF                    mov     a,      r7
+007B: CB                    xch     a,      r3
+007C: FF                    mov     r7,     a
+007D: 50 E2                 jnc     test_hex_32__loop
+007F: 11 E5                 acall   print_hex_32
+0081: 11 AE                 acall   print_text
+                   
+                   ; the end
+0083: 01 83                 ajmp    *
+                   
+                   test__text:
+0085: 48 65 6C 6C 
+      6F 2C 20 77 
+      6F 72 6C 64 
+      21                    .byte   "Hello, world!"
+                   test__newline:
+0092: 0D 0A 00              .byte   13, 10, 0
+                   test__space:
+0095: 20 00                 .byte   32, 0
+                   
+                   ; *********************
+                   ; * Library Functions *
+                   ; *********************
+                   
+                   ; *** serial/init.inc ***
+                   
+                   ; >> void serial_init() <<
+                   
+                   ; Initialize serial interface.
+                   ; - assumes 20MHz clock and X2 mode
+                   ; - uses internal baud rate generator
+                   ; - speed: 9600 bits per second
+                   ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
+                   ; ---
+                   ; See datasheet page 52 for details,
+                   ; also note oscillator diagram on page 16!
+                   
+                   serial_init:
+0097: 75 98 52              mov     SCON,   #0x52   ; SM1, REN, TI
+009A: 75 9A BF              mov     BRL,    #191    ; 9600 @20MHz CLK
+009D: 75 9B 1E              mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+00A0: 22                    ret
+                   
+                   ; *** serial/tx.inc ***
+                   
+                   ; >> void serial_tx(char a) <<
+                   
+                   ; Transmit byte from accumulator.
+                   
+                   serial_tx:
+00A1: 30 99 FD              jnb     TI,     serial_tx
+00A4: C2 99                 clr     TI
+00A6: F5 99                 mov     SBUF,   a
+00A8: 22                    ret
+                   
+                   ; *** print/char.inc ***
+                   
+                   ; >> void print_char(char a) <<
+                   
+                   ; Print char from accumulator.
+                   ; Indirect call to function behind COUT pointer.
+                   
+                   print_char:
+00A9: C0 30                 push    COUT
+00AB: C0 31                 push    COUT+1
+00AD: 22                    ret
+                   
+                   ; *** print/text.inc ***
+                   
+                   ; >> void print_text(char* dptr) <<
+                   
+                   ; Print null-terminated string from program code.
+                   ; Aborts if no null terminator is found after 256 bytes.
+                   
+                   print_text:
+00AE: C0 E0                 push    ACC
+00B0: E8                    mov     a,      r0
+00B1: C0 E0                 push    ACC
+                   
+00B3: 74 00                 mov     a,      #0
+00B5: F8                    mov     r0,     a
+                   print_text__loop:
+00B6: 93                    movc    a,      @dptr+a
+00B7: 60 06                 jz      print_text__end
+00B9: 11 A9                 acall   print_char
+00BB: 08                    inc     r0
+00BC: E8                    mov     a,      r0
+00BD: 70 F7                 jnz     print_text__loop
+                   
+                   print_text__end:
+00BF: D0 E0                 pop     ACC
+00C1: F8                    mov     r0,     a
+00C2: D0 E0                 pop     ACC
+00C4: 22                    ret
+                   
+                   ; *** print/hex.inc ***
+                   
+                   ; >> void print_hex_8(char a) <<
+                   
+                   ; Print hexadecimal number from accumulator.
+                   
+                   print_hex_8:
+00C5: C4                    swap    a       ; high nibble first
+00C6: 11 C9                 acall   print_hex_8__nibble
+00C8: C4                    swap    a
+                   print_hex_8__nibble:
+00C9: C0 E0                 push    ACC
+00CB: 54 0F                 anl     a,      #0x0f
+00CD: 24 90                 add     a,      #0x90
+00CF: D4                    da      a
+00D0: 34 40                 addc    a,      #0x40
+00D2: D4                    da      a
+00D3: 44 20                 orl     a,      #0x20   ; lower case
+00D5: 11 A9                 acall   print_char
+00D7: D0 E0                 pop     ACC
+00D9: 22                    ret
+                   
+                   ; >> void print_hex_16(int r0r1) <<
+                   
+                   ; Print hexadecimal number from r0-r1.
+                   
+                   print_hex_16:
+00DA: C0 E0                 push    ACC
+00DC: E9                    mov     a,      r1      ; MSB first
+00DD: 11 C5                 acall   print_hex_8
+00DF: E8                    mov     a,      r0      ; LSB second
+00E0: 11 C5                 acall   print_hex_8
+00E2: D0 E0                 pop     ACC
+00E4: 22                    ret
+                   
+                   ; >> void print_hex_32(long r0r1r2r3) <<
+                   
+                   ; Print hexadecimal number from r0-r3.
+                   
+                   print_hex_32:
+00E5: C0 E0                 push    ACC
+00E7: EB                    mov     a,      r3      ; MSB first
+00E8: 11 C5                 acall   print_hex_8
+00EA: EA                    mov     a,      r2
+00EB: 11 C5                 acall   print_hex_8
+00ED: E9                    mov     a,      r1
+00EE: 11 C5                 acall   print_hex_8
+00F0: E8                    mov     a,      r0      ; LSB last
+00F1: 11 C5                 acall   print_hex_8
+00F3: D0 E0                 pop     ACC
+00F5: 22                    ret
+                   
+                   ; *** print/int.inc ***

@@ -30,10 +30,10 @@
                    
 0000: 11 1F                 acall   serial_init
                    
-0002: 90 00 11              mov     DPTR,   #hello_text
+0002: 90 00 11              mov     dptr,   #hello_text
                    hello_loop:
 0005: 74 00                 mov     a,      #0
-0007: 93                    movc    a,      @DPTR+a
+0007: 93                    movc    a,      @dptr+a
 0008: 60 05                 jz      hello_end
 000A: 11 29                 acall   serial_tx
 000C: A3                    inc     dptr

@@ -17,7 +17,10 @@ def open_serial():
     ser.parity = serial.PARITY_NONE
     ser.open()
     pe = pexpect.fdpexpect.fdspawn(ser)
+    pe.expect(r'.*', timeout=0.1) # clear buffer
     pe.timeout = 1
+    pe.logfile_send = Logger('> ')
+    pe.logfile_read = Logger('< ')
     return pe
 
 def close_serial():
@@ -27,11 +30,15 @@ def close_serial():
 class Logger:
     def __init__(self, prefix):
         self.prefix = prefix
+        self.raw = False;
 
     def write(self, data):
         if isinstance(data, bytes):
             data = data.decode('utf-8')
-        sys.stdout.write(self.prefix + repr(data)[1:-1] + '\n')
+        if self.raw:
+            sys.stdout.write(data)
+        else:
+            sys.stdout.write(self.prefix + repr(data)[1:-1] + '\n')
 
     def flush(self):
         sys.stdout.flush()
@@ -60,9 +67,6 @@ def enter_bootloader():
     ser.dtr = True
     time.sleep(0.2)
     ser.rts = True
-
-    pe.logfile_send = Logger('> ')
-    pe.logfile_read = Logger('< ')
 
     pe.send('U')
     pe.expect('U')

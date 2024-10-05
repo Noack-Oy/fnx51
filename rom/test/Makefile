@@ -1,13 +1,14 @@
 SHELL=/bin/bash -o pipefail
 
-sources = serial.asm
+sources = serial.asm print.asm
 
-default: $(sources:.asm=.out)
+default: $(sources:.asm=.lst)
+test: $(sources:.asm=.out)
 
 include $(sources:.asm=.d)
 
 %.lst %.hex: %.asm
-	as31 -l $< || rm -vf $*.lst $*.hex
+	as31 -l $*.asm || (rm -vf $*.lst $*.hex ; exit 1)
 
 %.out: %.hex %.t.py
 	rm -vf $*.fail

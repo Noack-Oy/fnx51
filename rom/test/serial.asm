@@ -22,10 +22,10 @@
 
 	acall	serial_init
 
-	mov	DPTR,	#hello_text
+	mov	dptr,	#hello_text
 hello_loop:
 	mov	a,	#0
-	movc	a,	@DPTR+a
+	movc	a,	@dptr+a
 	jz	hello_end
 	acall	serial_tx
 	inc	dptr
