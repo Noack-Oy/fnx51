@@ -3,7 +3,9 @@
 ; * Serial Interface Test Program *
 ; *********************************
 
-; This program prints "Hello, world!"
+; This program prints "Hello, world!",
+; then echoes every byte received,
+; but incremented by one
 
 
 ; **********************
@@ -29,14 +31,18 @@ hello_loop:
 	jz	hello_end
 	acall	serial_tx
 	inc	dptr
-	ajmp	hello_loop
-
+	sjmp	hello_loop
 hello_end:
-	ajmp	*
+
+echo_loop:
+	acall	serial_rx
+	inc	a
+	acall	serial_tx
+	sjmp	echo_loop
 
 hello_text:
 	.byte	"Hello, world!"
-	.byte	0
+	.byte	13, 10, 0
 
 
 ; *********************
@@ -44,3 +50,4 @@ hello_text:
 ; *********************
 .inc ../serial/init.inc
 .inc ../serial/tx.inc
+.inc ../serial/rx.inc

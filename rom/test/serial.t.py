@@ -6,7 +6,9 @@ sys.path.append('..')
 from loader import *
 
 def run_test(pe):
-        pe.expect('Hello, world!')
+        pe.expect('Hello, world!\r\n')
+        pe.send("Test")
+        pe.expect("Uftu")
 
 
 if __name__ == '__main__':
