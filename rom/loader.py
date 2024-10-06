@@ -16,8 +16,11 @@ def open_serial():
     ser.bytesize = serial.EIGHTBITS
     ser.parity = serial.PARITY_NONE
     ser.open()
+    time.sleep(0.5)
+    while ser.in_waiting:
+        ser.reset_input_buffer()
+        time.sleep(0.1)
     pe = pexpect.fdpexpect.fdspawn(ser)
-    pe.expect(r'.*', timeout=0.1) # clear buffer
     pe.timeout = 1
     pe.logfile_send = Logger('> ')
     pe.logfile_read = Logger('< ')

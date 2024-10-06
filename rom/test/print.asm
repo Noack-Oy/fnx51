@@ -12,9 +12,9 @@
 ; int_u8:  all integers from 0 to 255
 ; int_s8:  all integers from -128 to 127
 ; int_u16: integers from 0 to 65535 in steps of 51 (decimal)
-; int_s16: start at -32768 and add 99 until positive
+; int_s16: start at -32768 and add 127 until signed overflow
 ; int_u32: fibonacci sequence (in decimal)
-; int_s32: start at -2147483648 and add 9999999 until > 0
+; int_s32: start at -2147483648 and add 123456789 repeatedly
 
 
 ; **********************
@@ -38,6 +38,8 @@
 ; test print_text
 	mov	dptr,	#test__text
 	acall	print_text
+	mov	dptr,	#test__newline
+	acall	print_text
 
 ; test print_hex_8
 	mov	a,	#0
@@ -52,11 +54,13 @@ test_hex_8__newline:
 	mov	dptr,	#test__newline
 	acall	print_text
 	jnz	test_hex_8__loop
+test_hex_8__end:
+	acall	print_text
 
 ; test print_hex_16
 	mov	r0,	#0
 	mov	r1,	#0
-	mov	r3,	#10
+	mov	r3,	#12
 test_hex_16__loop:
 	acall	print_hex_16
 	mov	a,	r0
@@ -67,7 +71,7 @@ test_hex_16__loop:
 	mov	r1,	a
 	jc	test_hex_16__end
 	djnz	r3,	test_hex_16__space
-	mov	r3,	#10
+	mov	r3,	#12
 	mov	dptr,	#test__newline
 	acall	print_text
 	sjmp	test_hex_16__loop
@@ -77,6 +81,7 @@ test_hex_16__space:
 	sjmp	test_hex_16__loop
 test_hex_16__end:
 	mov	dptr,	#test__newline
+	acall	print_text
 	acall	print_text
 
 ; test print_hex_32
@@ -120,7 +125,98 @@ test_hex_32__loop:
 	xch	a,	r3
 	mov	r7,	a
 	jnc	test_hex_32__loop
+test_hex_32__end:
 	acall	print_hex_32
+	acall	print_text
+	acall	print_text
+
+; test print_int_u8
+	mov	a,	#0
+test_int_u8__loop:
+	acall	print_int_u8
+	add	a,	#1
+	jb	AC,	test_int_u8__newline
+	mov	dptr,	#test__space
+	acall	print_text
+	sjmp	test_int_u8__loop
+test_int_u8__newline:
+	mov	dptr,	#test__newline
+	acall	print_text
+	jnz	test_int_u8__loop
+test_int_u8__end:
+	acall	print_text
+
+; test print_int_s8
+	mov	a,	#0x80
+test_int_s8__loop:
+	acall	print_int_s8
+	add	a,	#1
+	jb	OV,	test_int_s8__end
+	jb	AC,	test_int_s8__newline
+	mov	dptr,	#test__space
+	acall	print_text
+	sjmp	test_int_s8__loop
+test_int_s8__newline:
+	mov	dptr,	#test__newline
+	acall	print_text
+	sjmp	test_int_s8__loop
+test_int_s8__end:
+	mov	dptr,	#test__newline
+	acall	print_text
+	acall	print_text
+
+; test print_hex_u16
+	mov	r0,	#0
+	mov	r1,	#0
+	mov	r3,	#10
+test_int_u16__loop:
+	acall	print_int_u16
+	mov	a,	r0
+	add	a,	#51
+	mov	r0,	a
+	mov	a,	r1
+	addc	a,	#0
+	mov	r1,	a
+	jc	test_int_u16__end
+	djnz	r3,	test_int_u16__space
+	mov	r3,	#10
+	mov	dptr,	#test__newline
+	acall	print_text
+	sjmp	test_int_u16__loop
+test_int_u16__space:
+	mov	dptr,	#test__space
+	acall	print_text
+	sjmp	test_int_u16__loop
+test_int_u16__end:
+	mov	dptr,	#test__newline
+	acall	print_text
+	acall	print_text
+
+; test print_hex_s16
+	mov	r0,	#0
+	mov	r1,	#0x80
+	mov	r3,	#10
+test_int_s16__loop:
+	acall	print_int_s16
+	mov	a,	r0
+	add	a,	#127
+	mov	r0,	a
+	mov	a,	r1
+	addc	a,	#0
+	mov	r1,	a
+	jb	OV,	test_int_s16__end
+	djnz	r3,	test_int_s16__space
+	mov	r3,	#10
+	mov	dptr,	#test__newline
+	acall	print_text
+	sjmp	test_int_s16__loop
+test_int_s16__space:
+	mov	dptr,	#test__space
+	acall	print_text
+	sjmp	test_int_s16__loop
+test_int_s16__end:
+	mov	dptr,	#test__newline
+	acall	print_text
 	acall	print_text
 
 ; the end
