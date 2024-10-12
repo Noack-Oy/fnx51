@@ -25,10 +25,10 @@
                    
                             ; variables in internal ram
                    
-0000:                       .equ    COUT,   0x30    ; pointer to output code
-                   ;        .equ    CIN,    0x32    ; pointer to input code
+0000:                       .equ    in,     0x30    ; pointer to input code
+0000:                       .equ    out,    0x32    ; pointer to ouput code
                    
-0000:                       .equ    STACK,  0x40    ; beginning of stack
+0000:                       .equ    stack,  0x40    ; beginning of stack
                    
                    ; *** serial/sfr.equ ***
                    
@@ -54,12 +54,12 @@
 0000: 75 81 40              mov     SP,     #STACK
                    
 0003: 90 01 3D              mov     dptr,   #serial_tx
-0006: 85 82 30              mov     COUT,   DPL
-0009: 85 83 31              mov     COUT+1, DPH
+0006: 85 82 32              mov     OUT,    DPL
+0009: 85 83 33              mov     OUT+1,  DPH
                    
                    ;        mov     dptr,   #serial_rx
-                   ;        mov     CIN,    DPL
-                   ;        mov     CIN+1,  DPH
+                   ;        mov     IN,     DPL
+                   ;        mov     IN+1,   DPH
                    
                    ; *** test/print.asm ***
                    
@@ -305,8 +305,8 @@
                    ; Indirect call to function behind COUT pointer.
                    
                    print_char:
-0145: C0 30                 push    COUT
-0147: C0 31                 push    COUT+1
+0145: C0 32                 push    OUT
+0147: C0 33                 push    OUT+1
 0149: 22                    ret
                    
                    ; *** print/text.inc ***

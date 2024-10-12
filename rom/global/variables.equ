@@ -3,7 +3,7 @@
 
 	; variables in internal ram
 
-	.equ	COUT,	0x30	; pointer to output code
-;	.equ	CIN,	0x32	; pointer to input code
+	.equ	in,	0x30	; pointer to input code
+	.equ	out,	0x32	; pointer to ouput code
 
-	.equ	STACK,	0x40	; beginning of stack
+	.equ	stack,	0x40	; beginning of stack

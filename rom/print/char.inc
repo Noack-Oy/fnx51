@@ -7,6 +7,6 @@
 ; Indirect call to function behind COUT pointer.
 
 print_char:
-	push	COUT
-	push	COUT+1
+	push	OUT
+	push	OUT+1
 	ret
