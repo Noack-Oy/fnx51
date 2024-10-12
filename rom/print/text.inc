@@ -11,7 +11,7 @@ print_text:
 	mov	a,	r0
 	push	ACC
 
-	mov	a,	#0
+	clr	a
 	mov	r0,	a
 print_text__loop:
 	movc	a,	@dptr+a

@@ -56,7 +56,7 @@
                    
 000C: 11 10                 acall   serial_init
                    
-000E: 11 6F                 acall   panic
+000E: 11 6E                 acall   panic
                    
                    ; *********************
                    ; * Library Functions *
@@ -117,21 +117,21 @@
 0029: E8                    mov     a,      r0
 002A: C0 E0                 push    ACC
                    
-002C: 74 00                 mov     a,      #0
-002E: F8                    mov     r0,     a
+002C: E4                    clr     a
+002D: F8                    mov     r0,     a
                    print_text__loop:
-002F: 93                    movc    a,      @dptr+a
-0030: 60 06                 jz      print_text__end
-0032: 11 22                 acall   print_char
-0034: 08                    inc     r0
-0035: E8                    mov     a,      r0
-0036: 70 F7                 jnz     print_text__loop
+002E: 93                    movc    a,      @dptr+a
+002F: 60 06                 jz      print_text__end
+0031: 11 22                 acall   print_char
+0033: 08                    inc     r0
+0034: E8                    mov     a,      r0
+0035: 70 F7                 jnz     print_text__loop
                    
                    print_text__end:
-0038: D0 E0                 pop     ACC
-003A: F8                    mov     r0,     a
-003B: D0 E0                 pop     ACC
-003D: 22                    ret
+0037: D0 E0                 pop     ACC
+0039: F8                    mov     r0,     a
+003A: D0 E0                 pop     ACC
+003C: 22                    ret
                    
                    ; *** print/hex.inc ***
                    
@@ -140,51 +140,51 @@
                    ; Print hexadecimal number from accumulator.
                    
                    print_hex_8:
-003E: C4                    swap    a       ; high nibble first
-003F: 11 42                 acall   print_hex_8__nibble
-0041: C4                    swap    a
+003D: C4                    swap    a       ; high nibble first
+003E: 11 41                 acall   print_hex_8__nibble
+0040: C4                    swap    a
                    print_hex_8__nibble:
-0042: C0 E0                 push    ACC
-0044: 54 0F                 anl     a,      #0x0f
-0046: 24 90                 add     a,      #0x90
-0048: D4                    da      a
-0049: 34 40                 addc    a,      #0x40
-004B: D4                    da      a
-004C: 44 20                 orl     a,      #0x20   ; lower case
-004E: 11 22                 acall   print_char
-0050: D0 E0                 pop     ACC
-0052: 22                    ret
+0041: C0 E0                 push    ACC
+0043: 54 0F                 anl     a,      #0x0f
+0045: 24 90                 add     a,      #0x90
+0047: D4                    da      a
+0048: 34 40                 addc    a,      #0x40
+004A: D4                    da      a
+004B: 44 20                 orl     a,      #0x20   ; lower case
+004D: 11 22                 acall   print_char
+004F: D0 E0                 pop     ACC
+0051: 22                    ret
                    
                    ; >> void print_hex_16(int r0r1) <<
                    
                    ; Print hexadecimal number from r0-r1.
                    
                    print_hex_16:
-0053: C0 E0                 push    ACC
-0055: E9                    mov     a,      r1      ; MSB first
-0056: 11 3E                 acall   print_hex_8
-0058: E8                    mov     a,      r0      ; LSB second
-0059: 11 3E                 acall   print_hex_8
-005B: D0 E0                 pop     ACC
-005D: 22                    ret
+0052: C0 E0                 push    ACC
+0054: E9                    mov     a,      r1      ; MSB first
+0055: 11 3D                 acall   print_hex_8
+0057: E8                    mov     a,      r0      ; LSB second
+0058: 11 3D                 acall   print_hex_8
+005A: D0 E0                 pop     ACC
+005C: 22                    ret
                    
                    ; >> void print_hex_32(long r0r1r2r3) <<
                    
                    ; Print hexadecimal number from r0-r3.
                    
                    print_hex_32:
-005E: C0 E0                 push    ACC
-0060: EB                    mov     a,      r3      ; MSB first
-0061: 11 3E                 acall   print_hex_8
-0063: EA                    mov     a,      r2
-0064: 11 3E                 acall   print_hex_8
-0066: E9                    mov     a,      r1
-0067: 11 3E                 acall   print_hex_8
-0069: E8                    mov     a,      r0      ; LSB last
-006A: 11 3E                 acall   print_hex_8
-006C: D0 E0                 pop     ACC
-006E: 22                    ret
-006F:              .equ     panic_out,serial_tx
+005D: C0 E0                 push    ACC
+005F: EB                    mov     a,      r3      ; MSB first
+0060: 11 3D                 acall   print_hex_8
+0062: EA                    mov     a,      r2
+0063: 11 3D                 acall   print_hex_8
+0065: E9                    mov     a,      r1
+0066: 11 3D                 acall   print_hex_8
+0068: E8                    mov     a,      r0      ; LSB last
+0069: 11 3D                 acall   print_hex_8
+006B: D0 E0                 pop     ACC
+006D: 22                    ret
+006E:              .equ     panic_out,serial_tx
                    
                    ; *** panic/panic.inc ***
                    
@@ -194,22 +194,22 @@
                    ; Print caller address and halt.
                    
                    panic:
-006F: C2 AF                 clr     ea      ; disable interrupts
-0071: 90 00 1A              mov     dptr,   #panic_out
-0074: 85 82 32              mov     out,    dpl
-0077: 85 83 33              mov     out+1,  dph
-007A: 90 00 89              mov     dptr,   #panic_text
-007D: 11 27                 acall   print_text
-007F: D0 E0                 pop     acc
-0081: 11 3E                 acall   print_hex_8
-0083: D0 E0                 pop     acc
-0085: 11 3E                 acall   print_hex_8
-0087: 80 FE                 sjmp    *
+006E: C2 AF                 clr     ea      ; disable interrupts
+0070: 90 00 1A              mov     dptr,   #panic_out
+0073: 85 82 32              mov     out,    dpl
+0076: 85 83 33              mov     out+1,  dph
+0079: 90 00 88              mov     dptr,   #panic_text
+007C: 11 27                 acall   print_text
+007E: D0 E0                 pop     acc
+0080: 11 3D                 acall   print_hex_8
+0082: D0 E0                 pop     acc
+0084: 11 3D                 acall   print_hex_8
+0086: 80 FE                 sjmp    *
                    
                    panic_text:
-0089: 0D 0A                 .db     13, 10
-008B: 20 21 21 21 
+0088: 0D 0A                 .db     13, 10
+008A: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                             .db     " !!! panic @"
-0097: 00                    .db     0
+0096: 00                    .db     0

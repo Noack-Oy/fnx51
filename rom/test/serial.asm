@@ -26,7 +26,7 @@
 
 	mov	dptr,	#hello_text
 hello_loop:
-	mov	a,	#0
+	clr	a
 	movc	a,	@dptr+a
 	jz	hello_end
 	acall	serial_tx
