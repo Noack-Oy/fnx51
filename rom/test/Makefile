@@ -1,6 +1,6 @@
 SHELL=/bin/bash -o pipefail
 
-sources = serial.asm print.asm
+sources = serial.asm print.asm panic.asm
 
 default: $(sources:.asm=.lst)
 test: $(sources:.asm=.out)

@@ -42,7 +42,7 @@
 	acall	print_text
 
 ; test print_hex_8
-	mov	a,	#0
+	clr	a
 test_hex_8__loop:
 	acall	print_hex_8
 	add	a,	#1
@@ -86,7 +86,7 @@ test_hex_16__end:
 
 ; test print_hex_32
 	mov	dptr,	#test__newline
-	mov	a,	#0
+	clr	a
 	mov	r0,	a
 	mov	r1,	a
 	mov	r2,	a
@@ -131,7 +131,7 @@ test_hex_32__end:
 	acall	print_text
 
 ; test print_int_u8
-	mov	a,	#0
+	clr	a
 test_int_u8__loop:
 	acall	print_int_u8
 	add	a,	#1

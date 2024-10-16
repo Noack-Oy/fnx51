@@ -30,30 +30,30 @@
                    
 0000:                       .org    0
                    
-0000: 11 26                 acall   serial_init
+0000: 11 25                 acall   serial_init
                    
-0002: 90 00 16              mov     dptr,   #hello_text
+0002: 90 00 15              mov     dptr,   #hello_text
                    hello_loop:
-0005: 74 00                 mov     a,      #0
-0007: 93                    movc    a,      @dptr+a
-0008: 60 05                 jz      hello_end
-000A: 11 30                 acall   serial_tx
-000C: A3                    inc     dptr
-000D: 80 F6                 sjmp    hello_loop
+0005: E4                    clr     a
+0006: 93                    movc    a,      @dptr+a
+0007: 60 05                 jz      hello_end
+0009: 11 2F                 acall   serial_tx
+000B: A3                    inc     dptr
+000C: 80 F7                 sjmp    hello_loop
                    hello_end:
                    
                    echo_loop:
-000F: 11 38                 acall   serial_rx
-0011: 04                    inc     a
-0012: 11 30                 acall   serial_tx
-0014: 80 F9                 sjmp    echo_loop
+000E: 11 37                 acall   serial_rx
+0010: 04                    inc     a
+0011: 11 2F                 acall   serial_tx
+0013: 80 F9                 sjmp    echo_loop
                    
                    hello_text:
-0016: 48 65 6C 6C 
+0015: 48 65 6C 6C 
       6F 2C 20 77 
       6F 72 6C 64 
       21                    .byte   "Hello, world!"
-0023: 0D 0A 00              .byte   13, 10, 0
+0022: 0D 0A 00              .byte   13, 10, 0
                    
                    
                    ; *********************
@@ -74,10 +74,10 @@
                    ; also note oscillator diagram on page 16!
                    
                    serial_init:
-0026: 75 98 52              mov     SCON,   #0x52   ; SM1, REN, TI
-0029: 75 9A BF              mov     BRL,    #191    ; 9600 @20MHz CLK
-002C: 75 9B 1E              mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
-002F: 22                    ret
+0025: 75 98 52              mov     SCON,   #0x52   ; SM1, REN, TI
+0028: 75 9A BF              mov     BRL,    #191    ; 9600 @20MHz CLK
+002B: 75 9B 1E              mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+002E: 22                    ret
                    
                    ; *** serial/tx.inc ***
                    
@@ -86,10 +86,10 @@
                    ; Transmit byte from accumulator.
                    
                    serial_tx:
-0030: 30 99 FD              jnb     TI,     serial_tx
-0033: C2 99                 clr     TI
-0035: F5 99                 mov     SBUF,   a
-0037: 22                    ret
+002F: 30 99 FD              jnb     TI,     serial_tx
+0032: C2 99                 clr     TI
+0034: F5 99                 mov     SBUF,   a
+0036: 22                    ret
                    
                    ; *** serial/rx.inc ***
                    
@@ -98,7 +98,7 @@
                    ; Receive byte into accumulator.
                    
                    serial_rx:
-0038: 30 98 FD              jnb     RI,     serial_rx
-003B: C2 98                 clr     RI
-003D: E5 99                 mov     a,      SBUF
-003F: 22                    ret
+0037: 30 98 FD              jnb     RI,     serial_rx
+003A: C2 98                 clr     RI
+003C: E5 99                 mov     a,      SBUF
+003E: 22                    ret
