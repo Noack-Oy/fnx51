@@ -1,0 +1,1 @@
+dump.lst dump.hex: dump.asm ../global/variables.equ ../serial/sfr.equ ../global/init.inc ../serial/init.inc ../serial/rx.inc ../serial/tx.inc ../print/char.inc ../print/hex.inc ../read/char.inc ../util/dump.inc ../util/xch.inc

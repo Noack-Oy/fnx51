@@ -1,12 +1,11 @@
 
-; *******************************
-; * Panic function Test Program *
-; *******************************
+; ************************
+; * Hexdump Test Program *
+; ************************
 
-; This program triggers the "panic" function,
-; which handles unrecoverable errors
-; by printng the address from where it was called
-; and halting the system.
+; This program reads 36 bytes and
+; echoes them in hexdump format
+
 
 ; **********************
 ; * Header Definitions *
@@ -14,19 +13,29 @@
 .inc ../global/variables.equ
 .inc ../serial/sfr.equ
 
+
 ; *************
 ; * Main Code *
 ; *************
 
-	.org	0
-
+.org 0
 .inc ../global/init.inc
 
-; *** test/panic.asm ***
+; *** test/serial.asm ***
 
 	acall	serial_init
 
-	acall	panic
+	clr	a
+	mov	r0,	a
+	mov	r1,	a
+	mov	r2,	a
+	mov	r3,	a
+	mov	a,	#36
+
+	acall	dump
+
+	sjmp	*
+
 
 ; *********************
 ; * Library Functions *
@@ -35,7 +44,7 @@
 .inc ../serial/rx.inc
 .inc ../serial/tx.inc
 .inc ../print/char.inc
-.inc ../print/text.inc
 .inc ../print/hex.inc
-.equ	panic_out,serial_tx
-.inc ../panic/panic.inc
+.inc ../read/char.inc
+.inc ../util/dump.inc
+.inc ../util/xch.inc
