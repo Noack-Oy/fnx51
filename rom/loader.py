@@ -20,7 +20,7 @@ def open_serial():
     while ser.in_waiting:
         ser.reset_input_buffer()
         time.sleep(0.1)
-    pe = pexpect.fdpexpect.fdspawn(ser)
+    pe = pexpect.fdpexpect.fdspawn(ser, encoding=None)
     pe.timeout = 1
     pe.logfile_send = Logger('> ')
     pe.logfile_read = Logger('< ')
@@ -36,12 +36,12 @@ class Logger:
         self.raw = False;
 
     def write(self, data):
-        if isinstance(data, bytes):
-            data = data.decode('utf-8')
         if self.raw:
+            if isinstance(data, bytes):
+                data = data.decode('utf-8')
             sys.stdout.write(data)
         else:
-            sys.stdout.write(self.prefix + repr(data)[1:-1] + '\n')
+            sys.stdout.write(self.prefix + repr(data)[2:-1] + '\n')
 
     def flush(self):
         sys.stdout.flush()
@@ -66,9 +66,9 @@ def enter_bootloader():
     print('BOOTLOADER')
     ser.dtr = False
     ser.rts = False
-    time.sleep(0.1)
-    ser.dtr = True
     time.sleep(0.2)
+    ser.dtr = True
+    time.sleep(0.1)
     ser.rts = True
 
     pe.send('U')

@@ -3,7 +3,7 @@
 ; * Hexdump Test Program *
 ; ************************
 
-; This program reads 36 bytes and
+; This program reads 37 bytes and
 ; echoes them in hexdump format
 
 
@@ -21,7 +21,7 @@
 .org 0
 .inc ../global/init.inc
 
-; *** test/serial.asm ***
+; *** test/dump.asm ***
 
 	acall	serial_init
 
@@ -30,9 +30,14 @@
 	mov	r1,	a
 	mov	r2,	a
 	mov	r3,	a
-	mov	a,	#36
+	mov	a,	#37
 
 	acall	dump
+	acall	print_hex_32
+	mov	a,	#13
+	acall	print_char
+	mov	a,	#10
+	acall	print_char
 
 	sjmp	*
 
