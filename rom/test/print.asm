@@ -233,6 +233,7 @@ test__space:
 ; * Library Functions *
 ; *********************
 .inc ../serial/init.inc
+.inc ../serial/rx.inc
 .inc ../serial/tx.inc
 .inc ../print/char.inc
 .inc ../print/text.inc
