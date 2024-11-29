@@ -96,7 +96,7 @@ def write_hex_file(filename):
 def reset():
     print('RESET')
     ser.dtr = False
-    time.sleep(0.1)
+    time.sleep(0.5)
     ser.dtr = True
     time.sleep(0.1)
 

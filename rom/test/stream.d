@@ -1,0 +1,1 @@
+stream.lst stream.hex: stream.asm ../global/variables.equ ../serial/sfr.equ ../global/init.inc ../serial/init.inc ../serial/rx.inc ../serial/tx.inc ../stream/imem_read.inc ../stream/imem_write.inc ../print/char.inc ../print/text.inc ../print/hex.inc ../print/int.inc ../read/char.inc ../util/dump.inc ../util/xch.inc ../util/regbank.inc ../util/panic.inc

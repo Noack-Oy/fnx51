@@ -1,6 +1,6 @@
 SHELL=/bin/bash -o pipefail
 
-sources = serial.asm print.asm panic.asm dump.asm
+sources = serial.asm print.asm panic.asm dump.asm stream.asm
 
 default: $(sources:.asm=.lst)
 test: $(sources:.asm=.out)
@@ -12,7 +12,7 @@ include $(sources:.asm=.d)
 
 %.out: %.hex %.t.py
 	rm -vf $*.fail
-	(python3 $*.t.py | tee $*.out) || mv -v $*.out $*.fail
+	(python3 -u $*.t.py | tee $*.out) || mv -v $*.out $*.fail
 
 %.d: %.asm
 	echo -n '$*.lst $*.hex: $*.asm ' > $@

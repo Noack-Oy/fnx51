@@ -37,5 +37,6 @@
 .inc ../print/char.inc
 .inc ../print/text.inc
 .inc ../print/hex.inc
-.equ	panic_out,serial_tx
-.inc ../panic/panic.inc
+
+.equ panic_out, serial_tx
+.inc ../util/panic.inc
