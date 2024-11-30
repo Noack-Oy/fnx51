@@ -66,9 +66,9 @@ def enter_bootloader():
     print('BOOTLOADER')
     ser.dtr = False
     ser.rts = False
-    time.sleep(0.2)
+    time.sleep(0.5)
     ser.dtr = True
-    time.sleep(0.1)
+    time.sleep(0.2)
     ser.rts = True
 
     pe.send('U')
