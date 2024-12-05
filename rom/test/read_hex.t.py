@@ -9,6 +9,7 @@ def run_test(pe):
 
         for t in ['\t', ' ', '/', ':', '@', 'g', '~']:
             pe.send('1'+t)
+            time.sleep(0.1)
             pe.expect('1')
 
         for n in range(1,9):
@@ -28,6 +29,10 @@ def run_test(pe):
         pe.send("cCdDeEfF!")
         time.sleep(0.1)
         pe.expect("ccddeeff")
+
+        pe.send('?')
+        time.sleep(0.1)
+        pe.expect("00000000")
 
 if __name__ == '__main__':
     try:
