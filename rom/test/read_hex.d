@@ -1,0 +1,1 @@
+read_hex.lst read_hex.hex: read_hex.asm ../global/variables.equ ../serial/sfr.equ ../global/init.inc ../serial/init.inc ../serial/tx.inc ../serial/rx.inc ../read/char.inc ../read/hex.inc ../print/char.inc ../print/hex.inc

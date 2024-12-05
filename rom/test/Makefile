@@ -1,7 +1,8 @@
 SHELL=/bin/bash -o pipefail
 
 sources = serial.asm print.asm panic.asm dump.asm \
-          stream_imem.asm stream_xram.asm
+          stream_imem.asm stream_xram.asm \
+          read_hex.asm
 
 default: $(sources:.asm=.lst)
 test: $(sources:.asm=.out)

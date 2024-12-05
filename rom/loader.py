@@ -29,6 +29,9 @@ def open_serial():
 def close_serial():
     ser.close()
 
+def flush_serial():
+    ser.flush()
+
 def flush():
     while ser.in_waiting:
         ser.reset_input_buffer()
