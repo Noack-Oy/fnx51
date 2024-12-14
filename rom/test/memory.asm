@@ -34,6 +34,37 @@
 	orl	a,	0x10	; set xrs2 (size 1792 bytes)
 	mov	auxr,	a
 
+	; initialize memory list
+	mov	dptr,	#0000
+	mov	memory_list,	dpl
+	mov	memory_list+1,	dph
+	; list head: pointer to first block
+	mov	a,	#4
+	movx	@dptr,	a
+	inc	dptr
+	clr	a
+	movx	@dptr,	a
+	inc	dptr
+	; amount of free memory: 1792-4 = 1788 = 0x06fc
+	mov	a,	#0xfc
+	movx	@dptr,	a
+	inc	dptr
+	mov	a,	#0x06
+	movx	@dptr,	a
+	inc	dptr
+	; first entry: pointer to next (null initially)
+	clr	a
+	movx	@dptr,	a
+	inc	dptr
+	movx	@dptr,	a
+	inc	dptr
+	; size of block (same as free memory initially)
+	mov	a,	#0xfc
+	movx	@dptr,	a
+	inc	dptr
+	mov	a,	#0x06
+	movx	@dptr,	a
+	inc	dptr
 
 loop:
 	acall	read_char
@@ -48,14 +79,21 @@ loop:
 	mov	r1,	stream_in+1
 	mov	r2,	#0
 	mov	r3,	#0
+	push	in
+	push	in+1
+	mov	dptr,	#stream_xram_read
+	mov	in,	dpl
+	mov	in+1,	dph
 	acall	dump
+	pop	in+1
+	pop	in
 	sjmp	loop
 __1:
 	cjne	a,	#'g',	__2
 	acall	read_hex_32
 	acall	getmem
 	acall	print_hex_32
-	sjmp	loop
+	sjmp	next
 __2:
 	cjne	a,	#'f',	__3
 	acall	read_hex_32
@@ -73,8 +111,14 @@ __2:
 	mov	a,	r5
 	mov	r1,	a
 	acall	freemem
+	sjmp	next
 __3:
 	mov	a,	#'?'
+	acall	print_char
+next:
+	mov	a,	#13
+	acall	print_char
+	mov	a,	#10
 	acall	print_char
 	sjmp	loop
 
@@ -93,6 +137,7 @@ __3:
 .inc ../util/xch.inc
 .inc ../util/regbank.inc
 .inc ../util/dump.inc
+.inc ../stream/xram_read.inc
 .inc ../memory/getmem.inc
 .inc ../memory/freemem.inc
 
