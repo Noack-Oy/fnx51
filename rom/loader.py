@@ -33,6 +33,7 @@ def flush_serial():
     ser.flush()
 
 def flush():
+    ser.flush()
     while ser.in_waiting:
         ser.reset_input_buffer()
         time.sleep(0.1)
@@ -83,15 +84,15 @@ def enter_bootloader():
             ser.flush()
             ser.dtr = False
             time.sleep(0.5)
+            flush()
             ser.rts = False
             time.sleep(0.5)
-            flush()
             ser.dtr = True
             time.sleep(0.5)
             ser.rts = True
 
             pe.send('U')
-            pe.expect('U')
+            pe.expect('U', searchwindowsize=1)
             break
 
        except pexpect.exceptions.TIMEOUT:
