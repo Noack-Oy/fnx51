@@ -5,8 +5,8 @@
 
 ; Interactive test:
 ; d <addr> <size>; 	- dump memory
-; g <size>;		- getmem
-; f <addr> <size>;	- freemem
+; a <size>;		- allocate memory
+; r <addr> <size>;	- release memory
 
 
 ; **********************
@@ -89,13 +89,13 @@ loop:
 	pop	in
 	sjmp	loop
 __1:
-	cjne	a,	#'g',	__2
+	cjne	a,	#'a',	__2
 	acall	read_hex_32
-	acall	getmem
+	acall	memory_allocate
 	acall	print_hex_32
 	sjmp	next
 __2:
-	cjne	a,	#'f',	__3
+	cjne	a,	#'r',	__3
 	acall	read_hex_32
 	mov	a,	r0
 	mov	r4,	a
@@ -110,7 +110,7 @@ __2:
 	mov	r0,	a
 	mov	a,	r5
 	mov	r1,	a
-	acall	freemem
+	acall	memory_release
 	sjmp	next
 __3:
 	mov	a,	#'?'
@@ -138,8 +138,8 @@ next:
 .inc ../util/regbank.inc
 .inc ../util/dump.inc
 .inc ../stream/xram_read.inc
-.inc ../memory/getmem.inc
-.inc ../memory/freemem.inc
+.inc ../memory/allocate.inc
+.inc ../memory/release.inc
 
 .equ panic_out, serial_tx
 .inc ../util/panic.inc

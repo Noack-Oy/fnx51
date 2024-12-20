@@ -11,8 +11,12 @@ def run_test(pe):
         pe.expect("00000000: 04 00 fc 06  00 00 fc 06")
         pe.expect("\r\n")
 
-        pe.send("g123;")
-        pe.expect("00000000\r\n")
+        pe.send("a123;")
+        pe.expect("00000004\r\n")
+        pe.send("d0;10;")
+        pe.expect("\r\n")
+        pe.send("d128;10;")
+        pe.expect("\r\n")
 
 if __name__ == '__main__':
     try:

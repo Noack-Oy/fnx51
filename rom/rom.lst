@@ -1,3 +1,35 @@
+                   
+                   ; *** headers ***
+                   
+                   
+                   ; *** global/variables.equ ***
+                   
+                   ; variables in internal ram
+                   
+0000:              .equ     in,     0x30    ; pointer to input code
+0000:              .equ     out,    0x32    ; pointer to ouput code
+                   
+0000:              .equ     stream_in,      0x34    ; input stream position
+0000:              .equ     stream_out,     0x36    ; output stream position
+                   
+0000:              .equ     memory_list,    0x38    ; pointer to heap
+                   
+0000:              .equ     stack,  0x40    ; beginning of stack
+                   
+                   ; *** serial/sfr.equ ***
+                   
+                   ; Special function registers for serial interface.
+                   ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
+                   
+                   ; Internal Baud Rate Generator (BRG), see datasheet page 52.
+0000:                       .equ    BRL,    0x9A    ; baud rate reload value
+0000:                       .equ    BDRCON, 0x9B    ; BRG control register
+                   
+                   ; *** pca/sfr.equ ***
+                   
+                   ; Special function registers for programmable counter array.
+                   ; See chapter 13 of AT89C51ED2 datasheet
+                   
 0000:              .equ     cmod,   0xd9
                    
 0000:              .equ     ccon,   0xd8
@@ -32,26 +64,203 @@
                    
 0000:              .flag    ec,     ie.6
                    
+                   
+                   ; *** interrupt vectors ***
+                   
 0000:              .org 0x0000
 0000: 80 4E                 sjmp    main
 0033:              .org 0x0033
-0033: 01 64                 ajmp    pca_int
+0033: 01 81                 ajmp    pca_interrupt
 0050:              .org 0x0050
                    
+                   
+                   ; *** main program ***
+                   
                    main:
-0050: 75 D9 03              mov     cmod,   #0x03   ; set cps0 and ecf
-0053: 75 DA 4C              mov     ccapm0, #0x4c   ; set tog, mat, ecom
-0056: 75 EA 20              mov     ccap0l, #0x20
-0059: 75 FA F0              mov     ccap0h, #0xf0
-005C: D2 AE                 setb    ec
-005E: D2 AF                 setb    ea
-0060: D2 DE                 setb    cr
+                   
+                   
+                   ; *** global/init.inc ***
+                   
+                   ; Initialize stack pointer and global variables.
+                   ; This must be included early in the main program.
+                   
+0050: 75 81 40              mov     SP,     #STACK
+                   
+0053: 90 00 93              mov     dptr,   #serial_rx
+0056: 85 82 30              mov     IN,     DPL
+0059: 85 83 31              mov     IN+1,   DPH
+                   
+005C: 90 00 9B              mov     dptr,   #serial_tx
+005F: 85 82 32              mov     OUT,    DPL
+0062: 85 83 33              mov     OUT+1,  DPH
+                   
+0065: 11 89                 acall   serial_init
+                   
+0067: 75 D9 03              mov     cmod,   #0x03   ; set cps0 and ecf
+006A: 75 DA 4C              mov     ccapm0, #0x4c   ; set tog, mat, ecom
+006D: 75 EA 20              mov     ccap0l, #0x20
+0070: 75 FA F0              mov     ccap0h, #0xf0
+0073: D2 AE                 setb    ec
+0075: D2 AF                 setb    ea
+0077: D2 DE                 setb    cr
                    
                    loop:
-0062: 80 FE                 sjmp    loop
+0079: 11 A8                 acall   read_hex_32
+007B: 88 EA                 mov     ccap0l, r0
+007D: 89 FA                 mov     ccap0h, r1
+007F: 80 F8                 sjmp    loop
                    
-                   pca_int:
-0064: D2 93                 setb    p1.3
-0066: 75 F9 F0              mov     ch,     #0xf0
-0069: C2 DF                 clr     cf
-006B: 32                    reti
+                   pca_interrupt:
+0081: D2 93                 setb    p1.3
+0083: 75 F9 F0              mov     ch,     #0xf0
+0086: C2 DF                 clr     cf
+0088: 32                    reti
+                   
+                   
+                   ; *** library ***
+                   
+                   
+                   ; *** serial/init.inc ***
+                   
+                   ; >> void serial_init() <<
+                   
+                   ; Initialize serial interface.
+                   ; - assumes 20MHz clock and X2 mode
+                   ; - uses internal baud rate generator
+                   ; - speed: 9600 bits per second
+                   ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
+                   ; ---
+                   ; See datasheet page 52 for details,
+                   ; also note oscillator diagram on page 16!
+                   
+                   serial_init:
+0089: 75 98 52              mov     SCON,   #0x52   ; SM1, REN, TI
+008C: 75 9A BF              mov     BRL,    #191    ; 9600 @20MHz CLK
+008F: 75 9B 1E              mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+0092: 22                    ret
+                   
+                   ; *** serial/rx.inc ***
+                   
+                   ; >> char serial_rx <<
+                   
+                   ; Receive byte into accumulator.
+                   
+                   serial_rx:
+0093: 30 98 FD              jnb     RI,     serial_rx
+0096: C2 98                 clr     RI
+0098: E5 99                 mov     a,      SBUF
+009A: 22                    ret
+                   
+                   ; *** serial/tx.inc ***
+                   
+                   ; >> void serial_tx(char a) <<
+                   
+                   ; Transmit byte from accumulator.
+                   
+                   serial_tx:
+009B: 30 99 FD              jnb     TI,     serial_tx
+009E: C2 99                 clr     TI
+00A0: F5 99                 mov     SBUF,   a
+00A2: 22                    ret
+                   
+                   ; *** read/char.inc ***
+                   
+                   ; >> char read_char() <<
+                   
+                   ; Read char into accumulator.
+                   ; Indirect call to function behind IN pointer.
+                   
+                   read_char:
+00A3: C0 30                 push    IN
+00A5: C0 31                 push    IN+1
+00A7: 22                    ret
+                   
+                   ; *** read/char.inc ***
+                   
+                   ; >> uint32 read_hex_32() <<
+                   
+                   ; Read 32 bit hex integer from input into r0-r3.
+                   ; Stops at the first non-hex character or integer overflow.
+                   
+                   read_hex_32:
+00A8: C0 E0                 push    acc
+00AA: EC                    mov     a,      r4
+00AB: C0 E0                 push    acc
+00AD: ED                    mov     a,      r5
+00AE: C0 E0                 push    acc
+                   
+00B0: E4                    clr     a
+00B1: F8                    mov     r0,     a
+00B2: F9                    mov     r1,     a
+00B3: FA                    mov     r2,     a
+00B4: FB                    mov     r3,     a
+                   
+                   read_hex_32__loop:
+00B5: 11 A3                 acall   read_char
+                   
+00B7: C3                    clr     c
+00B8: 94 30                 subb    a,      #0x30   ; ascii '0'
+00BA: 40 42                 jc      read_hex_32__end
+00BC: B4 0A 00              cjne    a,      #10,    read_hex_32__1
+                   read_hex_32__1:
+00BF: 40 0D                 jc      read_hex_32__3
+00C1: 94 11                 subb    a,      #17     ; chars between '0' and 'A'
+00C3: 40 39                 jc      read_hex_32__end
+00C5: 24 0A                 add     a,      #10
+00C7: 54 DF                 anl     a,      #0xdf   ; allow lowercase
+00C9: B4 10 00              cjne    a,      #0x10,  read_hex_32__2
+                   read_hex_32__2:
+00CC: 50 30                 jnc     read_hex_32__end
+                   
+                   read_hex_32__3:
+00CE: FC                    mov     r4,     a
+00CF: E8                    mov     a,      r0
+00D0: C4                    swap    a
+00D1: FD                    mov     r5,     a
+00D2: 54 F0                 anl     a,      #0xf0
+00D4: 4C                    orl     a,      r4
+00D5: F8                    mov     r0,     a
+00D6: ED                    mov     a,      r5
+00D7: 54 0F                 anl     a,      #0x0f
+                   
+00D9: FC                    mov     r4,     a
+00DA: E9                    mov     a,      r1
+00DB: C4                    swap    a
+00DC: FD                    mov     r5,     a
+00DD: 54 F0                 anl     a,      #0xf0
+00DF: 4C                    orl     a,      r4
+00E0: F9                    mov     r1,     a
+00E1: ED                    mov     a,      r5
+00E2: 54 0F                 anl     a,      #0x0f
+                   
+00E4: FC                    mov     r4,     a
+00E5: EA                    mov     a,      r2
+00E6: C4                    swap    a
+00E7: FD                    mov     r5,     a
+00E8: 54 F0                 anl     a,      #0xf0
+00EA: 4C                    orl     a,      r4
+00EB: FA                    mov     r2,     a
+00EC: ED                    mov     a,      r5
+00ED: 54 0F                 anl     a,      #0x0f
+                   
+00EF: FC                    mov     r4,     a
+00F0: EB                    mov     a,      r3
+00F1: C4                    swap    a
+00F2: FD                    mov     r5,     a
+00F3: 54 F0                 anl     a,      #0xf0
+00F5: 4C                    orl     a,      r4
+00F6: FB                    mov     r3,     a
+00F7: ED                    mov     a,      r5
+00F8: 54 0F                 anl     a,      #0x0f
+                   
+00FA: 70 02                 jnz     read_hex_32__end        ; overflow
+00FC: 80 B7                 sjmp    read_hex_32__loop
+                   
+                   
+                   read_hex_32__end:
+00FE: D0 E0                 pop     acc
+0100: FD                    mov     r5,     a
+0101: D0 E0                 pop     acc
+0103: FC                    mov     r4,     a
+0104: D0 E0                 pop     acc
+0106: 22                    ret

@@ -5,8 +5,8 @@
                    
                    ; Interactive test:
                    ; d <addr> <size>;       - dump memory
-                   ; g <size>;              - getmem
-                   ; f <addr> <size>;       - freemem
+                   ; a <size>;              - allocate memory
+                   ; r <addr> <size>;       - release memory
                    
                    
                    ; **********************
@@ -31,7 +31,8 @@
                    
                    ; global SFRs
                    
-0000:              .equ     auxr,   0x8e    ; auxiliary register
+0000:              .equ     auxr,   0x8e    ; auxiliary register 0
+0000:              .equ     auxr1,  0xa2    ; auxiliary register 1
                    
                    ; *** serial/sfr.equ ***
                    
@@ -129,13 +130,13 @@
 006B: D0 30                 pop     in
 006D: 80 D5                 sjmp    loop
                    __1:
-006F: B4 67 08              cjne    a,      #'g',   __2
+006F: B4 61 08              cjne    a,      #'a',   __2
 0072: 11 BE                 acall   read_hex_32
-0074: 51 81                 acall   getmem
+0074: 51 81                 acall   memory_allocate
 0076: 31 58                 acall   print_hex_32
 0078: 80 1B                 sjmp    next
                    __2:
-007A: B4 66 14              cjne    a,      #'f',   __3
+007A: B4 72 14              cjne    a,      #'r',   __3
 007D: 11 BE                 acall   read_hex_32
 007F: E8                    mov     a,      r0
 0080: FC                    mov     r4,     a
@@ -150,7 +151,7 @@
 008A: F8                    mov     r0,     a
 008B: ED                    mov     a,      r5
 008C: F9                    mov     r1,     a
-008D: 51 88                 acall   freemem
+008D: 71 46                 acall   memory_release
 008F: 80 04                 sjmp    next
                    __3:
 0091: 74 3F                 mov     a,      #'?'
@@ -224,7 +225,7 @@
                    
                    ; *** read/char.inc ***
                    
-                   ; >> int32_t read_hex_32() <<
+                   ; >> uint32 read_hex_32() <<
                    
                    ; Read 32 bit hex integer from input into r0-r3.
                    ; Stops at the first non-hex character or integer overflow.
@@ -443,7 +444,7 @@
 0178: E5 D0                 mov     a,      psw
 017A: 54 18                 anl     a,      #0x18
 017C: B4 18 02              cjne    a,      #0x18,  regbank_next__continue
-017F: 51 8F                 acall   panic   ; overflow
+017F: 71 4D                 acall   panic   ; overflow
                    regbank_next__continue:
                             ; switch to next bank
 0181: E5 D0                 mov     a,      psw
@@ -467,7 +468,7 @@
 0191: E5 D0                 mov     a,      psw
 0193: 54 18                 anl     a,      #0x18
 0195: 70 02                 jnz     regbank_prev__continue
-0197: 51 8F                 acall   panic   ; underflow
+0197: 71 4D                 acall   panic   ; underflow
                    regbank_prev__continue:
                             ; switch to previous bank
 0199: E5 D0                 mov     a,      psw
@@ -678,33 +679,196 @@
 027E: D0 8E                 pop     auxr
 0280: 22                    ret
                    
-                   ; *** memory/getmem.inc ***
+                   ; *** memory/allocate.inc ***
                    
-                   ; >> char *getmem(uint32 size) <<
+                   ; >> r0r1 *memory_allocate(r0r1 size) <<
                    
                    ; Allocate memory, return lowest address
                    
-                   getmem:
+                   memory_allocate:
 0281: C0 A8                 push    ie
 0283: C2 AF                 clr     ea
-                            
-0285: D0 A8                 pop     ie
-0287: 22                    ret
                    
-                   ; *** memory/getmem.inc ***
+0285: C0 E0                 push    acc
+0287: C0 82                 push    dpl
+0289: C0 83                 push    dph
                    
-                   ; >> void freemem(char *addr, uint32 size) <<
+028B: 31 76                 acall   regbank_next
+028D: E6                    mov     a,@r0
+028E: FE                    mov     r6,a
+028F: 08                    inc     r0
+0290: E6                    mov     a,@r0
+0291: FF                    mov     r7,a ; size param now in r6r7
+                   
+0292: EE                    mov     a,r6
+0293: 4F                    orl     a,r7
+0294: 70 02                 jnz     memory_allocate__0
+0296: 71 4D                 acall   panic   ; invalid size (0)
+                   
+                   memory_allocate__0:
+                            ; rounding to next multiple of 4
+0298: EE                    mov     a,r6
+0299: 24 03                 add     a,#3
+029B: 54 FC                 anl     a,#0xfc
+029D: FE                    mov     r6,a
+029E: EF                    mov     a,r7
+029F: 34 00                 addc    a,#0
+02A1: FF                    mov     r7,a
+                   
+                            ; set prev (r2,r3) and curr (r4r5) pointers
+02A2: AA 38                 mov     r2,memory_list
+02A4: AB 39                 mov     r3,memory_list+1
+02A6: 8A 82                 mov     dpl,r2
+02A8: 8B 83                 mov     dph,r3
+02AA: E0                    movx    a,@dptr
+02AB: FC                    mov     r4,a
+02AC: A3                    inc     dptr
+02AD: E0                    movx    a,@dptr
+02AE: FD                    mov     r5,a
+                   
+                   memory_allocate__loop:
+02AF: EC                    mov     a,r4
+02B0: 4D                    orl     a,r5
+02B1: 70 02                 jnz     memory_allocate__0a
+02B3: 71 4D                 acall   panic   ; no large enough free block found
+                   memory_allocate__0a:
+                            ; compare curr->size with required size
+02B5: 8C 82                 mov     dpl,r4
+02B7: 8D 83                 mov     dph,r5
+02B9: A3                    inc     dptr
+02BA: A3                    inc     dptr    ; dptr is now &(curr->size)
+02BB: E0                    movx    a,@dptr
+02BC: F9                    mov     r1,a    ; store low byte for later (cannot 
+02BD: A3                    inc     dptr    ; compare high byte first
+02BE: C3                    clr     c
+02BF: E0                    movx    a,@dptr
+02C0: 9F                    subb    a,r7
+02C1: 70 1C                 jnz     memory_allocate__1
+02C3: E9                    mov     a,r1
+02C4: 9E                    subb    a,r6
+02C5: 70 18                 jnz     memory_allocate__1
+                   
+                            ; block size is exact match
+02C7: 8A 82                 mov     dpl,r2  ; prev
+02C9: 8B 83                 mov     dph,r3
+02CB: 05 A2                 inc     auxr1   ;*switch data pointers
+02CD: 8C 82                 mov     dpl,r4  ; curr
+02CF: 8D 83                 mov     dph,r5
+                            ; prev->next = curr->next
+02D1: E0                    movx    a,@dptr
+02D2: A3                    inc     dptr
+02D3: 05 A2                 inc     auxr1   ;*
+02D5: F0                    movx    @dptr,a
+02D6: A3                    inc     dptr
+02D7: 05 A2                 inc     auxr1   ;*
+02D9: E0                    movx    a,@dptr
+02DA: 05 A2                 inc     auxr1   ;*
+02DC: F0                    movx    @dptr,a
+02DD: 80 47                 sjmp    memory_allocate__success
+                   
+                   memory_allocate__1:
+02DF: 50 0F                 jnc     memory_allocate__2 ; jump if curr is larger
+                            ; too small, move on to next entry in list
+02E1: EC                    mov     a,r4    ; -.
+02E2: FA                    mov     r2,a    ;  |- prev = curr
+02E3: ED                    mov     a,r5    ;  |
+02E4: FB                    mov     r3,a    ; -'
+02E5: 8C 82                 mov     dpl,r4  ; -.
+02E7: 8D 82                 mov     dpl,r5  ;  |
+02E9: E0                    movx    a,@dptr ;  |
+02EA: FC                    mov     r4,a    ;  |- curr = curr->next
+02EB: A3                    inc     dptr    ;  |
+02EC: E0                    movx    a,@dptr ;  |
+02ED: FD                    mov     r5,a    ; -'
+02EE: 80 BF                 sjmp    memory_allocate__loop
+                   
+                   memory_allocate__2:
+                            ; split big block
+02F0: 8A 82                 mov     dpl,r2  ; prev
+02F2: 8B 83                 mov     dph,r3  ;
+02F4: EC                    mov     a,r4    ; -.
+02F5: 2E                    add     a,r6    ;  |
+02F6: FA                    mov     r2,a    ;  |
+02F7: F0                    movx    @dptr,a ;  |
+02F8: A3                    inc     dptr    ;  |- prev->next = curr+size
+02F9: ED                    mov     a,r5    ;  |               '---.---'
+02FA: 3F                    addc    a,r7    ;  |  pointer to leftover block
+02FB: FB                    mov     r3,a    ;  |  also gets stored in r2r3
+02FC: F0                    movx    @dptr,a ; -' (prev is not needed anymore)
+                   
+02FD: 8A 82                 mov     dpl,r2  ; leftover
+02FF: 8B 83                 mov     dph,r3
+0301: 05 A2                 inc     auxr1   ;*switch data pointers
+0303: 8C 82                 mov     dpl,r4  ; curr
+0305: 8D 83                 mov     dph,r5
+0307: E0                    movx    a,@dptr         ; -.
+0308: A3                    inc     dptr    ;  |
+0309: 05 A2                 inc     auxr1   ;* |
+030B: F0                    movx    @dptr,a ;  |
+030C: A3                    inc     dptr    ;  |
+030D: 05 A2                 inc     auxr1   ;* |- leftover->next = curr->next
+030F: E0                    movx    a,@dptr ;  |
+0310: A3                    inc     dptr    ;  |
+0311: 05 A2                 inc     auxr1   ;* |
+0313: F0                    movx    @dptr,a ;  |
+0314: A3                    inc     dptr    ; -'
+                            ; data pointers are now &(leftover->size) and &(cur
+0315: 05 A2                 inc     auxr1   ;*-.
+0317: E0                    movx    a,@dptr ;  |
+0318: A3                    inc     dptr    ;  |
+0319: C3                    clr     c       ;  |
+031A: 9E                    subb    a,r6    ;  |
+031B: 05 A2                 inc     auxr1   ;* |
+031D: F0                    movx    @dptr,a ;  |- leftover->size = curr->size -
+031E: A3                    inc     dptr    ;  |
+031F: 05 A2                 inc     auxr1   ;* |
+0321: E0                    movx    a,@dptr ;  |
+0322: 9F                    subb    a,r7    ;  |
+0323: 05 A2                 inc     auxr1   ;* |
+0325: F0                    movx    @dptr,a ; -'
+                   
+                   memory_allocate__success:
+0326: 85 38 82              mov     dpl,memory_list
+0329: 85 39 83              mov     dph,memory_list+1
+032C: A3                    inc     dptr    ; -.
+032D: A3                    inc     dptr    ;  |
+032E: E0                    movx    a,@dptr ;  |
+032F: C3                    clr     c       ;  |
+0330: 9E                    subb    a,r6    ;  |- memory_list->free -= size
+0331: F0                    movx    @dptr,a ;  |
+0332: A3                    inc     dptr    ;  |
+0333: E0                    movx    a,@dptr ;  |
+0334: 9F                    subb    a,r7    ;  |
+0335: F0                    movx    @dptr,a ; -'
+                   
+0336: ED                    mov     a,r5    ; -.
+0337: F6                    mov     @r0,a   ;  |
+0338: 18                    dec     r0      ;  |- return curr
+0339: EC                    mov     a,r4    ;  |
+033A: F6                    mov     @r0,a   ; -'
+                   
+033B: 31 8F                 acall   regbank_prev
+033D: D0 83                 pop     dph
+033F: D0 82                 pop     dpl
+0341: D0 E0                 pop     acc
+                   
+0343: D0 A8                 pop     ie
+0345: 22                    ret
+                   
+                   ; *** memory/release.inc ***
+                   
+                   ; >> void release(r0r1 *addr, r2r3 size) <<
                    
                    ; Allocate memory, return lowest address
                    
-                   freemem:
-0288: C0 A8                 push    ie
-028A: C2 AF                 clr     ea
+                   memory_release:
+0346: C0 A8                 push    ie
+0348: C2 AF                 clr     ea
                             
-028C: D0 A8                 pop     ie
-028E: 22                    ret
+034A: D0 A8                 pop     ie
+034C: 22                    ret
                    
-028F:              .equ panic_out, serial_tx
+034D:              .equ panic_out, serial_tx
                    
                    ; *** panic/panic.inc ***
                    
@@ -714,22 +878,22 @@
                    ; Print caller address and halt.
                    
                    panic:
-028F: C2 AF                 clr     ea      ; disable interrupts
-0291: 90 00 A9              mov     dptr,   #panic_out
-0294: 85 82 32              mov     out,    dpl
-0297: 85 83 33              mov     out+1,  dph
-029A: 90 02 A9              mov     dptr,   #panic_text
-029D: 31 22                 acall   print_text
-029F: D0 E0                 pop     acc
-02A1: 31 38                 acall   print_hex_8
-02A3: D0 E0                 pop     acc
-02A5: 31 38                 acall   print_hex_8
-02A7: 80 FE                 sjmp    *
+034D: C2 AF                 clr     ea      ; disable interrupts
+034F: 90 00 A9              mov     dptr,   #panic_out
+0352: 85 82 32              mov     out,    dpl
+0355: 85 83 33              mov     out+1,  dph
+0358: 90 03 67              mov     dptr,   #panic_text
+035B: 31 22                 acall   print_text
+035D: D0 E0                 pop     acc
+035F: 31 38                 acall   print_hex_8
+0361: D0 E0                 pop     acc
+0363: 31 38                 acall   print_hex_8
+0365: 80 FE                 sjmp    *
                    
                    panic_text:
-02A9: 0D 0A                 .db     13, 10
-02AB: 20 21 21 21 
+0367: 0D 0A                 .db     13, 10
+0369: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                             .db     " !!! panic @"
-02B7: 00                    .db     0
+0375: 00                    .db     0
