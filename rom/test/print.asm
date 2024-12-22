@@ -219,6 +219,78 @@ test_int_s16__end:
 	acall	print_text
 	acall	print_text
 
+; test print_int_u32
+	mov	dptr,	#test__newline
+	clr	a
+	mov	r0,	a
+	mov	r1,	a
+	mov	r2,	a
+	mov	r3,	a
+	mov	r4,	#1
+	mov	r5,	a
+	mov	r6,	a
+	mov	r7,	a
+test_int_u32__loop:
+	acall	print_int_u32
+	acall	print_text
+	; r0-3 += r4-7
+	mov	a,	r0
+	add	a,	r4
+	mov	r0,	a
+	mov	a,	r1
+	addc	a,	r5
+	mov	r1,	a
+	mov	a,	r2
+	addc	a,	r6
+	mov	r2,	a
+	mov	a,	r3
+	addc	a,	r7
+	mov	r3,	a
+	; swap r0-3 with r4-7
+	mov	a,	r4
+	xch	a,	r0
+	mov	r4,	a
+	mov	a,	r5
+	xch	a,	r1
+	mov	r5,	a
+	mov	a,	r6
+	xch	a,	r2
+	mov	r6,	a
+	mov	a,	r7
+	xch	a,	r3
+	mov	r7,	a
+	jnc	test_int_u32__loop
+test_int_u32__end:
+	acall	print_int_u32
+	acall	print_text
+	acall	print_text
+
+; test print_int_s32
+	mov	dptr,	#test__newline
+	; r0-r3 <- 0x80000000 (-2147483648)
+	clr	a
+	mov	r0,	a
+	mov	r1,	a
+	mov	r2,	a
+	mov	r3,	#0x80
+test_int_s32_loop:
+	acall	print_int_s32
+	acall	print_text
+	; r0-r3 += 0x075bcd15 (123456789)
+	mov	a,	r0
+	add	a,	#0x15
+	mov	r0,	a
+	mov	a,	r1
+	addc	a,	#0xcd
+	mov	r1,	a
+	mov	a,	r2
+	addc	a,	#0x5b
+	mov	r2,	a
+	mov	a,	r3
+	addc	a,	#0x07
+	mov	r3,	a
+	jnb	ov,	test_int_s32_loop
+
 ; the end
 	ajmp	*
 
@@ -239,3 +311,7 @@ test__space:
 .inc ../print/text.inc
 .inc ../print/hex.inc
 .inc ../print/int.inc
+.inc ../util/regbank.inc
+
+.equ panic_out, serial_tx
+.inc ../util/panic.inc

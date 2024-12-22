@@ -29,6 +29,20 @@ def open_serial():
 def close_serial():
     ser.close()
 
+def flush_serial():
+    ser.flush()
+
+def flush():
+    ser.flush()
+    while ser.in_waiting:
+        ser.reset_input_buffer()
+        time.sleep(0.1)
+    try:
+        while True:
+            pe.read_nonblocking(size=1024, timeout=0.1)
+    except pexpect.exceptions.TIMEOUT:
+        pass
+
 
 class Logger:
     def __init__(self, prefix):
@@ -64,15 +78,27 @@ def cmd(function, data):
 
 def enter_bootloader():
     print('BOOTLOADER')
-    ser.dtr = False
-    ser.rts = False
-    time.sleep(0.2)
-    ser.dtr = True
-    time.sleep(0.1)
-    ser.rts = True
+    tries = 0
+    while True:
+       try:
+            ser.flush()
+            ser.dtr = False
+            time.sleep(0.5)
+            flush()
+            ser.rts = False
+            time.sleep(0.5)
+            ser.dtr = True
+            time.sleep(0.5)
+            ser.rts = True
 
-    pe.send('U')
-    pe.expect('U')
+            pe.send('U')
+            pe.expect('U', searchwindowsize=1)
+            break
+
+       except pexpect.exceptions.TIMEOUT:
+           tries += 1
+           if tries > 3:
+               raise
 
     cmd('05', '0B00') # read hardware security byte
     hsb = int(pe.before, 16)
@@ -96,7 +122,8 @@ def write_hex_file(filename):
 def reset():
     print('RESET')
     ser.dtr = False
-    time.sleep(0.1)
+    time.sleep(0.5)
+    flush()
     ser.dtr = True
     time.sleep(0.1)
 
