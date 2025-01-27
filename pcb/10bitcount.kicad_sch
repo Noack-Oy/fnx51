@@ -385,6 +385,126 @@
 				)
 			)
 		)
+		(symbol "power:+5V"
+			(power)
+			(pin_numbers hide)
+			(pin_names
+				(offset 0) hide)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "#PWR"
+				(at 0 -3.81 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Value" "+5V"
+				(at 0 3.556 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Power symbol creates a global label with name \"+5V\""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "global power"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "+5V_0_1"
+				(polyline
+					(pts
+						(xy -0.762 1.27) (xy 0 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 0) (xy 0 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54) (xy 0.762 1.27)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "+5V_1_1"
+				(pin power_in line
+					(at 0 0 90)
+					(length 0)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+		)
 		(symbol "power:GND"
 			(power)
 			(pin_numbers hide)
@@ -463,126 +583,6 @@
 			(symbol "GND_1_1"
 				(pin power_in line
 					(at 0 0 270)
-					(length 0)
-					(name "~"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-		)
-		(symbol "power:VCC"
-			(power)
-			(pin_numbers hide)
-			(pin_names
-				(offset 0) hide)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "#PWR"
-				(at 0 -3.81 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Value" "VCC"
-				(at 0 3.556 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Power symbol creates a global label with name \"VCC\""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_keywords" "global power"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "VCC_0_1"
-				(polyline
-					(pts
-						(xy -0.762 1.27) (xy 0 2.54)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 0) (xy 0 2.54)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 2.54) (xy 0.762 1.27)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "VCC_1_1"
-				(pin power_in line
-					(at 0 0 90)
 					(length 0)
 					(name "~"
 						(effects
@@ -1015,7 +1015,6 @@
 	(hierarchical_label "D5"
 		(shape input)
 		(at 114.3 58.42 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1027,7 +1026,6 @@
 	(hierarchical_label "CE"
 		(shape input)
 		(at 149.86 58.42 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1039,7 +1037,6 @@
 	(hierarchical_label "Q3"
 		(shape output)
 		(at 160.02 83.82 270)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1051,7 +1048,6 @@
 	(hierarchical_label "Q0"
 		(shape output)
 		(at 167.64 83.82 270)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1063,7 +1059,6 @@
 	(hierarchical_label "D9"
 		(shape input)
 		(at 63.5 58.42 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1075,7 +1070,6 @@
 	(hierarchical_label "Q4"
 		(shape output)
 		(at 116.84 83.82 270)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1087,7 +1081,6 @@
 	(hierarchical_label "D1"
 		(shape input)
 		(at 165.1 58.42 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1099,7 +1092,6 @@
 	(hierarchical_label "~{PE}"
 		(shape input)
 		(at 38.1 43.18 180)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1111,7 +1103,6 @@
 	(hierarchical_label "Q1"
 		(shape output)
 		(at 165.1 83.82 270)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1123,7 +1114,6 @@
 	(hierarchical_label "Q5"
 		(shape output)
 		(at 114.3 83.82 270)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1135,7 +1125,6 @@
 	(hierarchical_label "Q2"
 		(shape output)
 		(at 162.56 83.82 270)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1147,7 +1136,6 @@
 	(hierarchical_label "Q7"
 		(shape output)
 		(at 109.22 83.82 270)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1159,7 +1147,6 @@
 	(hierarchical_label "~{MR}"
 		(shape input)
 		(at 38.1 45.72 180)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1171,7 +1158,6 @@
 	(hierarchical_label "Q9"
 		(shape output)
 		(at 63.5 83.82 270)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1183,7 +1169,6 @@
 	(hierarchical_label "D6"
 		(shape input)
 		(at 111.76 58.42 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1195,7 +1180,6 @@
 	(hierarchical_label "D0"
 		(shape input)
 		(at 167.64 58.42 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1207,7 +1191,6 @@
 	(hierarchical_label "D7"
 		(shape input)
 		(at 109.22 58.42 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1219,7 +1202,6 @@
 	(hierarchical_label "D3"
 		(shape input)
 		(at 160.02 58.42 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1231,7 +1213,6 @@
 	(hierarchical_label "CP"
 		(shape input)
 		(at 38.1 48.26 180)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1243,7 +1224,6 @@
 	(hierarchical_label "Q6"
 		(shape output)
 		(at 111.76 83.82 270)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1255,7 +1235,6 @@
 	(hierarchical_label "D2"
 		(shape input)
 		(at 162.56 58.42 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1267,7 +1246,6 @@
 	(hierarchical_label "Q8"
 		(shape output)
 		(at 66.04 83.82 270)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1279,7 +1257,6 @@
 	(hierarchical_label "D8"
 		(shape input)
 		(at 66.04 58.42 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1291,7 +1268,6 @@
 	(hierarchical_label "D4"
 		(shape input)
 		(at 116.84 58.42 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1301,7 +1277,7 @@
 		(uuid "f9d62d0e-4143-46d7-bbc3-77bd3e4209bf")
 	)
 	(symbol
-		(lib_id "power:VCC")
+		(lib_id "power:+5V")
 		(at 73.66 71.12 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -1319,12 +1295,13 @@
 				(hide yes)
 			)
 		)
-		(property "Value" "VCC"
-			(at 73.66 66.04 0)
+		(property "Value" "+5V"
+			(at 76.2 69.8499 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
 		(property "Footprint" ""
@@ -1345,7 +1322,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Power symbol creates a global label with name \"VCC\""
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
 			(at 73.66 71.12 0)
 			(effects
 				(font
@@ -1358,7 +1335,11 @@
 			(uuid "661f8e27-d7ff-461f-88a8-15194ccf1667")
 		)
 		(instances
-			(project "fnx51"
+			(project ""
+				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/22fed627-5774-4fe5-8536-0466d92a967a"
+					(reference "#PWR?")
+					(unit 1)
+				)
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/6eee35b4-65a4-4e78-9eee-35747a769478"
 					(reference "#PWR?")
 					(unit 1)
@@ -1367,7 +1348,7 @@
 		)
 	)
 	(symbol
-		(lib_id "power:VCC")
+		(lib_id "power:+5V")
 		(at 175.26 71.12 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -1385,12 +1366,13 @@
 				(hide yes)
 			)
 		)
-		(property "Value" "VCC"
-			(at 175.26 66.04 0)
+		(property "Value" "+5V"
+			(at 177.8 69.8499 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
 		(property "Footprint" ""
@@ -1411,7 +1393,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Power symbol creates a global label with name \"VCC\""
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
 			(at 175.26 71.12 0)
 			(effects
 				(font
@@ -1424,7 +1406,11 @@
 			(uuid "17c28c3e-ce11-4754-a7da-f5a58b8dc89d")
 		)
 		(instances
-			(project "fnx51"
+			(project ""
+				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/22fed627-5774-4fe5-8536-0466d92a967a"
+					(reference "#PWR?")
+					(unit 1)
+				)
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/6eee35b4-65a4-4e78-9eee-35747a769478"
 					(reference "#PWR?")
 					(unit 1)
@@ -1603,7 +1589,11 @@
 			(uuid "646e8697-4880-4c38-aa5f-6098f549f857")
 		)
 		(instances
-			(project "fnx51"
+			(project ""
+				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/22fed627-5774-4fe5-8536-0466d92a967a"
+					(reference "#PWR?")
+					(unit 1)
+				)
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/6eee35b4-65a4-4e78-9eee-35747a769478"
 					(reference "#PWR?")
 					(unit 1)
@@ -1668,7 +1658,11 @@
 			(uuid "498541f5-f30f-42d7-88bb-8b4286fad918")
 		)
 		(instances
-			(project "fnx51"
+			(project ""
+				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/22fed627-5774-4fe5-8536-0466d92a967a"
+					(reference "#PWR?")
+					(unit 1)
+				)
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/6eee35b4-65a4-4e78-9eee-35747a769478"
 					(reference "#PWR?")
 					(unit 1)
@@ -1803,7 +1797,11 @@
 			(uuid "d1c35016-1b6d-4bce-984a-2807394df52b")
 		)
 		(instances
-			(project "fnx51"
+			(project ""
+				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/22fed627-5774-4fe5-8536-0466d92a967a"
+					(reference "#PWR?")
+					(unit 1)
+				)
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/6eee35b4-65a4-4e78-9eee-35747a769478"
 					(reference "#PWR?")
 					(unit 1)
@@ -1925,7 +1923,7 @@
 		)
 	)
 	(symbol
-		(lib_id "power:VCC")
+		(lib_id "power:+5V")
 		(at 124.46 71.12 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -1943,12 +1941,13 @@
 				(hide yes)
 			)
 		)
-		(property "Value" "VCC"
-			(at 124.46 66.04 0)
+		(property "Value" "+5V"
+			(at 127 69.8499 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
 		(property "Footprint" ""
@@ -1969,7 +1968,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Power symbol creates a global label with name \"VCC\""
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
 			(at 124.46 71.12 0)
 			(effects
 				(font
@@ -1982,7 +1981,11 @@
 			(uuid "49650b13-0e6e-449d-aba6-5dd3eccea0bb")
 		)
 		(instances
-			(project "fnx51"
+			(project ""
+				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/22fed627-5774-4fe5-8536-0466d92a967a"
+					(reference "#PWR?")
+					(unit 1)
+				)
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/6eee35b4-65a4-4e78-9eee-35747a769478"
 					(reference "#PWR?")
 					(unit 1)
@@ -2091,7 +2094,11 @@
 			(uuid "2faffc8b-2218-4bb0-b612-89503b08164d")
 		)
 		(instances
-			(project "fnx51"
+			(project ""
+				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/22fed627-5774-4fe5-8536-0466d92a967a"
+					(reference "U?")
+					(unit 1)
+				)
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/6eee35b4-65a4-4e78-9eee-35747a769478"
 					(reference "U?")
 					(unit 1)
@@ -2100,7 +2107,7 @@
 		)
 	)
 	(symbol
-		(lib_id "power:VCC")
+		(lib_id "power:+5V")
 		(at 152.4 55.88 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -2117,7 +2124,7 @@
 				(hide yes)
 			)
 		)
-		(property "Value" "VCC"
+		(property "Value" "+5V"
 			(at 152.4 52.07 0)
 			(effects
 				(font
@@ -2143,7 +2150,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Power symbol creates a global label with name \"VCC\""
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
 			(at 152.4 55.88 0)
 			(effects
 				(font
@@ -2156,7 +2163,11 @@
 			(uuid "40db00ff-08d8-407f-9aa4-6ee6b6a9747b")
 		)
 		(instances
-			(project "fnx51"
+			(project ""
+				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/22fed627-5774-4fe5-8536-0466d92a967a"
+					(reference "#PWR?")
+					(unit 1)
+				)
 				(path "/e63e39d7-6ac0-4ffd-8aa3-1841a4541b55/90e1f016-3c60-4383-aa8d-def9977ac47b/6eee35b4-65a4-4e78-9eee-35747a769478"
 					(reference "#PWR?")
 					(unit 1)
