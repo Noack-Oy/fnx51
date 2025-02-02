@@ -29,10 +29,8 @@
 	acall	serial_init
 
 	; use xram
-	mov	a,auxr
-	anl	a,0xe1	; clear extram, xrs0-2
-	orl	a,0x10	; set xrs2 (size 1792 bytes)
-	mov	auxr,a
+	anl	auxr,#0xe1	; clear extram, xrs0-2
+	orl	auxr,#0x10	; set xrs2 (size 1792 bytes)
 
 	; initialize memory list
 	mov	dptr,#0000

@@ -1,0 +1,9 @@
+
+; *** spi/sfr.equ ***
+
+; Special function registers for serial peripheral interface.
+; See chapter 16 of AT89C51ED2 datasheet
+
+.equ	spcon,	0xc3	; Serial Peripheral Control Register
+.equ	spsta,	0xc4	; Serial Peripheral Status Register
+.equ	spdat,	0xc5	; Serial Peripheral Data Register
