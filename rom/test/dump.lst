@@ -21,9 +21,11 @@
 0000:              .equ     stream_in,      0x34    ; input stream position
 0000:              .equ     stream_out,     0x36    ; output stream position
                    
-0000:              .equ     memory_list,    0x38    ; pointer to heap
+0000:              .equ     memory_list,    0x38    ; pointer to heap list head
+0000:              .equ     memory_start,   0x40    ; first allocatable address
+0000:              .equ     memory_end,     0x42    ; last allocatable address
                    
-0000:              .equ     stack,  0x40    ; beginning of stack
+0000:              .equ     stack,  0x50    ; beginning of stack
                    
                    ; *** serial/sfr.equ ***
                    
@@ -46,7 +48,7 @@
                    ; Initialize stack pointer and global variables.
                    ; This must be included early in the main program.
                    
-0000: 75 81 40              mov     SP,     #STACK
+0000: 75 81 50              mov     SP,     #STACK
                    
 0003: 90 00 36              mov     dptr,   #serial_rx
 0006: 85 82 30              mov     IN,     DPL

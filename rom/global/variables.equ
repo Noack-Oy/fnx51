@@ -9,6 +9,8 @@
 .equ	stream_in,	0x34	; input stream position
 .equ	stream_out,	0x36	; output stream position
 
-.equ	memory_list,	0x38	; pointer to heap
+.equ	memory_list,	0x38	; pointer to heap list head
+.equ	memory_start,	0x40	; first allocatable address
+.equ	memory_end,	0x42	; last allocatable address
 
-.equ	stack,	0x40	; beginning of stack
+.equ	stack,	0x50	; beginning of stack
