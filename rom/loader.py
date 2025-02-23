@@ -3,6 +3,7 @@
 import serial, time, sys
 import pexpect.fdpexpect
 
+device = '/dev/ttyUSB0'
 ser = None
 pe = None
 
@@ -12,7 +13,7 @@ def open_serial():
     ser = serial.Serial()
     ser.dtr = False
     ser.rts = False
-    ser.port = '/dev/ttyUSB0'
+    ser.port = device
     ser.bytesize = serial.EIGHTBITS
     ser.parity = serial.PARITY_NONE
     ser.open()
