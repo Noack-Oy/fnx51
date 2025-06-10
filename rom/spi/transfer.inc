@@ -1,5 +1,5 @@
 
-; *** spi/transfer.equ ***
+; *** spi/transfer.inc ***
 
 ; >> char{a} serial_transfer(char{a} data) <<
 

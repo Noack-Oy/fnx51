@@ -1,0 +1,20 @@
+
+; *** sd/config.equ ***
+
+; SPCON register configuration for SD card:
+; .-----.-------.-------.---------------------------------------.
+; | bit | name	| value | remark				|
+; |-----|-------|-------|---------------------------------------|
+; | 7	| SPR2	| 1	| SPR2:0 = 101-> Fclk_periph / 64	|
+; | 6	| SPEN	| 1	| Set to enable the SPI			|
+; | 5	| SSDIS | 1	| Set to disable /SS input		|
+; | 4	| MSTR	| 1	| Set to configure the SPI as a master	|
+; | 3	| CPOL	| 0	| Cleared to have SCK idle at '0'	|
+; | 2	| CPHA	| 0	| Cleared to sample on leading edge	|
+; | 1	| SPR1	| 0	| (see above)				|
+; | 0	| SPR0	| 1	| (see above)	speed: 312.5 kHz	|
+; '-----'-------'-------'---------------------------------------'
+
+.equ	sd_spi_config,	0xf1
+
+.flag	sd_pin_cs,	p1.1
