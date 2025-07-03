@@ -1,0 +1,964 @@
+                   
+                   ; ************************
+                   ; * SD Card Test Program *
+                   ; ************************
+                   
+                   ; This program initializes an SD card
+                   ; and dumps the first sector.
+                   
+                   
+                   ; **********************
+                   ; * Header Definitions *
+                   ; **********************
+                   
+                   ; *** global/variables.equ ***
+                   
+                   ; variables in internal ram
+                   
+0000:              .equ    in,     0x30    ; pointer to input code
+0000:              .equ    out,    0x32    ; pointer to ouput code
+                   
+0000:              .equ    stream_in,      0x34    ; input stream position
+0000:              .equ    stream_out,     0x36    ; output stream position
+                   
+0000:              .equ    memory_list,    0x38    ; pointer to heap list head
+0000:              .equ    memory_start,   0x40    ; first allocatable address
+0000:              .equ    memory_end,     0x42    ; last allocatable address
+                   
+0000:              .equ    stack,  0x50    ; beginning of stack
+                   
+                   ; *** global/sfr.equ ***
+                   
+                   ; global SFRs
+                   
+0000:              .equ    auxr,   0x8e    ; auxiliary register 0
+0000:              .equ    auxr1,  0xa2    ; auxiliary register 1
+                   
+                   ; *** serial/sfr.equ ***
+                   
+                   ; Special function registers for serial interface.
+                   ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
+                   
+                   ; Internal Baud Rate Generator (BRG), see datasheet page 52.
+0000:                      .equ    BRL,    0x9A    ; baud rate reload value
+0000:                      .equ    BDRCON, 0x9B    ; BRG control register
+                   
+                   ; *** spi/sfr.equ ***
+                   
+                   ; Special function registers for serial peripheral interface
+                   ; See chapter 16 of AT89C51ED2 datasheet
+                   
+0000:              .equ    spcon,  0xc3    ; Serial Peripheral Control Register
+0000:              .equ    spsta,  0xc4    ; Serial Peripheral Status Register
+0000:              .equ    spdat,  0xc5    ; Serial Peripheral Data Register
+                   
+                   ; *** sd/config.equ ***
+                   
+                   ; SPCON register configuration for SD card:
+                   ; .-----.-------.-------.-----------------------------------
+                   ; | bit | name  | value | remark                            
+                   ; |-----|-------|-------|-----------------------------------
+                   ; | 7   | SPR2  | 1     | SPR2:0 = 101-> Fclk_periph / 64   
+                   ; | 6   | SPEN  | 1     | Set to enable the SPI             
+                   ; | 5   | SSDIS | 1     | Set to disable /SS input          
+                   ; | 4   | MSTR  | 1     | Set to configure the SPI as a mast
+                   ; | 3   | CPOL  | 0     | Cleared to have SCK idle at '0'   
+                   ; | 2   | CPHA  | 0     | Cleared to sample on leading edge 
+                   ; | 1   | SPR1  | 0     | (see above)                       
+                   ; | 0   | SPR0  | 1     | (see above)   speed: 312.5 kHz    
+                   ; '-----'-------'-------'-----------------------------------
+                   
+0000:              .equ    sd_spi_config,  0xf1
+                   
+0000:              .flag   sd_pin_cs,      p1.1
+                   
+                   ; *************
+                   ; * Main Code *
+                   ; *************
+                   
+                   ; *** test/sd.asm ***
+                   
+0000:                      .org    0
+                   
+                   ; *** global/init.inc ***
+                   
+                   ; Initialize stack pointer and global variables.
+                   ; This must be included early in the main program.
+                   
+0000: 75 81 50             mov     SP,     #STACK
+                   
+0003: 90 00 6E             mov     dptr,   #serial_rx
+0006: 85 82 30             mov     IN,     DPL
+0009: 85 83 31             mov     IN+1,   DPH
+                   
+000C: 90 00 66             mov     dptr,   #serial_tx
+000F: 85 82 32             mov     OUT,    DPL
+0012: 85 83 33             mov     OUT+1,  DPH
+                   
+0015: 11 5C                acall   serial_init
+0017: 11 81                acall   sd_init
+0019: 51 14                acall   print_hex_8     ; status
+001B: 51 34                acall   print_hex_32    ; operation condition
+001D: 74 0D                mov     a,#13
+001F: 51 0F                acall   print_char
+0021: 74 0A                mov     a,#10
+0023: 51 0F                acall   print_char
+                   
+                           ; use xram
+0025: 53 8E E1             anl     auxr,#0xe1      ; clear extram, xrs0-2
+0028: 43 8E 10             orl     auxr,#0x10      ; set xrs2 (size 1792 bytes)
+                   
+002B: E4                   clr     a
+002C: F5 82                mov     dpl,a
+002E: F5 83                mov     dph,a
+0030: F8                   mov     r0,a
+0031: F9                   mov     r1,a
+0032: FA                   mov     r2,a
+0033: FB                   mov     r3,a
+0034: 31 90                acall   sd_block_read
+                   
+                           ; print CRC
+0036: EC                   mov     a,r4
+0037: F8                   mov     r0,a
+0038: ED                   mov     a,r5
+0039: F9                   mov     r1,a
+003A: 51 29                acall   print_hex_16
+003C: 74 0D                mov     a,#13
+003E: 51 0F                acall   print_char
+0040: 74 0A                mov     a,#10
+0042: 51 0F                acall   print_char
+                   
+0044: E4                   clr     a
+0045: F8                   mov     r0,a
+0046: F9                   mov     r1,a
+0047: FA                   mov     r2,a
+0048: FB                   mov     r3,a
+0049: F5 34                mov     stream_in,a
+004B: F5 35                mov     stream_in+1,a
+004D: 90 02 5B             mov     dptr,#stream_xram_read
+0050: 85 82 30             mov     in,dpl
+0053: 85 83 31             mov     in+1,dph
+0056: 51 90                acall   dump
+0058: 51 90                acall   dump
+                   
+                   halt:
+005A: 80 FE                sjmp    halt
+                   
+                   ; *********************
+                   ; * Library Functions *
+                   ; *********************
+                   
+                   ; *** serial/init.inc ***
+                   
+                   ; >> void serial_init() <<
+                   
+                   ; Initialize serial interface.
+                   ; - assumes 20MHz clock and X2 mode
+                   ; - uses internal baud rate generator
+                   ; - speed: 9600 bits per second
+                   ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
+                   ; ---
+                   ; See datasheet page 52 for details,
+                   ; also note oscillator diagram on page 16!
+                   
+                   serial_init:
+005C: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
+005F: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
+0062: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+0065: 22                   ret
+                   
+                   ; *** serial/tx.inc ***
+                   
+                   ; >> void serial_tx(char a) <<
+                   
+                   ; Transmit byte from accumulator.
+                   
+                   serial_tx:
+0066: 30 99 FD             jnb     TI,     serial_tx
+0069: C2 99                clr     TI
+006B: F5 99                mov     SBUF,   a
+006D: 22                   ret
+                   
+                   ; *** serial/rx.inc ***
+                   
+                   ; >> char serial_rx <<
+                   
+                   ; Receive byte into accumulator.
+                   
+                   serial_rx:
+006E: 30 98 FD             jnb     RI,     serial_rx
+0071: C2 98                clr     RI
+0073: E5 99                mov     a,      SBUF
+0075: 22                   ret
+                   
+                   
+                   ; *** spi/transfer.inc ***
+                   
+                   ; >> char{a} serial_transfer(char{a} data) <<
+                   
+                   ; SPI transfer function: send byte from a, read response int
+                   
+                   spi_transfer:
+0076: F5 C5                mov     spdat,a
+                   
+                   spi_transfer__wait:
+0078: E5 C4                mov     a,spsta
+007A: 54 80                anl     a,#0x80 ;check SPIF bit
+007C: 60 FA                jz      spi_transfer__wait
+                   
+007E: E5 C5                mov     a,spdat
+0080: 22                   ret
+                   
+                   ; *** sd/init.inc ***
+                   
+                   ; >> uint8{a},uint32{r0-r3} sd_init() <<
+                   
+                   ; Initialize SD card, return error code in a, OCR in r0-r3.
+                   sd_init:
+0081: ED                   mov     a,r5    ; r5 is used as temp store for error
+0082: C0 E0                push    acc
+                   
+0084: 75 C3 F1             mov     spcon,#sd_spi_config
+0087: 11 BE                acall   sd_warmup
+0089: 11 D3                acall   sd_select
+                   
+008B: 7D 05                mov     r5,#5   ; 5: no idle response to cmd0
+008D: 11 E2                acall   sd_cmd0
+008F: B4 01 28             cjne    a,#1,sd_init__end
+                   
+0092: 1D                   dec     r5      ; 4: no idle response to cmd8
+0093: 11 F2                acall   sd_cmd8
+0095: B4 01 22             cjne    a,#1,sd_init__end
+0098: 1D                   dec     r5      ; 3: invalid cmd8 response
+0099: BB 00 1E             cjne    r3,#0x00,sd_init__end
+009C: BA 00 1B             cjne    r2,#0x00,sd_init__end
+009F: B9 01 18             cjne    r1,#0x01,sd_init__end
+00A2: B8 AA 15             cjne    r0,#0xaa,sd_init__end
+                   
+00A5: 7D 64                mov     r5,#100 ; retry counter
+                   sd_init__loop:
+00A7: 31 0A                acall   sd_acmd41
+00A9: 60 0A                jz      sd_init__continue
+00AB: 74 0A                mov     a,#10
+00AD: 31 C7                acall   delay_ms_8
+00AF: DD F6                djnz    r5,sd_init__loop
+00B1: 7D 02                mov     r5,#2   ; 2: acmd41 ready response timeout
+00B3: 80 05                sjmp    sd_init__end
+                   
+                   sd_init__continue:
+00B5: 7D 01                mov     r5,#1   ; 1: no ready response to cmd58
+00B7: 31 32                acall   sd_cmd58
+                   
+00B9: 1D                   dec     r5      ; 0: success
+                   
+                   sd_init__end:
+00BA: D0 E0                pop     acc
+00BC: CD                   xch     a,r5
+00BD: 22                   ret
+                   
+                   ; *** sd/warmup.inc ***
+                   
+                   ; >> void sd_warmup() <<
+                   
+                   ; send 80 warmup pulses to sclk while cs is high
+                   sd_warmup:
+00BE: C0 E0                push    acc
+00C0: C0 F0                push    b
+00C2: D2 91                setb    sd_pin_cs ; p1.1
+00C4: 75 F0 0A             mov     b,#10
+                   sd_warmup_loop:
+00C7: 74 FF                mov     a,#0xff
+00C9: 11 76                acall   spi_transfer
+00CB: D5 F0 F9             djnz    b,sd_warmup_loop
+00CE: D0 F0                pop     b
+00D0: D0 E0                pop     acc
+00D2: 22                   ret
+                   
+                   ; *** sd/select.inc ***
+                   
+                   ; >> void sd_select() <<
+                   
+                   ; Activate the SD card
+                   sd_select:
+00D3: C0 E0                push    acc
+00D5: 74 FF                mov     a,#0xff
+00D7: 11 76                acall   spi_transfer
+00D9: C2 91                clr     sd_pin_cs
+00DB: 74 FF                mov     a,#0xff
+00DD: 11 76                acall   spi_transfer
+00DF: D0 E0                pop     acc
+00E1: 22                   ret
+                   
+                   ; *** sd/cmd0.inc ***
+                   
+                   ; >> char{a} sd_cmd0() <<
+                   
+                   ; CMD0: go to idle state
+                   sd_cmd0:
+00E2: 31 E3                acall   regbank_next
+00E4: E4                   clr     a
+00E5: F8                   mov     r0,a
+00E6: F9                   mov     r1,a
+00E7: FA                   mov     r2,a
+00E8: FB                   mov     r3,a
+00E9: 7C 94                mov     r4,#0x94
+00EB: 31 46                acall   sd_command
+00ED: 31 60                acall   sd_response1
+00EF: 31 FC                acall   regbank_prev
+00F1: 22                   ret
+                   
+                   ; *** sd/cmd8.inc ***
+                   
+                   ; >> uint8{a},uint32{r0-r3} sd_cmd8() <<
+                   
+                   ; CMD8: send interface condition
+                   sd_cmd8:
+00F2: EC                   mov     a,r4
+00F3: C0 E0                push    acc
+00F5: 74 08                mov     a,#8
+00F7: 78 AA                mov     r0,#0xaa
+00F9: 79 01                mov     r1,#0x01
+00FB: 7A 00                mov     r2,#0x00
+00FD: 7B 00                mov     r3,#0x00
+00FF: 7C 86                mov     r4,#0x86
+0101: 31 46                acall   sd_command
+0103: 31 72                acall   sd_response7
+0105: FC                   mov     r4,a
+0106: D0 E0                pop     acc
+0108: CC                   xch     a,r4
+0109: 22                   ret
+                   
+                   ; *** sd/acmd41.inc ***
+                   
+                   ; >> char{a} sd_acmd41() <<
+                   
+                   ; ACMD41: send operation condition
+                   sd_acmd41:
+010A: 31 21                acall   sd_cmd55
+010C: B4 01 11             cjne    a,#1,sd_acmd41__end
+010F: 31 E3                acall   regbank_next
+0111: E4                   clr     a
+0112: F8                   mov     r0,a
+0113: F9                   mov     r1,a
+0114: FA                   mov     r2,a
+0115: 7B 40                mov     r3,#0x40 ; indicates high capacity support
+0117: FC                   mov     r4,a
+0118: 74 29                mov     a,#41
+011A: 31 46                acall   sd_command
+011C: 31 60                acall   sd_response1
+011E: 31 FC                acall   regbank_prev
+                   sd_acmd41__end:
+0120: 22                   ret
+                   
+                   ; *** sd/cmd55.inc ***
+                   
+                   ; >> char{a} sd_cmd55() <<
+                   
+                   ; CMD55: application specific command (prefix)
+                   sd_cmd55:
+0121: 31 E3                acall   regbank_next
+0123: E4                   clr     a
+0124: F8                   mov     r0,a
+0125: F9                   mov     r1,a
+0126: FA                   mov     r2,a
+0127: FB                   mov     r3,a
+0128: FC                   mov     r4,a
+0129: 74 37                mov     a,#55
+012B: 31 46                acall   sd_command
+012D: 31 60                acall   sd_response1
+012F: 31 FC                acall   regbank_prev
+0131: 22                   ret
+                   
+                   ; *** sd/cmd58.inc ***
+                   
+                   ; >> uint8{a},uint32{r0-r3} sd_cmd58() <<
+                   
+                   ; CMD58: read operation conditions register
+                   sd_cmd58:
+0132: EC                   mov     a,r4
+0133: C0 E0                push    acc
+0135: E4                   clr     a
+0136: F8                   mov     r0,a
+0137: F9                   mov     r1,a
+0138: FA                   mov     r2,a
+0139: FB                   mov     r3,a
+013A: FC                   mov     r4,a
+013B: 74 3A                mov     a,#58
+013D: 31 46                acall   sd_command
+013F: 31 72                acall   sd_response3
+0141: FC                   mov     r4,a
+0142: D0 E0                pop     acc
+0144: CC                   xch     a,r4
+0145: 22                   ret
+                   
+                   ; *** sd/command.inc ***
+                   
+                   ; >> void sd_command(uint8{a} cmd, uint32{r0-r3} arg, uint8{
+                   
+                   ; Issue a command to the SD card
+                   sd_command:
+0146: C0 E0                push    acc
+                           ; transmit command
+0148: 44 40                orl     a,#0x40 ; transmission bit
+014A: 11 76                acall   spi_transfer
+                           ; transmit argument
+014C: EB                   mov     a,r3
+014D: 11 76                acall   spi_transfer
+014F: EA                   mov     a,r2
+0150: 11 76                acall   spi_transfer
+0152: E9                   mov     a,r1
+0153: 11 76                acall   spi_transfer
+0155: E8                   mov     a,r0
+0156: 11 76                acall   spi_transfer
+                           ; transmit crc
+0158: EC                   mov     a,r4
+0159: 44 01                orl     a,#0x01 ; end bit
+015B: 11 76                acall   spi_transfer
+015D: D0 E0                pop     acc
+015F: 22                   ret
+                   
+                   ; *** sd/response.inc ***
+                   
+                   ; >> uint8{a} sd_response1() <<
+                   
+                   ; Read response from SD card in 'R1' format into a
+                   sd_response1:
+0160: C0 F0                push    b
+0162: 85 08 F0             mov     b,8     ; number of tries
+                   sd_response1__loop:
+0165: 74 FF                mov     a,#0xff
+0167: 11 76                acall   spi_transfer
+0169: B4 FF 03             cjne    a,#0xff,sd_response1__end       ; success
+016C: D5 F0 F6             djnz    b,sd_response1__loop    ; retry / timeout
+                   sd_response1__end:
+016F: D0 F0                pop     b
+0171: 22                   ret
+                   
+                   ; >> uint8{a}, uint32{r0-r3} sd_response3() <<
+                   
+                   ; Read response from SD card in 'R3' format into a and r0-r3
+                   sd_response3: ; same as R7
+                   
+                   ; >> uint8{a}, uint32{r0-r3} sd_response7() <<
+                   
+                   ; Read response from SD card in 'R7' format into a and r0-r3
+                   sd_response7:
+0172: 31 60                acall   sd_response1
+0174: B4 02 00             cjne    a,#0x02,sd_response7__1
+                   sd_response7__1:
+0177: 40 01                jc      sd_response7__2
+0179: 22                   ret     ; error in R1 response
+                   sd_response7__2:
+017A: F8                   mov     r0,a
+017B: 74 FF                mov     a,#0xff
+017D: 11 76                acall   spi_transfer
+017F: FB                   mov     r3,a
+0180: 74 FF                mov     a,#0xff
+0182: 11 76                acall   spi_transfer
+0184: FA                   mov     r2,a
+0185: 74 FF                mov     a,#0xff
+0187: 11 76                acall   spi_transfer
+0189: F9                   mov     r1,a
+018A: 74 FF                mov     a,#0xff
+018C: 11 76                acall   spi_transfer
+018E: C8                   xch     a,r0
+018F: 22                   ret
+                   
+                   ; *** sd/block_read.inc ***
+                   
+                   ; >> uint16{r4-r5} sd_block_read(
+                   ;       uint32{r0-r3} &block_address,
+                   ;       char *{dptr}&destination) <<
+                   
+                   ; Read block at address from sd card, write to RAM at dptr.
+                   ; Return CRC in r4-r5, address incremented,
+                   ; dptr pointing to first byte after read block.
+                   
+                   sd_block_read:
+0190: C0 E0                push    acc
+                   
+                           ; send CMD17 (single block read)
+0192: 74 11                mov     a,#17
+0194: 7C FF                mov     r4,#0xff ; command CRC, ignored
+0196: 31 46                acall   sd_command
+                   sd_block_read__wait:
+0198: 31 60                acall   sd_response1
+019A: B4 FE FB             cjne    a,#0xfe,sd_block_read__wait
+019D: 7D 00                mov     r5,#0 ; loop counter
+                           ; this loop will run 256 times,
+                           ; two bytes are read per iteration
+                   sd_block_read__loop:
+019F: 74 FF                mov     a,#0xff
+01A1: 11 76                acall   spi_transfer
+01A3: F0                   movx    @dptr,a
+01A4: A3                   inc     dptr
+01A5: 74 FF                mov     a,#0xff
+01A7: 11 76                acall   spi_transfer
+01A9: F0                   movx    @dptr,a
+01AA: A3                   inc     dptr
+01AB: DD F2                djnz    r5,sd_block_read__loop
+                           ; read block CRC
+01AD: 74 FF                mov     a,#0xff
+01AF: 11 76                acall   spi_transfer
+01B1: FD                   mov     r5,a
+01B2: 74 FF                mov     a,#0xff
+01B4: 11 76                acall   spi_transfer
+01B6: FC                   mov     r4,a
+                           ; increment block address
+01B7: 74 01                mov     a,#1
+01B9: 28                   add     a,r0
+01BA: F8                   mov     r0,a
+01BB: E4                   clr     a
+01BC: 39                   addc    a,r1
+01BD: F9                   mov     r1,a
+01BE: E4                   clr     a
+01BF: 3A                   addc    a,r2
+01C0: FA                   mov     r2,a
+01C1: E4                   clr     a
+01C2: 3B                   addc    a,r3
+01C3: FB                   mov     r3,a
+                   
+01C4: D0 E0                pop     acc
+01C6: 22                   ret
+                   
+                   
+                   ; *** util/delay.inc ***
+                   
+                   ; >> void delay_ms_8(uint8{a} duration) <<
+                   
+                   ; 1-256 millisecond delay, duration given in a.
+                   ; Assumes 20MHz clock and X2 mode.
+                   ; Actual delay is slightly longer.
+                   delay_ms_8:
+                   
+01C7: C0 E0                push    acc
+01C9: C0 F0                push    b
+                   
+                           ; This loop is repeated a times (256 if a is zero).
+                           ; The goal is to stretch each repeat to one millisec
+                   delay_ms_8__loop1:
+                           ; Each millisecond is 20k clock periods.
+                           ; In X2 mode, a machine cycle is 6 clock periods.
+                           ; Therefore, a millisecond is approx. 3334 machine c
+01CB: 75 F0 B9             mov     b,#185  ; n = 185       cycles:   2
+                   delay_ms_8__loop2:
+01CE: C0 E0                push    acc                     ; n*2 = 370
+01D0: C0 F0                push    b                       ; n*2 = 370
+01D2: A4                   mul     ab                      ; n*4 = 740
+01D3: A4                   mul     ab                      ; n*4 = 740
+01D4: D0 F0                pop     b                       ; n*2 = 370
+01D6: D0 E0                pop     acc                     ; n*2 = 370
+01D8: D5 F0 F3             djnz    b,delay_ms_8__loop2     ; n*2 = 370
+01DB: D5 E0 ED             djnz    acc,delay_ms_8__loop1   ;         2
+                                                           ; Sum: 3334
+01DE: D0 F0                pop     b
+01E0: D0 E0                pop     acc
+01E2: 22                   ret
+                   
+                   ; *** util/regbank.inc ***
+                   
+                   ; >> void* regbank_next() <<
+                   
+                   ; Switch to next register bank.
+                   ; Return pointer to r0 of old bank in new r0.
+                   
+                   regbank_next:
+01E3: C0 E0                push    acc
+                           ; check if already at highest bank
+01E5: E5 D0                mov     a,      psw
+01E7: 54 18                anl     a,      #0x18
+01E9: B4 18 02             cjne    a,      #0x18,  regbank_next__continue
+01EC: 71 4C                acall   panic   ; overflow
+                   regbank_next__continue:
+                           ; switch to next bank
+01EE: E5 D0                mov     a,      psw
+01F0: 24 08                add     a,      #0x08
+01F2: F5 D0                mov     psw,    a
+                           ; calculate pointer to old bank
+01F4: 54 18                anl     a,      #0x18
+01F6: 24 F8                add     a,      #0xf8
+01F8: F8                   mov     r0,     a
+                           ; done
+01F9: D0 E0                pop     acc
+01FB: 22                   ret
+                   
+                   ; >> void regbank_prev() <<
+                   
+                   ; Switch to previous register bank.
+                   
+                   regbank_prev:
+01FC: C0 E0                push    acc
+                           ; check if already at lowest bank
+01FE: E5 D0                mov     a,      psw
+0200: 54 18                anl     a,      #0x18
+0202: 70 02                jnz     regbank_prev__continue
+0204: 71 4C                acall   panic   ; underflow
+                   regbank_prev__continue:
+                           ; switch to previous bank
+0206: E5 D0                mov     a,      psw
+0208: 24 F8                add     a,      #0xf8
+020A: F5 D0                mov     psw,    a
+                           ; done
+020C: D0 E0                pop     acc
+020E: 22                   ret
+                   
+                   ; *** print/char.inc ***
+                   
+                   ; >> void print_char(char a) <<
+                   
+                   ; Print char from accumulator.
+                   ; Indirect call to function behind OUT pointer.
+                   
+                   print_char:
+020F: C0 32                push    OUT
+0211: C0 33                push    OUT+1
+0213: 22                   ret
+                   
+                   ; *** print/hex.inc ***
+                   
+                   ; >> void print_hex_8(char a) <<
+                   
+                   ; Print hexadecimal number from accumulator.
+                   
+                   print_hex_8:
+0214: C4                   swap    a       ; high nibble first
+0215: 51 18                acall   print_hex_8__nibble
+0217: C4                   swap    a
+                   print_hex_8__nibble:
+0218: C0 E0                push    ACC
+021A: 54 0F                anl     a,      #0x0f
+021C: 24 90                add     a,      #0x90
+021E: D4                   da      a
+021F: 34 40                addc    a,      #0x40
+0221: D4                   da      a
+0222: 44 20                orl     a,      #0x20   ; lower case
+0224: 51 0F                acall   print_char
+0226: D0 E0                pop     ACC
+0228: 22                   ret
+                   
+                   ; >> void print_hex_16(int r0r1) <<
+                   
+                   ; Print hexadecimal number from r0-r1.
+                   
+                   print_hex_16:
+0229: C0 E0                push    ACC
+022B: E9                   mov     a,      r1      ; MSB first
+022C: 51 14                acall   print_hex_8
+022E: E8                   mov     a,      r0      ; LSB second
+022F: 51 14                acall   print_hex_8
+0231: D0 E0                pop     ACC
+0233: 22                   ret
+                   
+                   ; >> void print_hex_32(long r0r1r2r3) <<
+                   
+                   ; Print hexadecimal number from r0-r3.
+                   
+                   print_hex_32:
+0234: C0 E0                push    ACC
+0236: EB                   mov     a,      r3      ; MSB first
+0237: 51 14                acall   print_hex_8
+0239: EA                   mov     a,      r2
+023A: 51 14                acall   print_hex_8
+023C: E9                   mov     a,      r1
+023D: 51 14                acall   print_hex_8
+023F: E8                   mov     a,      r0      ; LSB last
+0240: 51 14                acall   print_hex_8
+0242: D0 E0                pop     ACC
+0244: 22                   ret
+                   
+                   ; *** print/text.inc ***
+                   
+                   ; >> void print_text(char* dptr) <<
+                   
+                   ; Print null-terminated string from program code.
+                   ; Aborts if no null terminator is found after 256 bytes.
+                   
+                   print_text:
+0245: C0 E0                push    ACC
+0247: E8                   mov     a,      r0
+0248: C0 E0                push    ACC
+                   
+024A: E4                   clr     a
+024B: F8                   mov     r0,     a
+                   print_text__loop:
+024C: 93                   movc    a,      @dptr+a
+024D: 60 06                jz      print_text__end
+024F: 51 0F                acall   print_char
+0251: 08                   inc     r0
+0252: E8                   mov     a,      r0
+0253: 70 F7                jnz     print_text__loop
+                   
+                   print_text__end:
+0255: D0 E0                pop     ACC
+0257: F8                   mov     r0,     a
+0258: D0 E0                pop     ACC
+025A: 22                   ret
+                   
+                   ; *** stream/xram_read.inc ***
+                   
+                   ; >> char stream_xram_read() <<
+                   
+                   ; Read byte from on-chip expanded RAM at stream input pointe
+                   ; 16 bit value of the stream pointer is used and incremented
+                   
+                   stream_xram_read:
+025B: C0 8E                push    auxr
+025D: C0 82                push    dpl
+025F: C0 83                push    dph
+                   
+0261: E5 8E                mov     a,      auxr
+0263: 55 E1                anl     a,      0xe1    ; clear extram, xrs0-2
+0265: 45 10                orl     a,      0x10    ; set xrs2 (size 1792 bytes)
+0267: F5 8E                mov     auxr,   a
+                   
+0269: 85 34 82             mov     dpl,    stream_in
+026C: 85 35 83             mov     dph,    stream_in+1
+                   
+026F: E0                   movx    a,      @dptr
+0270: A3                   inc     dptr
+0271: 85 82 34             mov     stream_in,      dpl
+0274: 85 83 35             mov     stream_in+1,    dph
+                   
+0277: D0 83                pop     dph
+0279: D0 82                pop     dpl
+027B: D0 8E                pop     auxr
+027D: 22                   ret
+                   
+                   ; *** read/char.inc ***
+                   
+                   ; >> char read_char() <<
+                   
+                   ; Read char into accumulator.
+                   ; Indirect call to function behind IN pointer.
+                   
+                   read_char:
+027E: C0 30                push    IN
+0280: C0 31                push    IN+1
+0282: 22                   ret
+                   
+                   ; *** util/xch.inc ***
+                   
+                   ; >> void xch_r0123_r4567(uint32 &r0r1r2r3, uint32 &r4r5r6r7
+                   
+                   ; Exchange registers r0-r3 with r4-r7.
+                   
+                   xch_r0123_r4567:
+                           ; r0 <-> r4
+0283: C8                   xch     a,      r0
+0284: CC                   xch     a,      r4
+0285: C8                   xch     a,      r0
+                           ; r1 <-> r5
+0286: C9                   xch     a,      r1
+0287: CD                   xch     a,      r5
+0288: C9                   xch     a,      r1
+                           ; r2 <-> r6
+0289: CA                   xch     a,      r2
+028A: CE                   xch     a,      r6
+028B: CA                   xch     a,      r2
+                           ; r3 <-> r7
+028C: CB                   xch     a,      r3
+028D: CF                   xch     a,      r7
+028E: CB                   xch     a,      r3
+                           ; a remains unchanged
+028F: 22                   ret
+                   
+                   ; *** util/dump.inc ***
+                   
+                   ; >> uint32{r0-r3} dump(uint32{r0-r3} addr, uint8{a} count) 
+                   
+                   ; Print hexdump from standard input to standard output.
+                   ; Starting value for address column in r0-r3.
+                   ; Number of bytes to print in a (0 means 256).
+                   ; r0-r3 contains next address upon exit.
+                   
+                   dump:
+0290: C0 F0                push    b
+0292: C0 E0                push    acc
+0294: F5 F0                mov     b,      a
+0296: EC                   mov     a,      r4
+0297: C0 E0                push    acc
+0299: ED                   mov     a,      r5
+029A: C0 E0                push    acc
+029C: EE                   mov     a,      r6
+029D: C0 E0                push    acc
+029F: EF                   mov     a,      r7
+02A0: C0 E0                push    acc
+                   
+                           ; b: total bytes remaining
+                           ; r0: buffer pointer
+                           ; r1: read loop counter / padding size
+                           ; r2: print loop counter
+                   
+                           ; r4-7: address label
+02A2: 51 83                acall   xch_r0123_r4567
+                   
+                           ; allocate 16 byte array on stack
+02A4: E5 81                mov     a,      sp
+02A6: F8                   mov     r0,     a
+02A7: 24 10                add     a,      #16
+02A9: F5 81                mov     sp,     a
+                   
+                   dump__line_loop:
+                           ; read into buffer
+02AB: 79 10                mov     r1,     #16
+                   dump__read_loop:
+02AD: 51 7E                acall   read_char
+02AF: 08                   inc     r0
+02B0: F6                   mov     @r0,    a
+02B1: D5 F0 03             djnz    b,      dump__read_continue
+02B4: 19                   dec     r1
+02B5: 80 02                sjmp    dump__read_end
+                   dump__read_continue:
+02B7: D9 F4                djnz    r1,     dump__read_loop
+                   dump__read_end:
+                   
+                           ; print address column
+02B9: 51 83                acall   xch_r0123_r4567
+02BB: 51 34                acall   print_hex_32
+02BD: 51 83                acall   xch_r0123_r4567
+02BF: 74 3A                mov     a,      #':'
+02C1: 51 0F                acall   print_char
+                   
+                           ; if r1 is nonzero here, we have a shorter line
+                           ; the value in r1 is the number of padding bytes
+                   
+                           ; wind back pointer
+02C3: E8                   mov     a,      r0
+02C4: 24 F0                add     a,      #-16
+02C6: 29                   add     a,      r1
+02C7: F8                   mov     r0,     a
+                   
+                           ; print hex
+02C8: 7A 10                mov     r2,     #16
+                   dump__print_hex_loop:
+02CA: 08                   inc     r0
+02CB: EA                   mov     a,      r2
+02CC: 54 03                anl     a,      #3      ; mod 4
+02CE: 70 04                jnz     dump__print_hex_no_gap
+02D0: 74 20                mov     a,      #' ' ; gap after every 4 bytes
+02D2: 51 0F                acall   print_char
+                   dump__print_hex_no_gap:
+02D4: EA                   mov     a,      r2
+02D5: D3                   setb    c
+02D6: 99                   subb    a,      r1
+02D7: 50 08                jnc     dump__print_hex_no_padding
+02D9: 74 20                mov     a,      #' ' ; padding for shorter line
+02DB: 51 0F                acall   print_char
+02DD: 51 0F                acall   print_char
+02DF: 80 03                sjmp    dump__print_hex_next
+                   dump__print_hex_no_padding:
+02E1: E6                   mov     a,      @r0
+02E2: 51 14                acall   print_hex_8
+                   dump__print_hex_next:
+02E4: 74 20                mov     a,      #' ' ; space between bytes
+02E6: 51 0F                acall   print_char
+02E8: DA E0                djnz    r2,     dump__print_hex_loop
+                   
+                           ; wind back again
+02EA: E8                   mov     a,      r0
+02EB: 24 F0                add     a,      #-16
+02ED: F8                   mov     r0,     a
+                   
+                           ; print ascii
+02EE: 74 20                mov     a,      #' '
+02F0: 51 0F                acall   print_char
+02F2: 74 7C                mov     a,      #'|'
+02F4: 51 0F                acall   print_char
+02F6: 74 10                mov     a,      #16
+02F8: C3                   clr     c
+02F9: 99                   subb    a,      r1
+02FA: F9                   mov     r1,     a ; number of bytes to print
+02FB: FA                   mov     r2,     a
+                   dump__print_ascii_loop:
+02FC: 08                   inc     r0
+02FD: E6                   mov     a,      @r0
+02FE: B4 20 00             cjne    a,      #0x20,  dump__print_ascii_check1
+                   dump__print_ascii_check1:
+0301: 40 05                jc      dump__print_ascii_replace
+0303: B4 7F 00             cjne    a,      #0x7f,  dump__print_ascii_check2
+                   dump__print_ascii_check2:
+0306: 40 02                jc      dump__print_ascii_continue
+                   dump__print_ascii_replace:
+0308: 74 2E                mov     a,      #'.'
+                   dump__print_ascii_continue:
+030A: 51 0F                acall   print_char
+030C: DA EE                djnz    r2,     dump__print_ascii_loop
+030E: 74 7C                mov     a,      #'|'
+0310: 51 0F                acall   print_char
+0312: 74 0D                mov     a,      #13
+0314: 51 0F                acall   print_char
+0316: 74 0A                mov     a,      #10
+0318: 51 0F                acall   print_char
+                   
+                           ; wind back again
+031A: E8                   mov     a,      r0
+031B: 24 F0                add     a,      #-16
+031D: F8                   mov     r0,     a
+                   
+                           ; next address
+031E: EC                   mov     a,      r4
+031F: 29                   add     a,      r1
+0320: FC                   mov     r4,     a
+0321: ED                   mov     a,      r5
+0322: 34 00                addc    a,      #0
+0324: FD                   mov     r5,     a
+0325: EE                   mov     a,      r6
+0326: 34 00                addc    a,      #0
+0328: FE                   mov     r6,     a
+0329: EF                   mov     a,      r7
+032A: 34 00                addc    a,      #0
+032C: FF                   mov     r7,     a
+                   
+032D: E5 F0                mov     a,      b
+032F: 60 02                jz      dump__end
+0331: 41 AB                ajmp    dump__line_loop
+                   
+                   dump__end:
+                           ; deallocate array from stack
+0333: E5 81                mov     a,      sp
+0335: 24 F0                add     a,      #-16
+0337: F5 81                mov     sp,     a
+                   
+0339: 51 83                acall   xch_r0123_r4567
+                   
+033B: D0 E0                pop     acc
+033D: FF                   mov     r7,     a
+033E: D0 E0                pop     acc
+0340: FE                   mov     r6,     a
+0341: D0 E0                pop     acc
+0343: FD                   mov     r5,     a
+0344: D0 E0                pop     acc
+0346: FC                   mov     r4,     a
+0347: D0 E0                pop     acc
+0349: D0 F0                pop     b
+034B: 22                   ret
+                   
+034C:              .equ panic_out, serial_tx
+                   
+                   ; *** panic/panic.inc ***
+                   
+                   ; >> void panic() <<
+                   
+                   ; Unrecoverable error handler.
+                   ; Print caller address and halt.
+                   
+                   panic:
+034C: C2 AF                clr     ea      ; disable interrupts
+034E: 90 00 66             mov     dptr,   #panic_out
+0351: 85 82 32             mov     out,    dpl
+0354: 85 83 33             mov     out+1,  dph
+0357: 90 03 66             mov     dptr,   #panic_text
+035A: 51 45                acall   print_text
+035C: D0 E0                pop     acc
+035E: 51 14                acall   print_hex_8
+0360: D0 E0                pop     acc
+0362: 51 14                acall   print_hex_8
+0364: 80 FE                sjmp    *
+                   
+                   panic_text:
+0366: 0D 0A                .db     13, 10
+0368: 20 21 21 21 
+      20 70 61 6E 
+      69 63 20 40 
+                           .db     " !!! panic @"
+0374: 00                   .db     0
