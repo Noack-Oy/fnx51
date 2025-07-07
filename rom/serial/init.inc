@@ -16,4 +16,13 @@ serial_init:
 	mov	SCON,	#0x52	; SM1, REN, TI
 	mov	BRL,	#191	; 9600 @20MHz CLK
 	mov	BDRCON, #0x1e	; BRR, RBCK, TBCK, SPD
+
+	mov	dptr,	#serial_rx
+	mov	IN,	DPL
+	mov	IN+1,	DPH
+
+	mov	dptr,	#serial_tx
+	mov	OUT,	DPL
+	mov	OUT+1,	DPH
+
 	ret

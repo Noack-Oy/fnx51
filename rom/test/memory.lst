@@ -27,6 +27,9 @@
 0000:              .equ    memory_start,   0x40    ; first allocatable address
 0000:              .equ    memory_end,     0x42    ; last allocatable address
                    
+0000:              .equ    block_read,     0x44    ; pointers to block device d
+0000:              .equ    block_write,    0x46    ; code (read and write funct
+                   
 0000:              .equ    stack,  0x50    ; beginning of stack
                    
                    ; *** global/sfr.equ ***
@@ -59,114 +62,106 @@
                    
 0000: 75 81 50             mov     SP,     #STACK
                    
-0003: 90 00 B9             mov     dptr,   #serial_rx
-0006: 85 82 30             mov     IN,     DPL
-0009: 85 83 31             mov     IN+1,   DPH
-                   
-000C: 90 00 B1             mov     dptr,   #serial_tx
-000F: 85 82 32             mov     OUT,    DPL
-0012: 85 83 33             mov     OUT+1,  DPH
-                   
                    ; *** test/memory.asm ***
                    
-0015: 11 A7                acall   serial_init
+0003: 11 95                acall   serial_init
                    
                            ; use xram
-0017: 53 8E E1             anl     auxr,#0xe1      ; clear extram, xrs0-2
-001A: 43 8E 10             orl     auxr,#0x10      ; set xrs2 (size 1792 bytes)
+0005: 53 8E E1             anl     auxr,#0xe1      ; clear extram, xrs0-2
+0008: 43 8E 10             orl     auxr,#0x10      ; set xrs2 (size 1792 bytes)
                    
                            ; initialize memory list
-001D: 90 00 00             mov     dptr,#0000
-0020: 85 82 38             mov     memory_list,dpl
-0023: 85 83 39             mov     memory_list+1,dph
+000B: 90 00 00             mov     dptr,#0000
+000E: 85 82 38             mov     memory_list,dpl
+0011: 85 83 39             mov     memory_list+1,dph
                            ; list head: pointer to first block
-0026: 74 04                mov     a,#4
-0028: F5 40                mov     memory_start,a
-002A: F0                   movx    @dptr,a
-002B: A3                   inc     dptr
-002C: E4                   clr     a
-002D: F5 41                mov     memory_start+1,a
-002F: F0                   movx    @dptr,a
-0030: A3                   inc     dptr
+0014: 74 04                mov     a,#4
+0016: F5 40                mov     memory_start,a
+0018: F0                   movx    @dptr,a
+0019: A3                   inc     dptr
+001A: E4                   clr     a
+001B: F5 41                mov     memory_start+1,a
+001D: F0                   movx    @dptr,a
+001E: A3                   inc     dptr
                            ; max address of allocatable memory: 0x06ff
-0031: 75 42 FF             mov     memory_end,#0xff
-0034: 85 06 43             mov     memory_end+1,0x06
+001F: 75 42 FF             mov     memory_end,#0xff
+0022: 85 06 43             mov     memory_end+1,0x06
                            ; amount of free memory: 1792-4 = 1788 = 0x06fc
-0037: 74 FC                mov     a,#0xfc
-0039: F0                   movx    @dptr,a
-003A: A3                   inc     dptr
-003B: 74 06                mov     a,#0x06
-003D: F0                   movx    @dptr,a
-003E: A3                   inc     dptr
+0025: 74 FC                mov     a,#0xfc
+0027: F0                   movx    @dptr,a
+0028: A3                   inc     dptr
+0029: 74 06                mov     a,#0x06
+002B: F0                   movx    @dptr,a
+002C: A3                   inc     dptr
                            ; first entry: pointer to next (null initially)
-003F: E4                   clr     a
-0040: F0                   movx    @dptr,a
-0041: A3                   inc     dptr
-0042: F0                   movx    @dptr,a
-0043: A3                   inc     dptr
+002D: E4                   clr     a
+002E: F0                   movx    @dptr,a
+002F: A3                   inc     dptr
+0030: F0                   movx    @dptr,a
+0031: A3                   inc     dptr
                            ; size of block (same as free memory initially)
-0044: 74 FC                mov     a,#0xfc
-0046: F0                   movx    @dptr,a
-0047: A3                   inc     dptr
-0048: 74 06                mov     a,#0x06
-004A: F0                   movx    @dptr,a
-004B: A3                   inc     dptr
+0032: 74 FC                mov     a,#0xfc
+0034: F0                   movx    @dptr,a
+0035: A3                   inc     dptr
+0036: 74 06                mov     a,#0x06
+0038: F0                   movx    @dptr,a
+0039: A3                   inc     dptr
                    
                    loop:
-004C: 11 C1                acall   read_char
+003A: 11 C1                acall   read_char
                    
-004E: B4 44 26             cjne    a,#'D',__1
-0051: 11 C6                acall   read_hex_32
-0053: 88 34                mov     stream_in,r0
-0055: 89 35                mov     stream_in+1,r1
-0057: 11 C6                acall   read_hex_32
-0059: E8                   mov     a,r0
-005A: A8 34                mov     r0,stream_in
-005C: A9 35                mov     r1,stream_in+1
-005E: 7A 00                mov     r2,#0
-0060: 7B 00                mov     r3,#0
-0062: C0 30                push    in
-0064: C0 31                push    in+1
-0066: 90 02 66             mov     dptr,#stream_xram_read
-0069: 85 82 30             mov     in,dpl
-006C: 85 83 31             mov     in+1,dph
-006F: 31 AA                acall   dump
-0071: D0 31                pop     in+1
-0073: D0 30                pop     in
-0075: 80 D5                sjmp    loop
+003C: B4 44 26             cjne    a,#'D',__1
+003F: 11 C6                acall   read_hex_32
+0041: 88 34                mov     stream_in,r0
+0043: 89 35                mov     stream_in+1,r1
+0045: 11 C6                acall   read_hex_32
+0047: E8                   mov     a,r0
+0048: A8 34                mov     r0,stream_in
+004A: A9 35                mov     r1,stream_in+1
+004C: 7A 00                mov     r2,#0
+004E: 7B 00                mov     r3,#0
+0050: C0 30                push    in
+0052: C0 31                push    in+1
+0054: 90 02 66             mov     dptr,#stream_xram_read
+0057: 85 82 30             mov     in,dpl
+005A: 85 83 31             mov     in+1,dph
+005D: 31 AA                acall   dump
+005F: D0 31                pop     in+1
+0061: D0 30                pop     in
+0063: 80 D5                sjmp    loop
                    __1:
-0077: B4 41 08             cjne    a,#'A',__2
-007A: 11 C6                acall   read_hex_32
-007C: 51 89                acall   memory_allocate
-007E: 31 55                acall   print_hex_16
-0080: 80 1B                sjmp    next
+0065: B4 41 08             cjne    a,#'A',__2
+0068: 11 C6                acall   read_hex_32
+006A: 51 89                acall   memory_allocate
+006C: 31 55                acall   print_hex_16
+006E: 80 1B                sjmp    next
                    __2:
-0082: B4 52 14             cjne    a,#'R',__3
-0085: 11 C6                acall   read_hex_32
-0087: E8                   mov     a,r0
-0088: FC                   mov     r4,a
-0089: E9                   mov     a,r1
-008A: FD                   mov     r5,a
-008B: 11 C6                acall   read_hex_32
-008D: E8                   mov     a,r0
-008E: FA                   mov     r2,a
-008F: E9                   mov     a,r1
-0090: FB                   mov     r3,a
-0091: EC                   mov     a,r4
-0092: F8                   mov     r0,a
-0093: ED                   mov     a,r5
-0094: F9                   mov     r1,a
-0095: 71 4E                acall   memory_release
-0097: 80 04                sjmp    next
+0070: B4 52 14             cjne    a,#'R',__3
+0073: 11 C6                acall   read_hex_32
+0075: E8                   mov     a,r0
+0076: FC                   mov     r4,a
+0077: E9                   mov     a,r1
+0078: FD                   mov     r5,a
+0079: 11 C6                acall   read_hex_32
+007B: E8                   mov     a,r0
+007C: FA                   mov     r2,a
+007D: E9                   mov     a,r1
+007E: FB                   mov     r3,a
+007F: EC                   mov     a,r4
+0080: F8                   mov     r0,a
+0081: ED                   mov     a,r5
+0082: F9                   mov     r1,a
+0083: 71 4E                acall   memory_release
+0085: 80 04                sjmp    next
                    __3:
-0099: 74 3F                mov     a,#'?'
-009B: 31 25                acall   print_char
+0087: 74 3F                mov     a,#'?'
+0089: 31 25                acall   print_char
                    next:
-009D: 74 0D                mov     a,#13
-009F: 31 25                acall   print_char
-00A1: 74 0A                mov     a,#10
-00A3: 31 25                acall   print_char
-00A5: 80 A5                sjmp    loop
+008B: 74 0D                mov     a,#13
+008D: 31 25                acall   print_char
+008F: 74 0A                mov     a,#10
+0091: 31 25                acall   print_char
+0093: 80 A5                sjmp    loop
                    
                    
                    ; *********************
@@ -187,9 +182,18 @@
                    ; also note oscillator diagram on page 16!
                    
                    serial_init:
-00A7: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
-00AA: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
-00AD: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+0095: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
+0098: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
+009B: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+                   
+009E: 90 00 B9             mov     dptr,   #serial_rx
+00A1: 85 82 30             mov     IN,     DPL
+00A4: 85 83 31             mov     IN+1,   DPH
+                   
+00A7: 90 00 B1             mov     dptr,   #serial_tx
+00AA: 85 82 32             mov     OUT,    DPL
+00AD: 85 83 33             mov     OUT+1,  DPH
+                   
 00B0: 22                   ret
                    
                    ; *** serial/tx.inc ***

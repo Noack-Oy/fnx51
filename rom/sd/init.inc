@@ -41,6 +41,10 @@ sd_init__continue:
 
 	dec	r5	; 0: success
 
+	mov	dptr,#sd_block_read
+	mov	block_read,dpl
+	mov	block_read+1,dph
+
 sd_init__end:
 	pop	acc
 	xch	a,r5

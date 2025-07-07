@@ -25,6 +25,9 @@
 0000:              .equ    memory_start,   0x40    ; first allocatable address
 0000:              .equ    memory_end,     0x42    ; last allocatable address
                    
+0000:              .equ    block_read,     0x44    ; pointers to block device d
+0000:              .equ    block_write,    0x46    ; code (read and write funct
+                   
 0000:              .equ    stack,  0x50    ; beginning of stack
                    
                    ; *** serial/sfr.equ ***
@@ -50,33 +53,25 @@
                    
 0000: 75 81 50             mov     SP,     #STACK
                    
-0003: 90 00 36             mov     dptr,   #serial_rx
-0006: 85 82 30             mov     IN,     DPL
-0009: 85 83 31             mov     IN+1,   DPH
-                   
-000C: 90 00 3E             mov     dptr,   #serial_tx
-000F: 85 82 32             mov     OUT,    DPL
-0012: 85 83 33             mov     OUT+1,  DPH
-                   
                    ; *** test/dump.asm ***
                    
-0015: 11 2C                acall   serial_init
+0003: 11 1A                acall   serial_init
                    
-0017: E4                   clr     a
-0018: F8                   mov     r0,     a
-0019: F9                   mov     r1,     a
-001A: FA                   mov     r2,     a
-001B: FB                   mov     r3,     a
-001C: 74 25                mov     a,      #37
+0005: E4                   clr     a
+0006: F8                   mov     r0,     a
+0007: F9                   mov     r1,     a
+0008: FA                   mov     r2,     a
+0009: FB                   mov     r3,     a
+000A: 74 25                mov     a,      #37
                    
-001E: 11 81                acall   dump
-0020: 11 6B                acall   print_hex_32
-0022: 74 0D                mov     a,      #13
-0024: 11 46                acall   print_char
-0026: 74 0A                mov     a,      #10
-0028: 11 46                acall   print_char
+000C: 11 81                acall   dump
+000E: 11 6B                acall   print_hex_32
+0010: 74 0D                mov     a,      #13
+0012: 11 46                acall   print_char
+0014: 74 0A                mov     a,      #10
+0016: 11 46                acall   print_char
                    
-002A: 80 FE                sjmp    *
+0018: 80 FE                sjmp    *
                    
                    
                    ; *********************
@@ -97,9 +92,18 @@
                    ; also note oscillator diagram on page 16!
                    
                    serial_init:
-002C: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
-002F: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
-0032: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+001A: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
+001D: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
+0020: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+                   
+0023: 90 00 36             mov     dptr,   #serial_rx
+0026: 85 82 30             mov     IN,     DPL
+0029: 85 83 31             mov     IN+1,   DPH
+                   
+002C: 90 00 3E             mov     dptr,   #serial_tx
+002F: 85 82 32             mov     OUT,    DPL
+0032: 85 83 33             mov     OUT+1,  DPH
+                   
 0035: 22                   ret
                    
                    ; *** serial/rx.inc ***

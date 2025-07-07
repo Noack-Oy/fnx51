@@ -13,4 +13,7 @@
 .equ	memory_start,	0x40	; first allocatable address
 .equ	memory_end,	0x42	; last allocatable address
 
+.equ	block_read,	0x44	; pointers to block device driver
+.equ	block_write,	0x46	; code (read and write functions)
+
 .equ	stack,	0x50	; beginning of stack

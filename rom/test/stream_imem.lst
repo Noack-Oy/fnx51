@@ -24,6 +24,9 @@
 0000:              .equ    memory_start,   0x40    ; first allocatable address
 0000:              .equ    memory_end,     0x42    ; last allocatable address
                    
+0000:              .equ    block_read,     0x44    ; pointers to block device d
+0000:              .equ    block_write,    0x46    ; code (read and write funct
+                   
 0000:              .equ    stack,  0x50    ; beginning of stack
                    
                    ; *** serial/sfr.equ ***
@@ -49,51 +52,43 @@
                    
 0000: 75 81 50             mov     SP,     #STACK
                    
-0003: 90 00 74             mov     dptr,   #serial_rx
-0006: 85 82 30             mov     IN,     DPL
-0009: 85 83 31             mov     IN+1,   DPH
-                   
-000C: 90 00 7C             mov     dptr,   #serial_tx
-000F: 85 82 32             mov     OUT,    DPL
-0012: 85 83 33             mov     OUT+1,  DPH
-                   
                    ; *** test/stream.asm ***
                    
-0015: 11 6A                acall   serial_init
+0003: 11 58                acall   serial_init
                    
-0017:              .equ    scratch,        0x80
+0005:              .equ    scratch,        0x80
                    
-0017: C0 32                push    out
-0019: C0 33                push    out+1
-001B: 90 00 8F             mov     dptr,   #stream_imem_write
-001E: 85 82 32             mov     out,    dpl
-0021: 85 83 33             mov     out+1,  dph
-0024: 75 36 80             mov     stream_out,     #scratch
-0027: 90 00 4D             mov     dptr,   #test_message
-002A: 11 9F                acall   print_text
-002C: E5 36                mov     a,      stream_out
-002E: 11 F9                acall   print_int_u8
-0030: A8 36                mov     r0,     stream_out
-0032: 74 FF                mov     a,      #0xff
-0034: F6                   mov     @r0,    a
-0035: D0 33                pop     out+1
-0037: D0 32                pop     out
+0005: C0 32                push    out
+0007: C0 33                push    out+1
+0009: 90 00 8F             mov     dptr,   #stream_imem_write
+000C: 85 82 32             mov     out,    dpl
+000F: 85 83 33             mov     out+1,  dph
+0012: 75 36 80             mov     stream_out,     #scratch
+0015: 90 00 3B             mov     dptr,   #test_message
+0018: 11 9F                acall   print_text
+001A: E5 36                mov     a,      stream_out
+001C: 11 F9                acall   print_int_u8
+001E: A8 36                mov     r0,     stream_out
+0020: 74 FF                mov     a,      #0xff
+0022: F6                   mov     @r0,    a
+0023: D0 33                pop     out+1
+0025: D0 32                pop     out
                    
-0039: E4                   clr     a
-003A: FB                   mov     r3,     a
-003B: FA                   mov     r2,     a
-003C: F9                   mov     r1,     a
-003D: F8                   mov     r0,     a
-003E: F5 34                mov     stream_in,      a
-0040: 90 00 84             mov     dptr,   #stream_imem_read
-0043: 85 82 30             mov     in,     dpl
-0046: 85 83 31             mov     in+1,   dph
-0049: 51 AA                acall   dump
+0027: E4                   clr     a
+0028: FB                   mov     r3,     a
+0029: FA                   mov     r2,     a
+002A: F9                   mov     r1,     a
+002B: F8                   mov     r0,     a
+002C: F5 34                mov     stream_in,      a
+002E: 90 00 84             mov     dptr,   #stream_imem_read
+0031: 85 82 30             mov     in,     dpl
+0034: 85 83 31             mov     in+1,   dph
+0037: 51 AA                acall   dump
                    
-004B: 80 FE                sjmp    *
+0039: 80 FE                sjmp    *
                    
                    test_message:
-004D: 48 65 6C 6C 
+003B: 48 65 6C 6C 
       6F 20 66 72 
       6F 6D 20 69 
       6E 74 65 72 
@@ -102,7 +97,7 @@
       72 79 3A 20 
                            .db     "Hello from internal memory: "
                    test_message_end:
-0069: 00                   .db     0
+0057: 00                   .db     0
                    
                    
                    ; *********************
@@ -123,9 +118,18 @@
                    ; also note oscillator diagram on page 16!
                    
                    serial_init:
-006A: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
-006D: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
-0070: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+0058: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
+005B: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
+005E: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+                   
+0061: 90 00 74             mov     dptr,   #serial_rx
+0064: 85 82 30             mov     IN,     DPL
+0067: 85 83 31             mov     IN+1,   DPH
+                   
+006A: 90 00 7C             mov     dptr,   #serial_tx
+006D: 85 82 32             mov     OUT,    DPL
+0070: 85 83 33             mov     OUT+1,  DPH
+                   
 0073: 22                   ret
                    
                    ; *** serial/rx.inc ***

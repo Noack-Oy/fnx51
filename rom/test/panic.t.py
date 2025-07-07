@@ -6,7 +6,7 @@ sys.path.append('..')
 from loader import *
 
 def run_test(pe):
-        pe.expect('!!! panic @0019')
+        pe.expect('!!! panic @0007')
 
 if __name__ == '__main__':
     try:
