@@ -37,6 +37,7 @@
                    
 0000:              .equ    block_read,     0x44    ; pointers to block device d
 0000:              .equ    block_write,    0x46    ; code (read and write funct
+0000:              .equ    block_cache,    0x48    ; pointer to block cache dat
                    
 0000:              .equ    stack,  0x50    ; beginning of stack
                    
@@ -925,21 +926,30 @@
                    
                    panic:
 03DB: C2 AF                clr     ea      ; disable interrupts
-03DD: 90 01 9C             mov     dptr,   #panic_out
-03E0: 85 82 32             mov     out,    dpl
-03E3: 85 83 33             mov     out+1,  dph
-03E6: 90 03 F5             mov     dptr,   #panic_text
-03E9: 31 A9                acall   print_text
-03EB: D0 E0                pop     acc
-03ED: 31 BF                acall   print_hex_8
-03EF: D0 E0                pop     acc
-03F1: 31 BF                acall   print_hex_8
-03F3: 80 FE                sjmp    *
+03DD: F8                   mov     r0,a
+03DE: 90 01 9C             mov     dptr,#panic_out
+03E1: 85 82 32             mov     out,dpl
+03E4: 85 83 33             mov     out+1,dph
+03E7: 90 04 05             mov     dptr,#panic_text
+03EA: 31 A9                acall   print_text
+03EC: D0 E0                pop     acc
+03EE: 31 BF                acall   print_hex_8
+03F0: D0 E0                pop     acc
+03F2: 31 BF                acall   print_hex_8
+03F4: 74 20                mov     a,#' '
+03F6: 31 A4                acall   print_char
+03F8: E8                   mov     a,r0
+03F9: 31 BF                acall   print_hex_8
+03FB: 74 0D                mov     a,#13
+03FD: 31 A4                acall   print_char
+03FF: 74 0A                mov     a,#10
+0401: 31 A4                acall   print_char
+0403: 80 FE                sjmp    *
                    
                    panic_text:
-03F5: 0D 0A                .db     13, 10
-03F7: 20 21 21 21 
+0405: 0D 0A                .db     13, 10
+0407: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                            .db     " !!! panic @"
-0403: 00                   .db     0
+0413: 00                   .db     0

@@ -7,6 +7,8 @@
 sd_init:
 	mov	a,r5	; r5 is used as temp store for error code
 	push	acc
+	push	dpl
+	push	dph
 
 	mov	spcon,#sd_spi_config
 	acall	sd_warmup
@@ -46,6 +48,8 @@ sd_init__continue:
 	mov	block_read+1,dph
 
 sd_init__end:
+	pop	dph
+	pop	dpl
 	pop	acc
 	xch	a,r5
 	ret

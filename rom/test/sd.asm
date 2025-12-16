@@ -22,7 +22,7 @@
 
 ; *** test/sd.asm ***
 
-	.org	0
+.org	0
 .inc	../global/init.inc
 
 	acall	serial_init
@@ -73,6 +73,8 @@
 
 halt:
 	sjmp	halt
+
+.org	0x0100
 
 ; *********************
 ; * Library Functions *

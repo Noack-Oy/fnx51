@@ -15,5 +15,6 @@
 
 .equ	block_read,	0x44	; pointers to block device driver
 .equ	block_write,	0x46	; code (read and write functions)
+.equ	block_cache,	0x48	; pointer to block cache data in xram
 
 .equ	stack,	0x50	; beginning of stack

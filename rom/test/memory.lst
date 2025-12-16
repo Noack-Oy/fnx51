@@ -29,6 +29,7 @@
                    
 0000:              .equ    block_read,     0x44    ; pointers to block device d
 0000:              .equ    block_write,    0x46    ; code (read and write funct
+0000:              .equ    block_cache,    0x48    ; pointer to block cache dat
                    
 0000:              .equ    stack,  0x50    ; beginning of stack
                    
@@ -702,7 +703,7 @@
                    
 0291: D0 83                pop     dph
 0293: D0 82                pop     dpl
-0295: D0 E0                pop     acc     
+0295: D0 E0                pop     acc
                    
 0297: 22                   ret
                    
@@ -1152,21 +1153,30 @@
                    
                    panic:
 0483: C2 AF                clr     ea      ; disable interrupts
-0485: 90 00 7E             mov     dptr,   #panic_out
-0488: 85 82 32             mov     out,    dpl
-048B: 85 83 33             mov     out+1,  dph
-048E: 90 04 9D             mov     dptr,   #panic_text
-0491: 11 F7                acall   print_text
-0493: D0 E0                pop     acc
-0495: 31 0D                acall   print_hex_8
-0497: D0 E0                pop     acc
-0499: 31 0D                acall   print_hex_8
-049B: 80 FE                sjmp    *
+0485: F8                   mov     r0,a
+0486: 90 00 7E             mov     dptr,#panic_out
+0489: 85 82 32             mov     out,dpl
+048C: 85 83 33             mov     out+1,dph
+048F: 90 04 AD             mov     dptr,#panic_text
+0492: 11 F7                acall   print_text
+0494: D0 E0                pop     acc
+0496: 31 0D                acall   print_hex_8
+0498: D0 E0                pop     acc
+049A: 31 0D                acall   print_hex_8
+049C: 74 20                mov     a,#' '
+049E: 11 F2                acall   print_char
+04A0: E8                   mov     a,r0
+04A1: 31 0D                acall   print_hex_8
+04A3: 74 0D                mov     a,#13
+04A5: 11 F2                acall   print_char
+04A7: 74 0A                mov     a,#10
+04A9: 11 F2                acall   print_char
+04AB: 80 FE                sjmp    *
                    
                    panic_text:
-049D: 0D 0A                .db     13, 10
-049F: 20 21 21 21 
+04AD: 0D 0A                .db     13, 10
+04AF: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                            .db     " !!! panic @"
-04AB: 00                   .db     0
+04BB: 00                   .db     0

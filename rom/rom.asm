@@ -23,41 +23,8 @@ main:
 	acall	print_hex_8
 	acall	print_hex_32
 	acall	newline
+	jnz	halt
 
-; read a block
-	mov	a,#17
-	mov	r0,#0x00 ; block address
-	mov	r1,#0x00
-	mov	r2,#0x00
-	mov	r3,#0x00
-	mov	r4,#0x00 ; crc, ignored
-	acall	sd_command
-read_wait:
-	acall	sd_response1
-	acall	print_hex_8
-	cjne	a,#0xfe,read_wait
-	acall	newline
-	mov	r0,#0
-read_loop: ; 512 bytes (256*2)
-	mov	a,#0xff
-	acall	spi_transfer
-	acall	print_hex_8
-	mov	a,#0xff
-	acall	spi_transfer
-	acall	print_hex_8
-	djnz	r0,read_loop
-	acall	newline
-; crc
-	mov	a,#0xff
-	acall	spi_transfer
-	acall	print_hex_8
-	mov	a,#0xff
-	acall	spi_transfer
-	acall	print_hex_8
-	acall	newline
-
-abort:
-	acall	sd_deselect
 
 halt:
 	sjmp	halt

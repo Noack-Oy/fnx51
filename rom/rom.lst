@@ -77,72 +77,58 @@
                    
 0050: 75 81 50             mov     SP,     #STACK
                    
-0053: 90 02 B2             mov     dptr,   #panic
-                   
-0056: 85 82 30             mov     IN,     DPL
-0059: 85 83 31             mov     IN+1,   DPH
-                   
-005C: 85 82 32             mov     OUT,    DPL
-005F: 85 83 33             mov     OUT+1,  DPH
-                   
-0062: 85 82 44             mov     block_read,dpl
-0065: 85 83 45             mov     block_read+1,dph
-                   
-0068: 85 82 46             mov     block_write,dpl
-006B: 85 83 47             mov     block_write+1,dph
-                   
-006E: 31 F2                acall   serial_init
-0070: 11 CB                acall   sd_init
-0072: 51 23                acall   print_hex_8
-0074: 51 43                acall   print_hex_32
-0076: 11 B3                acall   newline
+0053: 31 D7                acall   serial_init
+0055: 11 B0                acall   sd_init
+0057: 51 08                acall   print_hex_8
+0059: 51 28                acall   print_hex_32
+005B: 11 98                acall   newline
                    
                    ; read a block
-0078: 74 11                mov     a,#17
-007A: 78 00                mov     r0,#0x00 ; block address
-007C: 79 00                mov     r1,#0x00
-007E: 7A 00                mov     r2,#0x00
-0080: 7B 00                mov     r3,#0x00
-0082: 7C 00                mov     r4,#0x00 ; crc, ignored
-0084: 31 44                acall   sd_command
+005D: 74 11                mov     a,#17
+005F: 78 00                mov     r0,#0x00 ; block address
+0061: 79 00                mov     r1,#0x00
+0063: 7A 00                mov     r2,#0x00
+0065: 7B 00                mov     r3,#0x00
+0067: 7C 00                mov     r4,#0x00 ; crc, ignored
+0069: 31 29                acall   sd_command
                    read_wait:
-0086: 31 5E                acall   sd_response1
-0088: 51 23                acall   print_hex_8
-008A: B4 FE F9             cjne    a,#0xfe,read_wait
-008D: 11 B3                acall   newline
-008F: 78 00                mov     r0,#0
+006B: 31 43                acall   sd_response1
+006D: 51 08                acall   print_hex_8
+006F: B4 FE F9             cjne    a,#0xfe,read_wait
+0072: 11 98                acall   newline
+0074: 78 00                mov     r0,#0
                    read_loop: ; 512 bytes (256*2)
-0091: 74 FF                mov     a,#0xff
-0093: 11 C0                acall   spi_transfer
-0095: 51 23                acall   print_hex_8
-0097: 74 FF                mov     a,#0xff
-0099: 11 C0                acall   spi_transfer
-009B: 51 23                acall   print_hex_8
-009D: D8 F2                djnz    r0,read_loop
-009F: 11 B3                acall   newline
+0076: 74 FF                mov     a,#0xff
+0078: 11 A5                acall   spi_transfer
+007A: 51 08                acall   print_hex_8
+007C: 74 FF                mov     a,#0xff
+007E: 11 A5                acall   spi_transfer
+0080: 51 08                acall   print_hex_8
+0082: D8 F2                djnz    r0,read_loop
+0084: 11 98                acall   newline
                    ; crc
-00A1: 74 FF                mov     a,#0xff
-00A3: 11 C0                acall   spi_transfer
-00A5: 51 23                acall   print_hex_8
-00A7: 74 FF                mov     a,#0xff
-00A9: 11 C0                acall   spi_transfer
-00AB: 51 23                acall   print_hex_8
-00AD: 11 B3                acall   newline
+0086: 74 FF                mov     a,#0xff
+0088: 11 A5                acall   spi_transfer
+008A: 51 08                acall   print_hex_8
+008C: 74 FF                mov     a,#0xff
+008E: 11 A5                acall   spi_transfer
+0090: 51 08                acall   print_hex_8
+0092: 11 98                acall   newline
                    
                    abort:
-00AF: 31 35                acall   sd_deselect
+0094: 31 1A                acall   sd_deselect
                    
                    halt:
-00B1: 80 FE                sjmp    halt
+0096: 80 FE                sjmp    halt
                    
                    newline:
-00B3: C0 E0                push    acc
-00B5: 74 0D                mov     a,#13
-00B7: 51 1E                acall   print_char
-00B9: 74 0A                mov     a,#10
-00BB: 51 1E                acall   print_char
-00BD: D0 E0                pop     acc
-00BF: 22                   ret
+0098: C0 E0                push    acc
+009A: 74 0D                mov     a,#13
+009C: 51 03                acall   print_char
+009E: 74 0A                mov     a,#10
+00A0: 51 03                acall   print_char
+00A2: D0 E0                pop     acc
+00A4: 22                   ret
                    
                    ; *** library ***
                    
@@ -154,15 +140,15 @@
                    ; SPI transfer function: send byte from a, read response int
                    
                    spi_transfer:
-00C0: F5 C5                mov     spdat,a
+00A5: F5 C5                mov     spdat,a
                    
                    spi_transfer__wait:
-00C2: E5 C4                mov     a,spsta
-00C4: 54 80                anl     a,#0x80 ;check SPIF bit
-00C6: 60 FA                jz      spi_transfer__wait
+00A7: E5 C4                mov     a,spsta
+00A9: 54 80                anl     a,#0x80 ;check SPIF bit
+00AB: 60 FA                jz      spi_transfer__wait
                    
-00C8: E5 C5                mov     a,spdat
-00CA: 22                   ret
+00AD: E5 C5                mov     a,spdat
+00AF: 22                   ret
                    
                    ; *** sd/init.inc ***
                    
@@ -170,50 +156,50 @@
                    
                    ; Initialize SD card, return error code in a, OCR in r0-r3.
                    sd_init:
-00CB: ED                   mov     a,r5    ; r5 is used as temp store for error
-00CC: C0 E0                push    acc
+00B0: ED                   mov     a,r5    ; r5 is used as temp store for error
+00B1: C0 E0                push    acc
                    
-00CE: 75 C3 F1             mov     spcon,#sd_spi_config
-00D1: 31 11                acall   sd_warmup
-00D3: 31 26                acall   sd_select
+00B3: 75 C3 F1             mov     spcon,#sd_spi_config
+00B6: 11 F6                acall   sd_warmup
+00B8: 31 0B                acall   sd_select
                    
-00D5: 7D 05                mov     r5,#5   ; 5: no idle response to cmd0
-00D7: 31 8E                acall   sd_cmd0
-00D9: B4 01 31             cjne    a,#1,sd_init__end
+00BA: 7D 05                mov     r5,#5   ; 5: no idle response to cmd0
+00BC: 31 73                acall   sd_cmd0
+00BE: B4 01 31             cjne    a,#1,sd_init__end
                    
-00DC: 1D                   dec     r5      ; 4: no idle response to cmd8
-00DD: 31 9E                acall   sd_cmd8
-00DF: B4 01 2B             cjne    a,#1,sd_init__end
-00E2: 1D                   dec     r5      ; 3: invalid cmd8 response
-00E3: BB 00 27             cjne    r3,#0x00,sd_init__end
-00E6: BA 00 24             cjne    r2,#0x00,sd_init__end
-00E9: B9 01 21             cjne    r1,#0x01,sd_init__end
-00EC: B8 AA 1E             cjne    r0,#0xaa,sd_init__end
+00C1: 1D                   dec     r5      ; 4: no idle response to cmd8
+00C2: 31 83                acall   sd_cmd8
+00C4: B4 01 2B             cjne    a,#1,sd_init__end
+00C7: 1D                   dec     r5      ; 3: invalid cmd8 response
+00C8: BB 00 27             cjne    r3,#0x00,sd_init__end
+00CB: BA 00 24             cjne    r2,#0x00,sd_init__end
+00CE: B9 01 21             cjne    r1,#0x01,sd_init__end
+00D1: B8 AA 1E             cjne    r0,#0xaa,sd_init__end
                    
-00EF: 7D 64                mov     r5,#100 ; retry counter
+00D4: 7D 64                mov     r5,#100 ; retry counter
                    sd_init__loop:
-00F1: 31 DB                acall   sd_acmd41
-00F3: 60 0A                jz      sd_init__continue
-00F5: 74 0A                mov     a,#10
-00F7: 51 6A                acall   delay_ms_8
-00F9: DD F6                djnz    r5,sd_init__loop
-00FB: 7D 02                mov     r5,#2   ; 2: acmd41 ready response timeout
-00FD: 80 0E                sjmp    sd_init__end
+00D6: 31 C0                acall   sd_acmd41
+00D8: 60 0A                jz      sd_init__continue
+00DA: 74 0A                mov     a,#10
+00DC: 51 4F                acall   delay_ms_8
+00DE: DD F6                djnz    r5,sd_init__loop
+00E0: 7D 02                mov     r5,#2   ; 2: acmd41 ready response timeout
+00E2: 80 0E                sjmp    sd_init__end
                    
                    sd_init__continue:
-00FF: 7D 01                mov     r5,#1   ; 1: no ready response to cmd58
-0101: 31 C7                acall   sd_cmd58
+00E4: 7D 01                mov     r5,#1   ; 1: no ready response to cmd58
+00E6: 31 AC                acall   sd_cmd58
                    
-0103: 1D                   dec     r5      ; 0: success
+00E8: 1D                   dec     r5      ; 0: success
                    
-0104: 90 64 09             mov     dptr,#sd_block_read
-0107: 85 82 44             mov     block_read,dpl
-010A: 85 83 45             mov     block_read+1,dph
+00E9: 90 65 68             mov     dptr,#sd_block_read
+00EC: 85 82 44             mov     block_read,dpl
+00EF: 85 83 45             mov     block_read+1,dph
                    
                    sd_init__end:
-010D: D0 E0                pop     acc
-010F: CD                   xch     a,r5
-0110: 22                   ret
+00F2: D0 E0                pop     acc
+00F4: CD                   xch     a,r5
+00F5: 22                   ret
                    
                    ; *** sd/warmup.inc ***
                    
@@ -221,17 +207,17 @@
                    
                    ; send 80 warmup pulses to sclk while cs is high
                    sd_warmup:
-0111: C0 E0                push    acc
-0113: C0 F0                push    b
-0115: D2 91                setb    sd_pin_cs ; p1.1
-0117: 75 F0 0A             mov     b,#10
+00F6: C0 E0                push    acc
+00F8: C0 F0                push    b
+00FA: D2 91                setb    sd_pin_cs ; p1.1
+00FC: 75 F0 0A             mov     b,#10
                    sd_warmup_loop:
-011A: 74 FF                mov     a,#0xff
-011C: 11 C0                acall   spi_transfer
-011E: D5 F0 F9             djnz    b,sd_warmup_loop
-0121: D0 F0                pop     b
-0123: D0 E0                pop     acc
-0125: 22                   ret
+00FF: 74 FF                mov     a,#0xff
+0101: 11 A5                acall   spi_transfer
+0103: D5 F0 F9             djnz    b,sd_warmup_loop
+0106: D0 F0                pop     b
+0108: D0 E0                pop     acc
+010A: 22                   ret
                    
                    ; *** sd/select.inc ***
                    
@@ -239,14 +225,14 @@
                    
                    ; Activate the SD card
                    sd_select:
-0126: C0 E0                push    acc
-0128: 74 FF                mov     a,#0xff
-012A: 11 C0                acall   spi_transfer
-012C: C2 91                clr     sd_pin_cs
-012E: 74 FF                mov     a,#0xff
-0130: 11 C0                acall   spi_transfer
-0132: D0 E0                pop     acc
-0134: 22                   ret
+010B: C0 E0                push    acc
+010D: 74 FF                mov     a,#0xff
+010F: 11 A5                acall   spi_transfer
+0111: C2 91                clr     sd_pin_cs
+0113: 74 FF                mov     a,#0xff
+0115: 11 A5                acall   spi_transfer
+0117: D0 E0                pop     acc
+0119: 22                   ret
                    
                    ; *** sd/deselect.inc ***
                    
@@ -254,14 +240,14 @@
                    
                    ; Deactivate the SD card
                    sd_deselect:
-0135: C0 E0                push    acc
-0137: 74 FF                mov     a,#0xff
-0139: 11 C0                acall   spi_transfer
-013B: D2 91                setb    sd_pin_cs
-013D: 74 FF                mov     a,#0xff
-013F: 11 C0                acall   spi_transfer
-0141: D0 E0                pop     acc
-0143: 22                   ret
+011A: C0 E0                push    acc
+011C: 74 FF                mov     a,#0xff
+011E: 11 A5                acall   spi_transfer
+0120: D2 91                setb    sd_pin_cs
+0122: 74 FF                mov     a,#0xff
+0124: 11 A5                acall   spi_transfer
+0126: D0 E0                pop     acc
+0128: 22                   ret
                    
                    ; *** sd/command.inc ***
                    
@@ -269,25 +255,25 @@
                    
                    ; Issue a command to the SD card
                    sd_command:
-0144: C0 E0                push    acc
+0129: C0 E0                push    acc
                            ; transmit command
-0146: 44 40                orl     a,#0x40 ; transmission bit
-0148: 11 C0                acall   spi_transfer
+012B: 44 40                orl     a,#0x40 ; transmission bit
+012D: 11 A5                acall   spi_transfer
                            ; transmit argument
-014A: EB                   mov     a,r3
-014B: 11 C0                acall   spi_transfer
-014D: EA                   mov     a,r2
-014E: 11 C0                acall   spi_transfer
-0150: E9                   mov     a,r1
-0151: 11 C0                acall   spi_transfer
-0153: E8                   mov     a,r0
-0154: 11 C0                acall   spi_transfer
+012F: EB                   mov     a,r3
+0130: 11 A5                acall   spi_transfer
+0132: EA                   mov     a,r2
+0133: 11 A5                acall   spi_transfer
+0135: E9                   mov     a,r1
+0136: 11 A5                acall   spi_transfer
+0138: E8                   mov     a,r0
+0139: 11 A5                acall   spi_transfer
                            ; transmit crc
-0156: EC                   mov     a,r4
-0157: 44 01                orl     a,#0x01 ; end bit
-0159: 11 C0                acall   spi_transfer
-015B: D0 E0                pop     acc
-015D: 22                   ret
+013B: EC                   mov     a,r4
+013C: 44 01                orl     a,#0x01 ; end bit
+013E: 11 A5                acall   spi_transfer
+0140: D0 E0                pop     acc
+0142: 22                   ret
                    
                    ; *** sd/response.inc ***
                    
@@ -295,16 +281,16 @@
                    
                    ; Read response from SD card in 'R1' format into a
                    sd_response1:
-015E: C0 F0                push    b
-0160: 85 08 F0             mov     b,8     ; number of tries
+0143: C0 F0                push    b
+0145: 85 08 F0             mov     b,8     ; number of tries
                    sd_response1__loop:
-0163: 74 FF                mov     a,#0xff
-0165: 11 C0                acall   spi_transfer
-0167: B4 FF 03             cjne    a,#0xff,sd_response1__end       ; success
-016A: D5 F0 F6             djnz    b,sd_response1__loop    ; retry / timeout
+0148: 74 FF                mov     a,#0xff
+014A: 11 A5                acall   spi_transfer
+014C: B4 FF 03             cjne    a,#0xff,sd_response1__end       ; success
+014F: D5 F0 F6             djnz    b,sd_response1__loop    ; retry / timeout
                    sd_response1__end:
-016D: D0 F0                pop     b
-016F: 22                   ret
+0152: D0 F0                pop     b
+0154: 22                   ret
                    
                    ; >> uint8{a}, uint32{r0-r3} sd_response3() <<
                    
@@ -315,26 +301,26 @@
                    
                    ; Read response from SD card in 'R7' format into a and r0-r3
                    sd_response7:
-0170: 31 5E                acall   sd_response1
-0172: B4 02 00             cjne    a,#0x02,sd_response7__1
+0155: 31 43                acall   sd_response1
+0157: B4 02 00             cjne    a,#0x02,sd_response7__1
                    sd_response7__1:
-0175: 40 01                jc      sd_response7__2
-0177: 22                   ret     ; error in R1 response
+015A: 40 01                jc      sd_response7__2
+015C: 22                   ret     ; error in R1 response
                    sd_response7__2:
-0178: F8                   mov     r0,a
-0179: 74 FF                mov     a,#0xff
-017B: 11 C0                acall   spi_transfer
-017D: FB                   mov     r3,a
-017E: 74 FF                mov     a,#0xff
-0180: 11 C0                acall   spi_transfer
-0182: FA                   mov     r2,a
-0183: 74 FF                mov     a,#0xff
-0185: 11 C0                acall   spi_transfer
-0187: F9                   mov     r1,a
-0188: 74 FF                mov     a,#0xff
-018A: 11 C0                acall   spi_transfer
-018C: C8                   xch     a,r0
-018D: 22                   ret
+015D: F8                   mov     r0,a
+015E: 74 FF                mov     a,#0xff
+0160: 11 A5                acall   spi_transfer
+0162: FB                   mov     r3,a
+0163: 74 FF                mov     a,#0xff
+0165: 11 A5                acall   spi_transfer
+0167: FA                   mov     r2,a
+0168: 74 FF                mov     a,#0xff
+016A: 11 A5                acall   spi_transfer
+016C: F9                   mov     r1,a
+016D: 74 FF                mov     a,#0xff
+016F: 11 A5                acall   spi_transfer
+0171: C8                   xch     a,r0
+0172: 22                   ret
                    
                    ; *** sd/cmd0.inc ***
                    
@@ -342,17 +328,17 @@
                    
                    ; CMD0: go to idle state
                    sd_cmd0:
-018E: 51 86                acall   regbank_next
-0190: E4                   clr     a
-0191: F8                   mov     r0,a
-0192: F9                   mov     r1,a
-0193: FA                   mov     r2,a
-0194: FB                   mov     r3,a
-0195: 7C 94                mov     r4,#0x94
-0197: 31 44                acall   sd_command
-0199: 31 5E                acall   sd_response1
-019B: 51 9F                acall   regbank_prev
-019D: 22                   ret
+0173: 51 6B                acall   regbank_next
+0175: E4                   clr     a
+0176: F8                   mov     r0,a
+0177: F9                   mov     r1,a
+0178: FA                   mov     r2,a
+0179: FB                   mov     r3,a
+017A: 7C 94                mov     r4,#0x94
+017C: 31 29                acall   sd_command
+017E: 31 43                acall   sd_response1
+0180: 51 84                acall   regbank_prev
+0182: 22                   ret
                    
                    ; *** sd/cmd8.inc ***
                    
@@ -360,20 +346,20 @@
                    
                    ; CMD8: send interface condition
                    sd_cmd8:
-019E: EC                   mov     a,r4
-019F: C0 E0                push    acc
-01A1: 74 08                mov     a,#8
-01A3: 78 AA                mov     r0,#0xaa
-01A5: 79 01                mov     r1,#0x01
-01A7: 7A 00                mov     r2,#0x00
-01A9: 7B 00                mov     r3,#0x00
-01AB: 7C 86                mov     r4,#0x86
-01AD: 31 44                acall   sd_command
-01AF: 31 70                acall   sd_response7
-01B1: FC                   mov     r4,a
-01B2: D0 E0                pop     acc
-01B4: CC                   xch     a,r4
-01B5: 22                   ret
+0183: EC                   mov     a,r4
+0184: C0 E0                push    acc
+0186: 74 08                mov     a,#8
+0188: 78 AA                mov     r0,#0xaa
+018A: 79 01                mov     r1,#0x01
+018C: 7A 00                mov     r2,#0x00
+018E: 7B 00                mov     r3,#0x00
+0190: 7C 86                mov     r4,#0x86
+0192: 31 29                acall   sd_command
+0194: 31 55                acall   sd_response7
+0196: FC                   mov     r4,a
+0197: D0 E0                pop     acc
+0199: CC                   xch     a,r4
+019A: 22                   ret
                    
                    ; *** sd/cmd55.inc ***
                    
@@ -381,18 +367,18 @@
                    
                    ; CMD55: application specific command (prefix)
                    sd_cmd55:
-01B6: 51 86                acall   regbank_next
-01B8: E4                   clr     a
-01B9: F8                   mov     r0,a
-01BA: F9                   mov     r1,a
-01BB: FA                   mov     r2,a
-01BC: FB                   mov     r3,a
-01BD: FC                   mov     r4,a
-01BE: 74 37                mov     a,#55
-01C0: 31 44                acall   sd_command
-01C2: 31 5E                acall   sd_response1
-01C4: 51 9F                acall   regbank_prev
-01C6: 22                   ret
+019B: 51 6B                acall   regbank_next
+019D: E4                   clr     a
+019E: F8                   mov     r0,a
+019F: F9                   mov     r1,a
+01A0: FA                   mov     r2,a
+01A1: FB                   mov     r3,a
+01A2: FC                   mov     r4,a
+01A3: 74 37                mov     a,#55
+01A5: 31 29                acall   sd_command
+01A7: 31 43                acall   sd_response1
+01A9: 51 84                acall   regbank_prev
+01AB: 22                   ret
                    
                    ; *** sd/cmd58.inc ***
                    
@@ -400,21 +386,21 @@
                    
                    ; CMD58: read operation conditions register
                    sd_cmd58:
-01C7: EC                   mov     a,r4
-01C8: C0 E0                push    acc
-01CA: E4                   clr     a
-01CB: F8                   mov     r0,a
-01CC: F9                   mov     r1,a
-01CD: FA                   mov     r2,a
-01CE: FB                   mov     r3,a
-01CF: FC                   mov     r4,a
-01D0: 74 3A                mov     a,#58
-01D2: 31 44                acall   sd_command
-01D4: 31 70                acall   sd_response3
-01D6: FC                   mov     r4,a
-01D7: D0 E0                pop     acc
-01D9: CC                   xch     a,r4
-01DA: 22                   ret
+01AC: EC                   mov     a,r4
+01AD: C0 E0                push    acc
+01AF: E4                   clr     a
+01B0: F8                   mov     r0,a
+01B1: F9                   mov     r1,a
+01B2: FA                   mov     r2,a
+01B3: FB                   mov     r3,a
+01B4: FC                   mov     r4,a
+01B5: 74 3A                mov     a,#58
+01B7: 31 29                acall   sd_command
+01B9: 31 55                acall   sd_response3
+01BB: FC                   mov     r4,a
+01BC: D0 E0                pop     acc
+01BE: CC                   xch     a,r4
+01BF: 22                   ret
                    
                    ; *** sd/acmd41.inc ***
                    
@@ -422,21 +408,21 @@
                    
                    ; ACMD41: send operation condition
                    sd_acmd41:
-01DB: 31 B6                acall   sd_cmd55
-01DD: B4 01 11             cjne    a,#1,sd_acmd41__end
-01E0: 51 86                acall   regbank_next
-01E2: E4                   clr     a
-01E3: F8                   mov     r0,a
-01E4: F9                   mov     r1,a
-01E5: FA                   mov     r2,a
-01E6: 7B 40                mov     r3,#0x40 ; indicates high capacity support
-01E8: FC                   mov     r4,a
-01E9: 74 29                mov     a,#41
-01EB: 31 44                acall   sd_command
-01ED: 31 5E                acall   sd_response1
-01EF: 51 9F                acall   regbank_prev
+01C0: 31 9B                acall   sd_cmd55
+01C2: B4 01 11             cjne    a,#1,sd_acmd41__end
+01C5: 51 6B                acall   regbank_next
+01C7: E4                   clr     a
+01C8: F8                   mov     r0,a
+01C9: F9                   mov     r1,a
+01CA: FA                   mov     r2,a
+01CB: 7B 40                mov     r3,#0x40 ; indicates high capacity support
+01CD: FC                   mov     r4,a
+01CE: 74 29                mov     a,#41
+01D0: 31 29                acall   sd_command
+01D2: 31 43                acall   sd_response1
+01D4: 51 84                acall   regbank_prev
                    sd_acmd41__end:
-01F1: 22                   ret
+01D6: 22                   ret
                    
                    ; *** serial/init.inc ***
                    
@@ -452,19 +438,19 @@
                    ; also note oscillator diagram on page 16!
                    
                    serial_init:
-01F2: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
-01F5: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
-01F8: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+01D7: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
+01DA: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
+01DD: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
                    
-01FB: 90 02 0E             mov     dptr,   #serial_rx
-01FE: 85 82 30             mov     IN,     DPL
-0201: 85 83 31             mov     IN+1,   DPH
+01E0: 90 01 F3             mov     dptr,   #serial_rx
+01E3: 85 82 30             mov     IN,     DPL
+01E6: 85 83 31             mov     IN+1,   DPH
                    
-0204: 90 02 16             mov     dptr,   #serial_tx
-0207: 85 82 32             mov     OUT,    DPL
-020A: 85 83 33             mov     OUT+1,  DPH
+01E9: 90 01 FB             mov     dptr,   #serial_tx
+01EC: 85 82 32             mov     OUT,    DPL
+01EF: 85 83 33             mov     OUT+1,  DPH
                    
-020D: 22                   ret
+01F2: 22                   ret
                    
                    ; *** serial/rx.inc ***
                    
@@ -473,10 +459,10 @@
                    ; Receive byte into accumulator.
                    
                    serial_rx:
-020E: 30 98 FD             jnb     RI,     serial_rx
-0211: C2 98                clr     RI
-0213: E5 99                mov     a,      SBUF
-0215: 22                   ret
+01F3: 30 98 FD             jnb     RI,     serial_rx
+01F6: C2 98                clr     RI
+01F8: E5 99                mov     a,      SBUF
+01FA: 22                   ret
                    
                    ; *** serial/tx.inc ***
                    
@@ -485,10 +471,10 @@
                    ; Transmit byte from accumulator.
                    
                    serial_tx:
-0216: 30 99 FD             jnb     TI,     serial_tx
-0219: C2 99                clr     TI
-021B: F5 99                mov     SBUF,   a
-021D: 22                   ret
+01FB: 30 99 FD             jnb     TI,     serial_tx
+01FE: C2 99                clr     TI
+0200: F5 99                mov     SBUF,   a
+0202: 22                   ret
                    
                    ; *** print/char.inc ***
                    
@@ -498,9 +484,9 @@
                    ; Indirect call to function behind OUT pointer.
                    
                    print_char:
-021E: C0 32                push    OUT
-0220: C0 33                push    OUT+1
-0222: 22                   ret
+0203: C0 32                push    OUT
+0205: C0 33                push    OUT+1
+0207: 22                   ret
                    
                    ; *** print/hex.inc ***
                    
@@ -509,50 +495,50 @@
                    ; Print hexadecimal number from accumulator.
                    
                    print_hex_8:
-0223: C4                   swap    a       ; high nibble first
-0224: 51 27                acall   print_hex_8__nibble
-0226: C4                   swap    a
+0208: C4                   swap    a       ; high nibble first
+0209: 51 0C                acall   print_hex_8__nibble
+020B: C4                   swap    a
                    print_hex_8__nibble:
-0227: C0 E0                push    ACC
-0229: 54 0F                anl     a,      #0x0f
-022B: 24 90                add     a,      #0x90
-022D: D4                   da      a
-022E: 34 40                addc    a,      #0x40
-0230: D4                   da      a
-0231: 44 20                orl     a,      #0x20   ; lower case
-0233: 51 1E                acall   print_char
-0235: D0 E0                pop     ACC
-0237: 22                   ret
+020C: C0 E0                push    ACC
+020E: 54 0F                anl     a,      #0x0f
+0210: 24 90                add     a,      #0x90
+0212: D4                   da      a
+0213: 34 40                addc    a,      #0x40
+0215: D4                   da      a
+0216: 44 20                orl     a,      #0x20   ; lower case
+0218: 51 03                acall   print_char
+021A: D0 E0                pop     ACC
+021C: 22                   ret
                    
                    ; >> void print_hex_16(int r0r1) <<
                    
                    ; Print hexadecimal number from r0-r1.
                    
                    print_hex_16:
-0238: C0 E0                push    ACC
-023A: E9                   mov     a,      r1      ; MSB first
-023B: 51 23                acall   print_hex_8
-023D: E8                   mov     a,      r0      ; LSB second
-023E: 51 23                acall   print_hex_8
-0240: D0 E0                pop     ACC
-0242: 22                   ret
+021D: C0 E0                push    ACC
+021F: E9                   mov     a,      r1      ; MSB first
+0220: 51 08                acall   print_hex_8
+0222: E8                   mov     a,      r0      ; LSB second
+0223: 51 08                acall   print_hex_8
+0225: D0 E0                pop     ACC
+0227: 22                   ret
                    
                    ; >> void print_hex_32(long r0r1r2r3) <<
                    
                    ; Print hexadecimal number from r0-r3.
                    
                    print_hex_32:
-0243: C0 E0                push    ACC
-0245: EB                   mov     a,      r3      ; MSB first
-0246: 51 23                acall   print_hex_8
-0248: EA                   mov     a,      r2
-0249: 51 23                acall   print_hex_8
-024B: E9                   mov     a,      r1
-024C: 51 23                acall   print_hex_8
-024E: E8                   mov     a,      r0      ; LSB last
-024F: 51 23                acall   print_hex_8
-0251: D0 E0                pop     ACC
-0253: 22                   ret
+0228: C0 E0                push    ACC
+022A: EB                   mov     a,      r3      ; MSB first
+022B: 51 08                acall   print_hex_8
+022D: EA                   mov     a,      r2
+022E: 51 08                acall   print_hex_8
+0230: E9                   mov     a,      r1
+0231: 51 08                acall   print_hex_8
+0233: E8                   mov     a,      r0      ; LSB last
+0234: 51 08                acall   print_hex_8
+0236: D0 E0                pop     ACC
+0238: 22                   ret
                    
                    ; *** print/text.inc ***
                    
@@ -562,25 +548,25 @@
                    ; Aborts if no null terminator is found after 256 bytes.
                    
                    print_text:
-0254: C0 E0                push    ACC
-0256: E8                   mov     a,      r0
-0257: C0 E0                push    ACC
+0239: C0 E0                push    ACC
+023B: E8                   mov     a,      r0
+023C: C0 E0                push    ACC
                    
-0259: E4                   clr     a
-025A: F8                   mov     r0,     a
+023E: E4                   clr     a
+023F: F8                   mov     r0,     a
                    print_text__loop:
-025B: 93                   movc    a,      @dptr+a
-025C: 60 06                jz      print_text__end
-025E: 51 1E                acall   print_char
-0260: 08                   inc     r0
-0261: E8                   mov     a,      r0
-0262: 70 F7                jnz     print_text__loop
+0240: 93                   movc    a,      @dptr+a
+0241: 60 06                jz      print_text__end
+0243: 51 03                acall   print_char
+0245: 08                   inc     r0
+0246: E8                   mov     a,      r0
+0247: 70 F7                jnz     print_text__loop
                    
                    print_text__end:
-0264: D0 E0                pop     ACC
-0266: F8                   mov     r0,     a
-0267: D0 E0                pop     ACC
-0269: 22                   ret
+0249: D0 E0                pop     ACC
+024B: F8                   mov     r0,     a
+024C: D0 E0                pop     ACC
+024E: 22                   ret
                    
                    ; *** util/delay.inc ***
                    
@@ -591,8 +577,8 @@
                    ; Actual delay is slightly longer.
                    delay_ms_8:
                    
-026A: C0 E0                push    acc
-026C: C0 F0                push    b
+024F: C0 E0                push    acc
+0251: C0 F0                push    b
                    
                            ; This loop is repeated a times (256 if a is zero).
                            ; The goal is to stretch each repeat to one millisec
@@ -600,20 +586,20 @@
                            ; Each millisecond is 20k clock periods.
                            ; In X2 mode, a machine cycle is 6 clock periods.
                            ; Therefore, a millisecond is approx. 3334 machine c
-026E: 75 F0 B9             mov     b,#185  ; n = 185       cycles:   2
+0253: 75 F0 B9             mov     b,#185  ; n = 185       cycles:   2
                    delay_ms_8__loop2:
-0271: C0 E0                push    acc                     ; n*2 = 370
-0273: C0 F0                push    b                       ; n*2 = 370
-0275: A4                   mul     ab                      ; n*4 = 740
-0276: A4                   mul     ab                      ; n*4 = 740
-0277: D0 F0                pop     b                       ; n*2 = 370
-0279: D0 E0                pop     acc                     ; n*2 = 370
-027B: D5 F0 F3             djnz    b,delay_ms_8__loop2     ; n*2 = 370
-027E: D5 E0 ED             djnz    acc,delay_ms_8__loop1   ;         2
+0256: C0 E0                push    acc                     ; n*2 = 370
+0258: C0 F0                push    b                       ; n*2 = 370
+025A: A4                   mul     ab                      ; n*4 = 740
+025B: A4                   mul     ab                      ; n*4 = 740
+025C: D0 F0                pop     b                       ; n*2 = 370
+025E: D0 E0                pop     acc                     ; n*2 = 370
+0260: D5 F0 F3             djnz    b,delay_ms_8__loop2     ; n*2 = 370
+0263: D5 E0 ED             djnz    acc,delay_ms_8__loop1   ;         2
                                                            ; Sum: 3334
-0281: D0 F0                pop     b
-0283: D0 E0                pop     acc
-0285: 22                   ret
+0266: D0 F0                pop     b
+0268: D0 E0                pop     acc
+026A: 22                   ret
                    
                    ; *** util/regbank.inc ***
                    
@@ -623,45 +609,45 @@
                    ; Return pointer to r0 of old bank in new r0.
                    
                    regbank_next:
-0286: C0 E0                push    acc
+026B: C0 E0                push    acc
                            ; check if already at highest bank
-0288: E5 D0                mov     a,      psw
-028A: 54 18                anl     a,      #0x18
-028C: B4 18 02             cjne    a,      #0x18,  regbank_next__continue
-028F: 51 B2                acall   panic   ; overflow
+026D: E5 D0                mov     a,      psw
+026F: 54 18                anl     a,      #0x18
+0271: B4 18 02             cjne    a,      #0x18,  regbank_next__continue
+0274: 51 97                acall   panic   ; overflow
                    regbank_next__continue:
                            ; switch to next bank
-0291: E5 D0                mov     a,      psw
-0293: 24 08                add     a,      #0x08
-0295: F5 D0                mov     psw,    a
+0276: E5 D0                mov     a,      psw
+0278: 24 08                add     a,      #0x08
+027A: F5 D0                mov     psw,    a
                            ; calculate pointer to old bank
-0297: 54 18                anl     a,      #0x18
-0299: 24 F8                add     a,      #0xf8
-029B: F8                   mov     r0,     a
+027C: 54 18                anl     a,      #0x18
+027E: 24 F8                add     a,      #0xf8
+0280: F8                   mov     r0,     a
                            ; done
-029C: D0 E0                pop     acc
-029E: 22                   ret
+0281: D0 E0                pop     acc
+0283: 22                   ret
                    
                    ; >> void regbank_prev() <<
                    
                    ; Switch to previous register bank.
                    
                    regbank_prev:
-029F: C0 E0                push    acc
+0284: C0 E0                push    acc
                            ; check if already at lowest bank
-02A1: E5 D0                mov     a,      psw
-02A3: 54 18                anl     a,      #0x18
-02A5: 70 02                jnz     regbank_prev__continue
-02A7: 51 B2                acall   panic   ; underflow
+0286: E5 D0                mov     a,      psw
+0288: 54 18                anl     a,      #0x18
+028A: 70 02                jnz     regbank_prev__continue
+028C: 51 97                acall   panic   ; underflow
                    regbank_prev__continue:
                            ; switch to previous bank
-02A9: E5 D0                mov     a,      psw
-02AB: 24 F8                add     a,      #0xf8
-02AD: F5 D0                mov     psw,    a
+028E: E5 D0                mov     a,      psw
+0290: 24 F8                add     a,      #0xf8
+0292: F5 D0                mov     psw,    a
                            ; done
-02AF: D0 E0                pop     acc
-02B1: 22                   ret
-02B2:              .equ panic_out, serial_tx
+0294: D0 E0                pop     acc
+0296: 22                   ret
+0297:              .equ panic_out, serial_tx
                    
                    ; *** panic/panic.inc ***
                    
@@ -671,22 +657,22 @@
                    ; Print caller address and halt.
                    
                    panic:
-02B2: C2 AF                clr     ea      ; disable interrupts
-02B4: 90 02 16             mov     dptr,   #panic_out
-02B7: 85 82 32             mov     out,    dpl
-02BA: 85 83 33             mov     out+1,  dph
-02BD: 90 02 CC             mov     dptr,   #panic_text
-02C0: 51 54                acall   print_text
-02C2: D0 E0                pop     acc
-02C4: 51 23                acall   print_hex_8
-02C6: D0 E0                pop     acc
-02C8: 51 23                acall   print_hex_8
-02CA: 80 FE                sjmp    *
+0297: C2 AF                clr     ea      ; disable interrupts
+0299: 90 01 FB             mov     dptr,   #panic_out
+029C: 85 82 32             mov     out,    dpl
+029F: 85 83 33             mov     out+1,  dph
+02A2: 90 02 B1             mov     dptr,   #panic_text
+02A5: 51 39                acall   print_text
+02A7: D0 E0                pop     acc
+02A9: 51 08                acall   print_hex_8
+02AB: D0 E0                pop     acc
+02AD: 51 08                acall   print_hex_8
+02AF: 80 FE                sjmp    *
                    
                    panic_text:
-02CC: 0D 0A                .db     13, 10
-02CE: 20 21 21 21 
+02B1: 0D 0A                .db     13, 10
+02B3: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                            .db     " !!! panic @"
-02DA: 00                   .db     0
+02BF: 00                   .db     0

@@ -28,6 +28,7 @@
                    
 0000:              .equ    block_read,     0x44    ; pointers to block device d
 0000:              .equ    block_write,    0x46    ; code (read and write funct
+0000:              .equ    block_cache,    0x48    ; pointer to block cache dat
                    
 0000:              .equ    stack,  0x50    ; beginning of stack
                    
@@ -219,21 +220,30 @@
                    
                    panic:
 007F: C2 AF                clr     ea      ; disable interrupts
-0081: 90 00 2B             mov     dptr,   #panic_out
-0084: 85 82 32             mov     out,    dpl
-0087: 85 83 33             mov     out+1,  dph
-008A: 90 00 99             mov     dptr,   #panic_text
-008D: 11 38                acall   print_text
-008F: D0 E0                pop     acc
-0091: 11 4E                acall   print_hex_8
-0093: D0 E0                pop     acc
-0095: 11 4E                acall   print_hex_8
-0097: 80 FE                sjmp    *
+0081: F8                   mov     r0,a
+0082: 90 00 2B             mov     dptr,#panic_out
+0085: 85 82 32             mov     out,dpl
+0088: 85 83 33             mov     out+1,dph
+008B: 90 00 A9             mov     dptr,#panic_text
+008E: 11 38                acall   print_text
+0090: D0 E0                pop     acc
+0092: 11 4E                acall   print_hex_8
+0094: D0 E0                pop     acc
+0096: 11 4E                acall   print_hex_8
+0098: 74 20                mov     a,#' '
+009A: 11 33                acall   print_char
+009C: E8                   mov     a,r0
+009D: 11 4E                acall   print_hex_8
+009F: 74 0D                mov     a,#13
+00A1: 11 33                acall   print_char
+00A3: 74 0A                mov     a,#10
+00A5: 11 33                acall   print_char
+00A7: 80 FE                sjmp    *
                    
                    panic_text:
-0099: 0D 0A                .db     13, 10
-009B: 20 21 21 21 
+00A9: 0D 0A                .db     13, 10
+00AB: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                            .db     " !!! panic @"
-00A7: 00                   .db     0
+00B7: 00                   .db     0

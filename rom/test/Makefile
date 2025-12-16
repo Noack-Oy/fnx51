@@ -2,7 +2,7 @@ SHELL=/bin/bash -o pipefail
 
 sources = serial.asm print.asm panic.asm dump.asm \
           stream_imem.asm stream_xram.asm \
-          read_hex.asm memory.asm sd.asm
+          read_hex.asm memory.asm sd.asm block.asm
 
 default: $(sources:.asm=.lst)
 test: $(sources:.asm=.out)
@@ -19,3 +19,6 @@ include $(sources:.asm=.d)
 %.d: %.asm
 	echo -n '$*.lst $*.hex: $*.asm ' > $@
 	grep -i '^\.inc' $< | awk '{print $$2}' | xargs >> $@
+
+clean:
+	rm -vf *.out *.fail
