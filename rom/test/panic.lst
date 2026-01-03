@@ -14,10 +14,13 @@
                    
                    ; *** global/variables.equ ***
                    
-                   ; variables in internal ram
+                   ; variables in internal RAM
                    
-0000:              .equ    in,     0x30    ; pointer to input code
-0000:              .equ    out,    0x32    ; pointer to ouput code
+                   ; 0x00-0x1f: register banks 0-3
+                   ; 0x20-0x2f: bit addressable variables
+                   
+0000:              .equ    in,             0x30    ; pointer to input handling 
+0000:              .equ    out,            0x32    ; pointer to ouput handling 
                    
 0000:              .equ    stream_in,      0x34    ; input stream position
 0000:              .equ    stream_out,     0x36    ; output stream position
@@ -30,7 +33,9 @@
 0000:              .equ    block_write,    0x46    ; code (read and write funct
 0000:              .equ    block_cache,    0x48    ; pointer to block cache dat
                    
-0000:              .equ    stack,  0x50    ; beginning of stack
+0000:              .equ    fatfs_info,     0x50    ; pointer to FAT file system
+                   
+0000:              .equ    stack,          0x60    ; beginning of stack (grows 
                    
                    ; *** serial/sfr.equ ***
                    
@@ -53,13 +58,38 @@
                    ; Initialize stack pointer and global variables.
                    ; This must be included early in the main program.
                    
-0000: 75 81 50             mov     SP,     #STACK
+                   global_init:
+0000: 75 81 60             mov     SP,#STACK
+                   
+                   ; Select register bank zero, clear processor flags
+0003: 75 D0 00             mov     PSW,#0
+                   
+                   ; Fill internal RAM with markers for uninitialized data
+0006: 78 00                mov     r0,#0 ; write pointer
+                   
+0008: 74 3F                mov     a,#0x3f ; '?' for uninitialized registers
+                   global_init__1:
+000A: 08                   inc     r0 ; first iteration skips address 0, r0 liv
+000B: F6                   mov     @r0,a
+000C: B8 1F FB             cjne    r0,#0x1f,global_init__1
+                   
+000F: 74 2A                mov     a,#0x2a ; '*' for uninitialized variables
+                   global_init__2:
+0011: 08                   inc     r0
+0012: F6                   mov     @r0,a
+0013: B8 5F FB             cjne    r0,#STACK-1,global_init__2
+                   
+0016: 74 7E                mov     a,#0x7e ; '~' for stack and above
+                   global_init__3:
+0018: 08                   inc     r0
+0019: F6                   mov     @r0,a
+001A: B8 FF FB             cjne    r0,#0xff,global_init__3
                    
                    ; *** test/panic.asm ***
                    
-0003: 11 07                acall   serial_init
+001D: 11 21                acall   serial_init
                    
-0005: 11 7F                acall   panic
+001F: 11 99                acall   panic
                    
                    ; *********************
                    ; * Library Functions *
@@ -79,19 +109,19 @@
                    ; also note oscillator diagram on page 16!
                    
                    serial_init:
-0007: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
-000A: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
-000D: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+0021: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
+0024: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
+0027: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
                    
-0010: 90 00 23             mov     dptr,   #serial_rx
-0013: 85 82 30             mov     IN,     DPL
-0016: 85 83 31             mov     IN+1,   DPH
+002A: 90 00 3D             mov     dptr,   #serial_rx
+002D: 85 82 30             mov     IN,     DPL
+0030: 85 83 31             mov     IN+1,   DPH
                    
-0019: 90 00 2B             mov     dptr,   #serial_tx
-001C: 85 82 32             mov     OUT,    DPL
-001F: 85 83 33             mov     OUT+1,  DPH
+0033: 90 00 45             mov     dptr,   #serial_tx
+0036: 85 82 32             mov     OUT,    DPL
+0039: 85 83 33             mov     OUT+1,  DPH
                    
-0022: 22                   ret
+003C: 22                   ret
                    
                    ; *** serial/rx.inc ***
                    
@@ -100,10 +130,10 @@
                    ; Receive byte into accumulator.
                    
                    serial_rx:
-0023: 30 98 FD             jnb     RI,     serial_rx
-0026: C2 98                clr     RI
-0028: E5 99                mov     a,      SBUF
-002A: 22                   ret
+003D: 30 98 FD             jnb     RI,     serial_rx
+0040: C2 98                clr     RI
+0042: E5 99                mov     a,      SBUF
+0044: 22                   ret
                    
                    ; *** serial/tx.inc ***
                    
@@ -112,10 +142,10 @@
                    ; Transmit byte from accumulator.
                    
                    serial_tx:
-002B: 30 99 FD             jnb     TI,     serial_tx
-002E: C2 99                clr     TI
-0030: F5 99                mov     SBUF,   a
-0032: 22                   ret
+0045: 30 99 FD             jnb     TI,     serial_tx
+0048: C2 99                clr     TI
+004A: F5 99                mov     SBUF,   a
+004C: 22                   ret
                    
                    ; *** print/char.inc ***
                    
@@ -125,9 +155,9 @@
                    ; Indirect call to function behind OUT pointer.
                    
                    print_char:
-0033: C0 32                push    OUT
-0035: C0 33                push    OUT+1
-0037: 22                   ret
+004D: C0 32                push    OUT
+004F: C0 33                push    OUT+1
+0051: 22                   ret
                    
                    ; *** print/text.inc ***
                    
@@ -137,25 +167,25 @@
                    ; Aborts if no null terminator is found after 256 bytes.
                    
                    print_text:
-0038: C0 E0                push    ACC
-003A: E8                   mov     a,      r0
-003B: C0 E0                push    ACC
+0052: C0 E0                push    ACC
+0054: E8                   mov     a,      r0
+0055: C0 E0                push    ACC
                    
-003D: E4                   clr     a
-003E: F8                   mov     r0,     a
+0057: E4                   clr     a
+0058: F8                   mov     r0,     a
                    print_text__loop:
-003F: 93                   movc    a,      @dptr+a
-0040: 60 06                jz      print_text__end
-0042: 11 33                acall   print_char
-0044: 08                   inc     r0
-0045: E8                   mov     a,      r0
-0046: 70 F7                jnz     print_text__loop
+0059: 93                   movc    a,      @dptr+a
+005A: 60 06                jz      print_text__end
+005C: 11 4D                acall   print_char
+005E: 08                   inc     r0
+005F: E8                   mov     a,      r0
+0060: 70 F7                jnz     print_text__loop
                    
                    print_text__end:
-0048: D0 E0                pop     ACC
-004A: F8                   mov     r0,     a
-004B: D0 E0                pop     ACC
-004D: 22                   ret
+0062: D0 E0                pop     ACC
+0064: F8                   mov     r0,     a
+0065: D0 E0                pop     ACC
+0067: 22                   ret
                    
                    ; *** print/hex.inc ***
                    
@@ -164,52 +194,52 @@
                    ; Print hexadecimal number from accumulator.
                    
                    print_hex_8:
-004E: C4                   swap    a       ; high nibble first
-004F: 11 52                acall   print_hex_8__nibble
-0051: C4                   swap    a
+0068: C4                   swap    a       ; high nibble first
+0069: 11 6C                acall   print_hex_8__nibble
+006B: C4                   swap    a
                    print_hex_8__nibble:
-0052: C0 E0                push    ACC
-0054: 54 0F                anl     a,      #0x0f
-0056: 24 90                add     a,      #0x90
-0058: D4                   da      a
-0059: 34 40                addc    a,      #0x40
-005B: D4                   da      a
-005C: 44 20                orl     a,      #0x20   ; lower case
-005E: 11 33                acall   print_char
-0060: D0 E0                pop     ACC
-0062: 22                   ret
+006C: C0 E0                push    ACC
+006E: 54 0F                anl     a,      #0x0f
+0070: 24 90                add     a,      #0x90
+0072: D4                   da      a
+0073: 34 40                addc    a,      #0x40
+0075: D4                   da      a
+0076: 44 20                orl     a,      #0x20   ; lower case
+0078: 11 4D                acall   print_char
+007A: D0 E0                pop     ACC
+007C: 22                   ret
                    
                    ; >> void print_hex_16(int r0r1) <<
                    
                    ; Print hexadecimal number from r0-r1.
                    
                    print_hex_16:
-0063: C0 E0                push    ACC
-0065: E9                   mov     a,      r1      ; MSB first
-0066: 11 4E                acall   print_hex_8
-0068: E8                   mov     a,      r0      ; LSB second
-0069: 11 4E                acall   print_hex_8
-006B: D0 E0                pop     ACC
-006D: 22                   ret
+007D: C0 E0                push    ACC
+007F: E9                   mov     a,      r1      ; MSB first
+0080: 11 68                acall   print_hex_8
+0082: E8                   mov     a,      r0      ; LSB second
+0083: 11 68                acall   print_hex_8
+0085: D0 E0                pop     ACC
+0087: 22                   ret
                    
                    ; >> void print_hex_32(long r0r1r2r3) <<
                    
                    ; Print hexadecimal number from r0-r3.
                    
                    print_hex_32:
-006E: C0 E0                push    ACC
-0070: EB                   mov     a,      r3      ; MSB first
-0071: 11 4E                acall   print_hex_8
-0073: EA                   mov     a,      r2
-0074: 11 4E                acall   print_hex_8
-0076: E9                   mov     a,      r1
-0077: 11 4E                acall   print_hex_8
-0079: E8                   mov     a,      r0      ; LSB last
-007A: 11 4E                acall   print_hex_8
-007C: D0 E0                pop     ACC
-007E: 22                   ret
+0088: C0 E0                push    ACC
+008A: EB                   mov     a,      r3      ; MSB first
+008B: 11 68                acall   print_hex_8
+008D: EA                   mov     a,      r2
+008E: 11 68                acall   print_hex_8
+0090: E9                   mov     a,      r1
+0091: 11 68                acall   print_hex_8
+0093: E8                   mov     a,      r0      ; LSB last
+0094: 11 68                acall   print_hex_8
+0096: D0 E0                pop     ACC
+0098: 22                   ret
                    
-007F:              .equ panic_out, serial_tx
+0099:              .equ panic_out, serial_tx
                    
                    ; *** panic/panic.inc ***
                    
@@ -219,31 +249,31 @@
                    ; Print caller address and halt.
                    
                    panic:
-007F: C2 AF                clr     ea      ; disable interrupts
-0081: F8                   mov     r0,a
-0082: 90 00 2B             mov     dptr,#panic_out
-0085: 85 82 32             mov     out,dpl
-0088: 85 83 33             mov     out+1,dph
-008B: 90 00 A9             mov     dptr,#panic_text
-008E: 11 38                acall   print_text
-0090: D0 E0                pop     acc
-0092: 11 4E                acall   print_hex_8
-0094: D0 E0                pop     acc
-0096: 11 4E                acall   print_hex_8
-0098: 74 20                mov     a,#' '
-009A: 11 33                acall   print_char
-009C: E8                   mov     a,r0
-009D: 11 4E                acall   print_hex_8
-009F: 74 0D                mov     a,#13
-00A1: 11 33                acall   print_char
-00A3: 74 0A                mov     a,#10
-00A5: 11 33                acall   print_char
-00A7: 80 FE                sjmp    *
+0099: C2 AF                clr     ea      ; disable interrupts
+009B: F8                   mov     r0,a
+009C: 90 00 45             mov     dptr,#panic_out
+009F: 85 82 32             mov     out,dpl
+00A2: 85 83 33             mov     out+1,dph
+00A5: 90 00 C3             mov     dptr,#panic_text
+00A8: 11 52                acall   print_text
+00AA: D0 E0                pop     acc
+00AC: 11 68                acall   print_hex_8
+00AE: D0 E0                pop     acc
+00B0: 11 68                acall   print_hex_8
+00B2: 74 20                mov     a,#' '
+00B4: 11 4D                acall   print_char
+00B6: E8                   mov     a,r0
+00B7: 11 68                acall   print_hex_8
+00B9: 74 0D                mov     a,#13
+00BB: 11 4D                acall   print_char
+00BD: 74 0A                mov     a,#10
+00BF: 11 4D                acall   print_char
+00C1: 80 FE                sjmp    *
                    
                    panic_text:
-00A9: 0D 0A                .db     13, 10
-00AB: 20 21 21 21 
+00C3: 0D 0A                .db     13, 10
+00C5: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                            .db     " !!! panic @"
-00B7: 00                   .db     0
+00D1: 00                   .db     0

@@ -11,20 +11,16 @@ stream_xram_write:
 	push	dpl
 	push	dph
 
-	mov	dpl,	a
-	mov	a,	auxr
-	anl	a,	0xe1	; clear extram, xrs0-2
-	orl	a,	0x10	; set xrs2 (size 1792 bytes)
-	mov	auxr,	a
-	mov	a,	dpl
+	anl	auxr,#0xe1	; clear extram, xrs0-2
+	orl	auxr,#0x10	; set xrs2 (size 1792 bytes)
 
-	mov	dpl,	stream_out
-	mov	dph,	stream_out+1
+	mov	dpl,stream_out
+	mov	dph,stream_out+1
 
-	movx	@dptr,	a
+	movx	@dptr,a
 	inc	dptr
-	mov	stream_out,	dpl
-	mov	stream_out+1,	dph
+	mov	stream_out,dpl
+	mov	stream_out+1,dph
 
 	pop	dph
 	pop	dpl

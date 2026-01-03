@@ -21,7 +21,7 @@
 .org 0
 .inc ../global/init.inc
 
-; *** test/stream.asm ***
+; *** test/stream_xram.asm ***
 
 	acall	serial_init
 
