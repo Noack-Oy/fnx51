@@ -79,6 +79,12 @@ def cmd(function, data):
 
 def enter_bootloader():
     print('BOOTLOADER')
+
+    log_send = pe.logfile_send;
+    log_read = pe.logfile_read;
+    pe.logfile_send = None;
+    pe.logfile_read = None;
+
     tries = 0
     while True:
        try:
@@ -98,8 +104,14 @@ def enter_bootloader():
 
        except pexpect.exceptions.TIMEOUT:
            tries += 1
-           if tries > 3:
+           if tries == 3:
+               pe.logfile_send = log_send;
+               pe.logfile_read = log_read;
+           elif tries > 3:
                raise
+
+    pe.logfile_send = log_send;
+    pe.logfile_read = log_read;
 
     cmd('05', '0B00') # read hardware security byte
     hsb = int(pe.before, 16)
