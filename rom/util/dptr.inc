@@ -15,9 +15,11 @@ dptr_copy:
 dptr_copy__loop:
 	inc	auxr1
 	movx	a,@dptr
+	inc	dptr
 	inc	auxr1
-	movc	@dptr,a
-	djnz	r0,ddpr_copy__loop
+	movx	@dptr,a
+	inc	dptr
+	djnz	r0,dptr_copy__loop
 
 	pop	acc
 	mov	r0,a
@@ -50,6 +52,7 @@ dptr_read_32:
 	inc	dptr
 
 	pop	acc
+	ret
 
 
 ; >> void dptr_write_32(uint32 *{dptr}&addr, uint32{r0-r3} value <<
@@ -77,3 +80,4 @@ dptr_write_32:
 	inc	dptr
 
 	pop	acc
+	ret
