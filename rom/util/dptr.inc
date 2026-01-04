@@ -50,3 +50,30 @@ dptr_read_32:
 	inc	dptr
 
 	pop	acc
+
+
+; >> void dptr_write_32(uint32 *{dptr}&addr, uint32{r0-r3} value <<
+
+; Write 32 bit value from r0-r3 via movx to @dptr.
+; Data pointer is returned in advanced position (first byte after).
+
+dptr_write_32:
+	push	acc
+
+	mov	a,r0
+	movx	@dptr,a
+	inc	dptr
+
+	mov	a,r1
+	movx	@dptr,a
+	inc	dptr
+
+	mov	a,r2
+	movx	@dptr,a
+	inc	dptr
+
+	mov	a,r3
+	movx	@dptr,a
+	inc	dptr
+
+	pop	acc

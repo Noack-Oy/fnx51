@@ -4,10 +4,10 @@
 ; offsets for fatfs_info data structure
 
 .equ	fatfs_info_part_lba,	0;..3	LBA where partition begins
-.equ	fatfs_info_fat1_lba,	4;..7	LBA where FAT#1 begins
-.equ	fatfs_info_fat2_lba,	8;..11	LBA where FAT#2 begins
-.equ	fatfs_info_cluster_lba,	12;..15	LBA of theoretical cluster #0
+.equ	fatfs_info_cluster_size,4;	number of sectors per cluster
+.equ	fatfs_info_fat1_lba,	5;..8	LBA where FAT#1 begins
+.equ	fatfs_info_fat2_lba,	9;..12	LBA where FAT#2 begins
+.equ	fatfs_info_cluster_lba,	13;..16	LBA of theoretical cluster #0
 ; NOTE: Clusters #0 and #1 do not exist. The first valid cluster is #2.
-.equ	fatfs_info_cluster_size,16;	number of sectors per cluster
 .equ	fatfs_info_root_dir,	17;..20	cluster # of root directory
 .equ	fatfs_info_size,	21
