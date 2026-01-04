@@ -956,30 +956,44 @@
                    
                    panic:
 03F5: C2 AF                clr     ea      ; disable interrupts
-03F7: F8                   mov     r0,a
+03F7: F8                   mov     r0,a    ; save a
+                           ; display panic text
 03F8: 90 01 B6             mov     dptr,#panic_out
 03FB: 85 82 32             mov     out,dpl
 03FE: 85 83 33             mov     out+1,dph
-0401: 90 04 1F             mov     dptr,#panic_text
+0401: 90 04 28             mov     dptr,#panic_text
 0404: 31 C3                acall   print_text
+                           ; get return address from stack
 0406: D0 E0                pop     acc
-0408: 31 D9                acall   print_hex_8
-040A: D0 E0                pop     acc
-040C: 31 D9                acall   print_hex_8
-040E: 74 20                mov     a,#' '
-0410: 31 BE                acall   print_char
-0412: E8                   mov     a,r0
-0413: 31 D9                acall   print_hex_8
-0415: 74 0D                mov     a,#13
-0417: 31 BE                acall   print_char
-0419: 74 0A                mov     a,#10
-041B: 31 BE                acall   print_char
-041D: 80 FE                sjmp    *
+0408: FA                   mov     r2,a
+0409: D0 E0                pop     acc
+                           ; subtract two to get call instruction address
+040B: C3                   clr     c
+040C: 94 02                subb    a,#2
+040E: F9                   mov     r1,a
+040F: EA                   mov     a,r2
+0410: 94 00                subb    a,#0
+                           ; print caller address (to look up cause in .lst fil
+0412: 31 D9                acall   print_hex_8
+0414: E9                   mov     a,r1
+0415: 31 D9                acall   print_hex_8
+                           ; print original value of a (error code / debug info
+0417: 74 20                mov     a,#' '
+0419: 31 BE                acall   print_char
+041B: E8                   mov     a,r0
+041C: 31 D9                acall   print_hex_8
+                           ; newline
+041E: 74 0D                mov     a,#13
+0420: 31 BE                acall   print_char
+0422: 74 0A                mov     a,#10
+0424: 31 BE                acall   print_char
+                           ; hang
+0426: 80 FE                sjmp    *
                    
                    panic_text:
-041F: 0D 0A                .db     13, 10
-0421: 20 21 21 21 
+0428: 0D 0A                .db     13, 10
+042A: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                            .db     " !!! panic @"
-042D: 00                   .db     0
+0436: 00                   .db     0

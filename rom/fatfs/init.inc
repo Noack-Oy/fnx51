@@ -33,6 +33,8 @@ fatfs_init:
 	mov	r3,a
 	acall	block_load
 
+	acall	fatfs_init__check_signature
+
 	; partition table begins at offset:	446 = 0x1be
 	; the type code is at that +4:		450 = 0x1c2
 	mov	a,dpl
@@ -67,6 +69,8 @@ fatfs_init__type_code_ok:
 	mov	dph,fatfs_info+1
 	acall	dptr_read_32
 	acall	block_load
+
+	acall	fatfs_init__check_signature
 
 	; validate bytes per sector (offset 0x0b), must be 512
 	mov	a,dpl
@@ -195,4 +199,27 @@ fatfs_init__nof_ok:
 	pop	dpl
 	pop	b
 	pop	acc
+	ret
+
+fatfs_init__check_signature:
+	mov	a,dpl
+	add	a,#0xfe
+	mov	dpl,a
+	mov	a,dph
+	addc	a,#0x01
+	mov	dph,a
+	movx	a,@dptr ; read fist signature byte at offset 510
+	xrl	a,#0x55
+	jz	fatfs_init__check_signature_ok_1
+	acall	panic ; invalid signature
+fatfs_init__check_signature_ok_1:
+	inc	dptr
+	movx	a,@dptr ; read second signature byte at offset 511
+	xrl	a,#0xaa
+	jz	fatfs_init__check_signature_ok_2
+	acall	panic ; invalid signature
+fatfs_init__check_signature_ok_2:
+	inc	dptr ; this moves dptr to offset 512
+	dec	dph  ; so we can now wind back to the beginning
+	dec	dph  ; by decrementing dph twice
 	ret

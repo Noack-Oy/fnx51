@@ -1007,30 +1007,44 @@
                    
                    panic:
 03F4: C2 AF                clr     ea      ; disable interrupts
-03F6: F8                   mov     r0,a
+03F6: F8                   mov     r0,a    ; save a
+                           ; display panic text
 03F7: 90 00 A5             mov     dptr,#panic_out
 03FA: 85 82 32             mov     out,dpl
 03FD: 85 83 33             mov     out+1,dph
-0400: 90 04 1E             mov     dptr,#panic_text
+0400: 90 04 27             mov     dptr,#panic_text
 0403: 11 F4                acall   print_text
+                           ; get return address from stack
 0405: D0 E0                pop     acc
-0407: 31 0A                acall   print_hex_8
-0409: D0 E0                pop     acc
-040B: 31 0A                acall   print_hex_8
-040D: 74 20                mov     a,#' '
-040F: 11 EF                acall   print_char
-0411: E8                   mov     a,r0
-0412: 31 0A                acall   print_hex_8
-0414: 74 0D                mov     a,#13
-0416: 11 EF                acall   print_char
-0418: 74 0A                mov     a,#10
-041A: 11 EF                acall   print_char
-041C: 80 FE                sjmp    *
+0407: FA                   mov     r2,a
+0408: D0 E0                pop     acc
+                           ; subtract two to get call instruction address
+040A: C3                   clr     c
+040B: 94 02                subb    a,#2
+040D: F9                   mov     r1,a
+040E: EA                   mov     a,r2
+040F: 94 00                subb    a,#0
+                           ; print caller address (to look up cause in .lst fil
+0411: 31 0A                acall   print_hex_8
+0413: E9                   mov     a,r1
+0414: 31 0A                acall   print_hex_8
+                           ; print original value of a (error code / debug info
+0416: 74 20                mov     a,#' '
+0418: 11 EF                acall   print_char
+041A: E8                   mov     a,r0
+041B: 31 0A                acall   print_hex_8
+                           ; newline
+041D: 74 0D                mov     a,#13
+041F: 11 EF                acall   print_char
+0421: 74 0A                mov     a,#10
+0423: 11 EF                acall   print_char
+                           ; hang
+0425: 80 FE                sjmp    *
                    
                    panic_text:
-041E: 0D 0A                .db     13, 10
-0420: 20 21 21 21 
+0427: 0D 0A                .db     13, 10
+0429: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                            .db     " !!! panic @"
-042C: 00                   .db     0
+0435: 00                   .db     0

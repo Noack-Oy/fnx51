@@ -1435,30 +1435,44 @@
                    
                    panic:
 05AB: C2 AF                clr     ea      ; disable interrupts
-05AD: F8                   mov     r0,a
+05AD: F8                   mov     r0,a    ; save a
+                           ; display panic text
 05AE: 90 01 1C             mov     dptr,#panic_out
 05B1: 85 82 32             mov     out,dpl
 05B4: 85 83 33             mov     out+1,dph
-05B7: 90 05 D5             mov     dptr,#panic_text
+05B7: 90 05 DE             mov     dptr,#panic_text
 05BA: 91 A6                acall   print_text
+                           ; get return address from stack
 05BC: D0 E0                pop     acc
-05BE: 91 75                acall   print_hex_8
-05C0: D0 E0                pop     acc
-05C2: 91 75                acall   print_hex_8
-05C4: 74 20                mov     a,#' '
-05C6: 91 70                acall   print_char
-05C8: E8                   mov     a,r0
-05C9: 91 75                acall   print_hex_8
-05CB: 74 0D                mov     a,#13
-05CD: 91 70                acall   print_char
-05CF: 74 0A                mov     a,#10
-05D1: 91 70                acall   print_char
-05D3: 80 FE                sjmp    *
+05BE: FA                   mov     r2,a
+05BF: D0 E0                pop     acc
+                           ; subtract two to get call instruction address
+05C1: C3                   clr     c
+05C2: 94 02                subb    a,#2
+05C4: F9                   mov     r1,a
+05C5: EA                   mov     a,r2
+05C6: 94 00                subb    a,#0
+                           ; print caller address (to look up cause in .lst fil
+05C8: 91 75                acall   print_hex_8
+05CA: E9                   mov     a,r1
+05CB: 91 75                acall   print_hex_8
+                           ; print original value of a (error code / debug info
+05CD: 74 20                mov     a,#' '
+05CF: 91 70                acall   print_char
+05D1: E8                   mov     a,r0
+05D2: 91 75                acall   print_hex_8
+                           ; newline
+05D4: 74 0D                mov     a,#13
+05D6: 91 70                acall   print_char
+05D8: 74 0A                mov     a,#10
+05DA: 91 70                acall   print_char
+                           ; hang
+05DC: 80 FE                sjmp    *
                    
                    panic_text:
-05D5: 0D 0A                .db     13, 10
-05D7: 20 21 21 21 
+05DE: 0D 0A                .db     13, 10
+05E0: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                            .db     " !!! panic @"
-05E3: 00                   .db     0
+05EC: 00                   .db     0
