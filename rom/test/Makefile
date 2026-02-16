@@ -22,8 +22,7 @@ include $(sources:.asm=.d)
 ifdef REMOTE_HOST
 	@echo "Setting up test on remote host $(REMOTE_HOST)..."
 	@ssh $(REMOTE_HOST) 'mkdir -p $(REMOTE_DIR)'
-	@scp ../loader.py $(REMOTE_HOST):$(REMOTE_DIR)/
-	@scp $*.hex $*.t.py $(REMOTE_HOST):$(REMOTE_DIR)/
+	@rsync -au ../loader.py util.py $*.hex $*.t.py $(REMOTE_HOST):$(REMOTE_DIR)/
 	@echo "Running test on remote host..."
 	(ssh $(REMOTE_HOST) 'cd $(REMOTE_DIR) && python3 -u $*.t.py' | tee $*.out) || mv -v $*.out $*.fail
 else
@@ -36,4 +35,4 @@ endif
 	grep -i '^\.inc' $< | awk '{print $$2}' | xargs >> $@
 
 clean:
-	rm -vf *.out *.fail
+	rm -vf *.hex *.lst *.out *.fail
