@@ -11,6 +11,7 @@
 ; **********************
 ; * Header Definitions *
 ; **********************
+.inc ../global/variables.equ
 .inc ../serial/sfr.equ
 
 
@@ -18,9 +19,11 @@
 ; * Main Code *
 ; *************
 
-; *** test/serial.asm ***
-
 	.org	0
+
+.inc ../global/init.inc
+
+; *** test/serial.asm ***
 
 	acall	serial_init
 

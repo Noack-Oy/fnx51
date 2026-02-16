@@ -1,12 +1,12 @@
 
 ; *** util/dump.inc ***
 
-; >> void dump(uint32 &r0r1r2r3, uint8 a) <<
+; >> uint32{r0-r3} dump(uint32{r0-r3} addr, uint8{a} count) <<
 
 ; Print hexdump from standard input to standard output.
 ; Starting value for address column in r0-r3.
 ; Number of bytes to print in a (0 means 256).
-; r0-r4 contains next address upon exit.
+; r0-r3 contains next address upon exit.
 
 dump:
 	push	b

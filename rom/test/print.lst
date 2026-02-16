@@ -23,19 +23,28 @@
                    
                    ; *** global/variables.equ ***
                    
-                   ; variables in internal ram
+                   ; variables in internal RAM
                    
-0000:              .equ     in,     0x30    ; pointer to input code
-0000:              .equ     out,    0x32    ; pointer to ouput code
+                   ; 0x00-0x1f: register banks 0-3
+                   ; 0x20-0x2f: bit addressable variables
                    
-0000:              .equ     stream_in,      0x34    ; input stream position
-0000:              .equ     stream_out,     0x36    ; output stream position
+0000:              .equ    in,             0x30    ; pointer to input handling 
+0000:              .equ    out,            0x32    ; pointer to ouput handling 
                    
-0000:              .equ     memory_list,    0x38    ; pointer to heap list head
-0000:              .equ     memory_start,   0x40    ; first allocatable address
-0000:              .equ     memory_end,     0x42    ; last allocatable address
+0000:              .equ    stream_in,      0x34    ; input stream position
+0000:              .equ    stream_out,     0x36    ; output stream position
                    
-0000:              .equ     stack,  0x50    ; beginning of stack
+0000:              .equ    memory_list,    0x38    ; pointer to heap list head
+0000:              .equ    memory_start,   0x40    ; first allocatable address
+0000:              .equ    memory_end,     0x42    ; last allocatable address
+                   
+0000:              .equ    block_read,     0x44    ; pointers to block device d
+0000:              .equ    block_write,    0x46    ; code (read and write funct
+0000:              .equ    block_cache,    0x48    ; pointer to block cache dat
+                   
+0000:              .equ    fatfs_info,     0x50    ; pointer to FAT file system
+                   
+0000:              .equ    stack,          0x60    ; beginning of stack (grows 
                    
                    ; *** serial/sfr.equ ***
                    
@@ -43,303 +52,320 @@
                    ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
                    
                    ; Internal Baud Rate Generator (BRG), see datasheet page 52.
-0000:                       .equ    BRL,    0x9A    ; baud rate reload value
-0000:                       .equ    BDRCON, 0x9B    ; BRG control register
+0000:                      .equ    BRL,    0x9A    ; baud rate reload value
+0000:                      .equ    BDRCON, 0x9B    ; BRG control register
                    
                    
                    ; *************
                    ; * Main Code *
                    ; *************
                    
-0000:                       .org    0
+0000:                      .org    0
                    
                    ; *** global/init.inc ***
                    
                    ; Initialize stack pointer and global variables.
                    ; This must be included early in the main program.
                    
-0000: 75 81 50              mov     SP,     #STACK
+                   global_init:
+0000: 75 81 60             mov     SP,#STACK
                    
-0003: 90 01 94              mov     dptr,   #serial_rx
-0006: 85 82 30              mov     IN,     DPL
-0009: 85 83 31              mov     IN+1,   DPH
+                   ; Select register bank zero, clear processor flags
+0003: 75 D0 00             mov     PSW,#0
                    
-000C: 90 01 9C              mov     dptr,   #serial_tx
-000F: 85 82 32              mov     OUT,    DPL
-0012: 85 83 33              mov     OUT+1,  DPH
+                   ; Fill internal RAM with markers for uninitialized data
+0006: 78 00                mov     r0,#0 ; write pointer
+                   
+0008: 74 3F                mov     a,#0x3f ; '?' for uninitialized registers
+                   global_init__1:
+000A: 08                   inc     r0 ; first iteration skips address 0, r0 liv
+000B: F6                   mov     @r0,a
+000C: B8 1F FB             cjne    r0,#0x1f,global_init__1
+                   
+000F: 74 2A                mov     a,#0x2a ; '*' for uninitialized variables
+                   global_init__2:
+0011: 08                   inc     r0
+0012: F6                   mov     @r0,a
+0013: B8 5F FB             cjne    r0,#STACK-1,global_init__2
+                   
+0016: 74 7E                mov     a,#0x7e ; '~' for stack and above
+                   global_init__3:
+0018: 08                   inc     r0
+0019: F6                   mov     @r0,a
+001A: B8 FF FB             cjne    r0,#0xff,global_init__3
                    
                    ; *** test/print.asm ***
                    
-0015: 31 8A                 acall   serial_init
+001D: 31 92                acall   serial_init
                    
                    ; test print_text
-0017: 90 01 78              mov     dptr,   #test__text
-001A: 31 A9                 acall   print_text
-001C: 90 01 85              mov     dptr,   #test__newline
-001F: 31 A9                 acall   print_text
+001F: 90 01 80             mov     dptr,   #test__text
+0022: 31 C3                acall   print_text
+0024: 90 01 8D             mov     dptr,   #test__newline
+0027: 31 C3                acall   print_text
                    
                    ; test print_hex_8
-0021: E4                    clr     a
+0029: E4                   clr     a
                    test_hex_8__loop:
-0022: 31 BF                 acall   print_hex_8
-0024: 24 01                 add     a,      #1
-0026: 20 D6 07              jb      AC,     test_hex_8__newline
-0029: 90 01 88              mov     dptr,   #test__space
-002C: 31 A9                 acall   print_text
-002E: 80 F2                 sjmp    test_hex_8__loop
+002A: 31 D9                acall   print_hex_8
+002C: 24 01                add     a,      #1
+002E: 20 D6 07             jb      AC,     test_hex_8__newline
+0031: 90 01 90             mov     dptr,   #test__space
+0034: 31 C3                acall   print_text
+0036: 80 F2                sjmp    test_hex_8__loop
                    test_hex_8__newline:
-0030: 90 01 85              mov     dptr,   #test__newline
-0033: 31 A9                 acall   print_text
-0035: 70 EB                 jnz     test_hex_8__loop
+0038: 90 01 8D             mov     dptr,   #test__newline
+003B: 31 C3                acall   print_text
+003D: 70 EB                jnz     test_hex_8__loop
                    test_hex_8__end:
-0037: 31 A9                 acall   print_text
+003F: 31 C3                acall   print_text
                    
                    ; test print_hex_16
-0039: 78 00                 mov     r0,     #0
-003B: 79 00                 mov     r1,     #0
-003D: 7B 0C                 mov     r3,     #12
+0041: 78 00                mov     r0,     #0
+0043: 79 00                mov     r1,     #0
+0045: 7B 0C                mov     r3,     #12
                    test_hex_16__loop:
-003F: 31 D4                 acall   print_hex_16
-0041: E8                    mov     a,      r0
-0042: 24 55                 add     a,      #0x55
-0044: F8                    mov     r0,     a
-0045: E9                    mov     a,      r1
-0046: 34 00                 addc    a,      #0
-0048: F9                    mov     r1,     a
-0049: 40 12                 jc      test_hex_16__end
-004B: DB 09                 djnz    r3,     test_hex_16__space
-004D: 7B 0C                 mov     r3,     #12
-004F: 90 01 85              mov     dptr,   #test__newline
-0052: 31 A9                 acall   print_text
-0054: 80 E9                 sjmp    test_hex_16__loop
+0047: 31 EE                acall   print_hex_16
+0049: E8                   mov     a,      r0
+004A: 24 55                add     a,      #0x55
+004C: F8                   mov     r0,     a
+004D: E9                   mov     a,      r1
+004E: 34 00                addc    a,      #0
+0050: F9                   mov     r1,     a
+0051: 40 12                jc      test_hex_16__end
+0053: DB 09                djnz    r3,     test_hex_16__space
+0055: 7B 0C                mov     r3,     #12
+0057: 90 01 8D             mov     dptr,   #test__newline
+005A: 31 C3                acall   print_text
+005C: 80 E9                sjmp    test_hex_16__loop
                    test_hex_16__space:
-0056: 90 01 88              mov     dptr,   #test__space
-0059: 31 A9                 acall   print_text
-005B: 80 E2                 sjmp    test_hex_16__loop
+005E: 90 01 90             mov     dptr,   #test__space
+0061: 31 C3                acall   print_text
+0063: 80 E2                sjmp    test_hex_16__loop
                    test_hex_16__end:
-005D: 90 01 85              mov     dptr,   #test__newline
-0060: 31 A9                 acall   print_text
-0062: 31 A9                 acall   print_text
+0065: 90 01 8D             mov     dptr,   #test__newline
+0068: 31 C3                acall   print_text
+006A: 31 C3                acall   print_text
                    
                    ; test print_hex_32
-0064: 90 01 85              mov     dptr,   #test__newline
-0067: E4                    clr     a
-0068: F8                    mov     r0,     a
-0069: F9                    mov     r1,     a
-006A: FA                    mov     r2,     a
-006B: FB                    mov     r3,     a
-006C: 7C 01                 mov     r4,     #1
-006E: FD                    mov     r5,     a
-006F: FE                    mov     r6,     a
-0070: FF                    mov     r7,     a
+006C: 90 01 8D             mov     dptr,   #test__newline
+006F: E4                   clr     a
+0070: F8                   mov     r0,     a
+0071: F9                   mov     r1,     a
+0072: FA                   mov     r2,     a
+0073: FB                   mov     r3,     a
+0074: 7C 01                mov     r4,     #1
+0076: FD                   mov     r5,     a
+0077: FE                   mov     r6,     a
+0078: FF                   mov     r7,     a
                    test_hex_32__loop:
-0071: 31 DF                 acall   print_hex_32
-0073: 31 A9                 acall   print_text
-                            ; r0-3 += r4-7
-0075: E8                    mov     a,      r0
-0076: 2C                    add     a,      r4
-0077: F8                    mov     r0,     a
-0078: E9                    mov     a,      r1
-0079: 3D                    addc    a,      r5
-007A: F9                    mov     r1,     a
-007B: EA                    mov     a,      r2
-007C: 3E                    addc    a,      r6
-007D: FA                    mov     r2,     a
-007E: EB                    mov     a,      r3
-007F: 3F                    addc    a,      r7
-0080: FB                    mov     r3,     a
-                            ; swap r0-3 with r4-7
-0081: EC                    mov     a,      r4
-0082: C8                    xch     a,      r0
-0083: FC                    mov     r4,     a
-0084: ED                    mov     a,      r5
-0085: C9                    xch     a,      r1
-0086: FD                    mov     r5,     a
-0087: EE                    mov     a,      r6
-0088: CA                    xch     a,      r2
-0089: FE                    mov     r6,     a
-008A: EF                    mov     a,      r7
-008B: CB                    xch     a,      r3
-008C: FF                    mov     r7,     a
-008D: 50 E2                 jnc     test_hex_32__loop
+0079: 31 F9                acall   print_hex_32
+007B: 31 C3                acall   print_text
+                           ; r0-3 += r4-7
+007D: E8                   mov     a,      r0
+007E: 2C                   add     a,      r4
+007F: F8                   mov     r0,     a
+0080: E9                   mov     a,      r1
+0081: 3D                   addc    a,      r5
+0082: F9                   mov     r1,     a
+0083: EA                   mov     a,      r2
+0084: 3E                   addc    a,      r6
+0085: FA                   mov     r2,     a
+0086: EB                   mov     a,      r3
+0087: 3F                   addc    a,      r7
+0088: FB                   mov     r3,     a
+                           ; swap r0-3 with r4-7
+0089: EC                   mov     a,      r4
+008A: C8                   xch     a,      r0
+008B: FC                   mov     r4,     a
+008C: ED                   mov     a,      r5
+008D: C9                   xch     a,      r1
+008E: FD                   mov     r5,     a
+008F: EE                   mov     a,      r6
+0090: CA                   xch     a,      r2
+0091: FE                   mov     r6,     a
+0092: EF                   mov     a,      r7
+0093: CB                   xch     a,      r3
+0094: FF                   mov     r7,     a
+0095: 50 E2                jnc     test_hex_32__loop
                    test_hex_32__end:
-008F: 31 DF                 acall   print_hex_32
-0091: 31 A9                 acall   print_text
-0093: 31 A9                 acall   print_text
+0097: 31 F9                acall   print_hex_32
+0099: 31 C3                acall   print_text
+009B: 31 C3                acall   print_text
                    
                    ; test print_int_u8
-0095: E4                    clr     a
+009D: E4                   clr     a
                    test_int_u8__loop:
-0096: 51 03                 acall   print_int_u8
-0098: 24 01                 add     a,      #1
-009A: 20 D6 07              jb      AC,     test_int_u8__newline
-009D: 90 01 88              mov     dptr,   #test__space
-00A0: 31 A9                 acall   print_text
-00A2: 80 F2                 sjmp    test_int_u8__loop
+009E: 51 1D                acall   print_int_u8
+00A0: 24 01                add     a,      #1
+00A2: 20 D6 07             jb      AC,     test_int_u8__newline
+00A5: 90 01 90             mov     dptr,   #test__space
+00A8: 31 C3                acall   print_text
+00AA: 80 F2                sjmp    test_int_u8__loop
                    test_int_u8__newline:
-00A4: 90 01 85              mov     dptr,   #test__newline
-00A7: 31 A9                 acall   print_text
-00A9: 70 EB                 jnz     test_int_u8__loop
+00AC: 90 01 8D             mov     dptr,   #test__newline
+00AF: 31 C3                acall   print_text
+00B1: 70 EB                jnz     test_int_u8__loop
                    test_int_u8__end:
-00AB: 31 A9                 acall   print_text
+00B3: 31 C3                acall   print_text
                    
                    ; test print_int_s8
-00AD: 74 80                 mov     a,      #0x80
+00B5: 74 80                mov     a,      #0x80
                    test_int_s8__loop:
-00AF: 31 F0                 acall   print_int_s8
-00B1: 24 01                 add     a,      #1
-00B3: 20 D2 11              jb      OV,     test_int_s8__end
-00B6: 20 D6 07              jb      AC,     test_int_s8__newline
-00B9: 90 01 88              mov     dptr,   #test__space
-00BC: 31 A9                 acall   print_text
-00BE: 80 EF                 sjmp    test_int_s8__loop
+00B7: 51 0A                acall   print_int_s8
+00B9: 24 01                add     a,      #1
+00BB: 20 D2 11             jb      OV,     test_int_s8__end
+00BE: 20 D6 07             jb      AC,     test_int_s8__newline
+00C1: 90 01 90             mov     dptr,   #test__space
+00C4: 31 C3                acall   print_text
+00C6: 80 EF                sjmp    test_int_s8__loop
                    test_int_s8__newline:
-00C0: 90 01 85              mov     dptr,   #test__newline
-00C3: 31 A9                 acall   print_text
-00C5: 80 E8                 sjmp    test_int_s8__loop
+00C8: 90 01 8D             mov     dptr,   #test__newline
+00CB: 31 C3                acall   print_text
+00CD: 80 E8                sjmp    test_int_s8__loop
                    test_int_s8__end:
-00C7: 90 01 85              mov     dptr,   #test__newline
-00CA: 31 A9                 acall   print_text
-00CC: 31 A9                 acall   print_text
+00CF: 90 01 8D             mov     dptr,   #test__newline
+00D2: 31 C3                acall   print_text
+00D4: 31 C3                acall   print_text
                    
                    ; test print_hex_u16
-00CE: 78 00                 mov     r0,     #0
-00D0: 79 00                 mov     r1,     #0
-00D2: 7B 0A                 mov     r3,     #10
+00D6: 78 00                mov     r0,     #0
+00D8: 79 00                mov     r1,     #0
+00DA: 7B 0A                mov     r3,     #10
                    test_int_u16__loop:
-00D4: 51 4F                 acall   print_int_u16
-00D6: E8                    mov     a,      r0
-00D7: 24 33                 add     a,      #51
-00D9: F8                    mov     r0,     a
-00DA: E9                    mov     a,      r1
-00DB: 34 00                 addc    a,      #0
-00DD: F9                    mov     r1,     a
-00DE: 40 12                 jc      test_int_u16__end
-00E0: DB 09                 djnz    r3,     test_int_u16__space
-00E2: 7B 0A                 mov     r3,     #10
-00E4: 90 01 85              mov     dptr,   #test__newline
-00E7: 31 A9                 acall   print_text
-00E9: 80 E9                 sjmp    test_int_u16__loop
+00DC: 51 69                acall   print_int_u16
+00DE: E8                   mov     a,      r0
+00DF: 24 33                add     a,      #51
+00E1: F8                   mov     r0,     a
+00E2: E9                   mov     a,      r1
+00E3: 34 00                addc    a,      #0
+00E5: F9                   mov     r1,     a
+00E6: 40 12                jc      test_int_u16__end
+00E8: DB 09                djnz    r3,     test_int_u16__space
+00EA: 7B 0A                mov     r3,     #10
+00EC: 90 01 8D             mov     dptr,   #test__newline
+00EF: 31 C3                acall   print_text
+00F1: 80 E9                sjmp    test_int_u16__loop
                    test_int_u16__space:
-00EB: 90 01 88              mov     dptr,   #test__space
-00EE: 31 A9                 acall   print_text
-00F0: 80 E2                 sjmp    test_int_u16__loop
+00F3: 90 01 90             mov     dptr,   #test__space
+00F6: 31 C3                acall   print_text
+00F8: 80 E2                sjmp    test_int_u16__loop
                    test_int_u16__end:
-00F2: 90 01 85              mov     dptr,   #test__newline
-00F5: 31 A9                 acall   print_text
-00F7: 31 A9                 acall   print_text
+00FA: 90 01 8D             mov     dptr,   #test__newline
+00FD: 31 C3                acall   print_text
+00FF: 31 C3                acall   print_text
                    
                    ; test print_hex_s16
-00F9: 78 00                 mov     r0,     #0
-00FB: 79 80                 mov     r1,     #0x80
-00FD: 7B 0A                 mov     r3,     #10
+0101: 78 00                mov     r0,     #0
+0103: 79 80                mov     r1,     #0x80
+0105: 7B 0A                mov     r3,     #10
                    test_int_s16__loop:
-00FF: 51 34                 acall   print_int_s16
-0101: E8                    mov     a,      r0
-0102: 24 7F                 add     a,      #127
-0104: F8                    mov     r0,     a
-0105: E9                    mov     a,      r1
-0106: 34 00                 addc    a,      #0
-0108: F9                    mov     r1,     a
-0109: 20 D2 12              jb      OV,     test_int_s16__end
-010C: DB 09                 djnz    r3,     test_int_s16__space
-010E: 7B 0A                 mov     r3,     #10
-0110: 90 01 85              mov     dptr,   #test__newline
-0113: 31 A9                 acall   print_text
-0115: 80 E8                 sjmp    test_int_s16__loop
+0107: 51 4E                acall   print_int_s16
+0109: E8                   mov     a,      r0
+010A: 24 7F                add     a,      #127
+010C: F8                   mov     r0,     a
+010D: E9                   mov     a,      r1
+010E: 34 00                addc    a,      #0
+0110: F9                   mov     r1,     a
+0111: 20 D2 12             jb      OV,     test_int_s16__end
+0114: DB 09                djnz    r3,     test_int_s16__space
+0116: 7B 0A                mov     r3,     #10
+0118: 90 01 8D             mov     dptr,   #test__newline
+011B: 31 C3                acall   print_text
+011D: 80 E8                sjmp    test_int_s16__loop
                    test_int_s16__space:
-0117: 90 01 88              mov     dptr,   #test__space
-011A: 31 A9                 acall   print_text
-011C: 80 E1                 sjmp    test_int_s16__loop
+011F: 90 01 90             mov     dptr,   #test__space
+0122: 31 C3                acall   print_text
+0124: 80 E1                sjmp    test_int_s16__loop
                    test_int_s16__end:
-011E: 90 01 85              mov     dptr,   #test__newline
-0121: 31 A9                 acall   print_text
-0123: 31 A9                 acall   print_text
+0126: 90 01 8D             mov     dptr,   #test__newline
+0129: 31 C3                acall   print_text
+012B: 31 C3                acall   print_text
                    
                    ; test print_int_u32
-0125: 90 01 85              mov     dptr,   #test__newline
-0128: E4                    clr     a
-0129: F8                    mov     r0,     a
-012A: F9                    mov     r1,     a
-012B: FA                    mov     r2,     a
-012C: FB                    mov     r3,     a
-012D: 7C 01                 mov     r4,     #1
-012F: FD                    mov     r5,     a
-0130: FE                    mov     r6,     a
-0131: FF                    mov     r7,     a
+012D: 90 01 8D             mov     dptr,   #test__newline
+0130: E4                   clr     a
+0131: F8                   mov     r0,     a
+0132: F9                   mov     r1,     a
+0133: FA                   mov     r2,     a
+0134: FB                   mov     r3,     a
+0135: 7C 01                mov     r4,     #1
+0137: FD                   mov     r5,     a
+0138: FE                   mov     r6,     a
+0139: FF                   mov     r7,     a
                    test_int_u32__loop:
-0132: 71 18                 acall   print_int_u32
-0134: 31 A9                 acall   print_text
-                            ; r0-3 += r4-7
-0136: E8                    mov     a,      r0
-0137: 2C                    add     a,      r4
-0138: F8                    mov     r0,     a
-0139: E9                    mov     a,      r1
-013A: 3D                    addc    a,      r5
-013B: F9                    mov     r1,     a
-013C: EA                    mov     a,      r2
-013D: 3E                    addc    a,      r6
-013E: FA                    mov     r2,     a
-013F: EB                    mov     a,      r3
-0140: 3F                    addc    a,      r7
-0141: FB                    mov     r3,     a
-                            ; swap r0-3 with r4-7
-0142: EC                    mov     a,      r4
-0143: C8                    xch     a,      r0
-0144: FC                    mov     r4,     a
-0145: ED                    mov     a,      r5
-0146: C9                    xch     a,      r1
-0147: FD                    mov     r5,     a
-0148: EE                    mov     a,      r6
-0149: CA                    xch     a,      r2
-014A: FE                    mov     r6,     a
-014B: EF                    mov     a,      r7
-014C: CB                    xch     a,      r3
-014D: FF                    mov     r7,     a
-014E: 50 E2                 jnc     test_int_u32__loop
+013A: 71 32                acall   print_int_u32
+013C: 31 C3                acall   print_text
+                           ; r0-3 += r4-7
+013E: E8                   mov     a,      r0
+013F: 2C                   add     a,      r4
+0140: F8                   mov     r0,     a
+0141: E9                   mov     a,      r1
+0142: 3D                   addc    a,      r5
+0143: F9                   mov     r1,     a
+0144: EA                   mov     a,      r2
+0145: 3E                   addc    a,      r6
+0146: FA                   mov     r2,     a
+0147: EB                   mov     a,      r3
+0148: 3F                   addc    a,      r7
+0149: FB                   mov     r3,     a
+                           ; swap r0-3 with r4-7
+014A: EC                   mov     a,      r4
+014B: C8                   xch     a,      r0
+014C: FC                   mov     r4,     a
+014D: ED                   mov     a,      r5
+014E: C9                   xch     a,      r1
+014F: FD                   mov     r5,     a
+0150: EE                   mov     a,      r6
+0151: CA                   xch     a,      r2
+0152: FE                   mov     r6,     a
+0153: EF                   mov     a,      r7
+0154: CB                   xch     a,      r3
+0155: FF                   mov     r7,     a
+0156: 50 E2                jnc     test_int_u32__loop
                    test_int_u32__end:
-0150: 71 18                 acall   print_int_u32
-0152: 31 A9                 acall   print_text
-0154: 31 A9                 acall   print_text
+0158: 71 32                acall   print_int_u32
+015A: 31 C3                acall   print_text
+015C: 31 C3                acall   print_text
                    
                    ; test print_int_s32
-0156: 90 01 85              mov     dptr,   #test__newline
-                            ; r0-r3 <- 0x80000000 (-2147483648)
-0159: E4                    clr     a
-015A: F8                    mov     r0,     a
-015B: F9                    mov     r1,     a
-015C: FA                    mov     r2,     a
-015D: 7B 80                 mov     r3,     #0x80
+015E: 90 01 8D             mov     dptr,   #test__newline
+                           ; r0-r3 <- 0x80000000 (-2147483648)
+0161: E4                   clr     a
+0162: F8                   mov     r0,     a
+0163: F9                   mov     r1,     a
+0164: FA                   mov     r2,     a
+0165: 7B 80                mov     r3,     #0x80
                    test_int_s32_loop:
-015F: 51 E6                 acall   print_int_s32
-0161: 31 A9                 acall   print_text
-                            ; r0-r3 += 0x075bcd15 (123456789)
-0163: E8                    mov     a,      r0
-0164: 24 15                 add     a,      #0x15
-0166: F8                    mov     r0,     a
-0167: E9                    mov     a,      r1
-0168: 34 CD                 addc    a,      #0xcd
-016A: F9                    mov     r1,     a
-016B: EA                    mov     a,      r2
-016C: 34 5B                 addc    a,      #0x5b
-016E: FA                    mov     r2,     a
-016F: EB                    mov     a,      r3
-0170: 34 07                 addc    a,      #0x07
-0172: FB                    mov     r3,     a
-0173: 30 D2 E9              jnb     ov,     test_int_s32_loop
+0167: 71 00                acall   print_int_s32
+0169: 31 C3                acall   print_text
+                           ; r0-r3 += 0x075bcd15 (123456789)
+016B: E8                   mov     a,      r0
+016C: 24 15                add     a,      #0x15
+016E: F8                   mov     r0,     a
+016F: E9                   mov     a,      r1
+0170: 34 CD                addc    a,      #0xcd
+0172: F9                   mov     r1,     a
+0173: EA                   mov     a,      r2
+0174: 34 5B                addc    a,      #0x5b
+0176: FA                   mov     r2,     a
+0177: EB                   mov     a,      r3
+0178: 34 07                addc    a,      #0x07
+017A: FB                   mov     r3,     a
+017B: 30 D2 E9             jnb     ov,     test_int_s32_loop
                    
                    ; the end
-0176: 21 76                 ajmp    *
+017E: 21 7E                ajmp    *
                    
                    test__text:
-0178: 48 65 6C 6C 
+0180: 48 65 6C 6C 
       6F 2C 20 77 
       6F 72 6C 64 
-      21                    .byte   "Hello, world!"
+      21                   .byte   "Hello, world!"
                    test__newline:
-0185: 0D 0A 00              .byte   13, 10, 0
+018D: 0D 0A 00             .byte   13, 10, 0
                    test__space:
-0188: 20 00                 .byte   32, 0
+0190: 20 00                .byte   32, 0
                    
                    ; *********************
                    ; * Library Functions *
@@ -359,10 +385,19 @@
                    ; also note oscillator diagram on page 16!
                    
                    serial_init:
-018A: 75 98 52              mov     SCON,   #0x52   ; SM1, REN, TI
-018D: 75 9A BF              mov     BRL,    #191    ; 9600 @20MHz CLK
-0190: 75 9B 1E              mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
-0193: 22                    ret
+0192: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
+0195: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
+0198: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+                   
+019B: 90 01 AE             mov     dptr,   #serial_rx
+019E: 85 82 30             mov     IN,     DPL
+01A1: 85 83 31             mov     IN+1,   DPH
+                   
+01A4: 90 01 B6             mov     dptr,   #serial_tx
+01A7: 85 82 32             mov     OUT,    DPL
+01AA: 85 83 33             mov     OUT+1,  DPH
+                   
+01AD: 22                   ret
                    
                    ; *** serial/rx.inc ***
                    
@@ -371,10 +406,10 @@
                    ; Receive byte into accumulator.
                    
                    serial_rx:
-0194: 30 98 FD              jnb     RI,     serial_rx
-0197: C2 98                 clr     RI
-0199: E5 99                 mov     a,      SBUF
-019B: 22                    ret
+01AE: 30 98 FD             jnb     RI,     serial_rx
+01B1: C2 98                clr     RI
+01B3: E5 99                mov     a,      SBUF
+01B5: 22                   ret
                    
                    ; *** serial/tx.inc ***
                    
@@ -383,10 +418,10 @@
                    ; Transmit byte from accumulator.
                    
                    serial_tx:
-019C: 30 99 FD              jnb     TI,     serial_tx
-019F: C2 99                 clr     TI
-01A1: F5 99                 mov     SBUF,   a
-01A3: 22                    ret
+01B6: 30 99 FD             jnb     TI,     serial_tx
+01B9: C2 99                clr     TI
+01BB: F5 99                mov     SBUF,   a
+01BD: 22                   ret
                    
                    ; *** print/char.inc ***
                    
@@ -396,9 +431,9 @@
                    ; Indirect call to function behind OUT pointer.
                    
                    print_char:
-01A4: C0 32                 push    OUT
-01A6: C0 33                 push    OUT+1
-01A8: 22                    ret
+01BE: C0 32                push    OUT
+01C0: C0 33                push    OUT+1
+01C2: 22                   ret
                    
                    ; *** print/text.inc ***
                    
@@ -408,25 +443,25 @@
                    ; Aborts if no null terminator is found after 256 bytes.
                    
                    print_text:
-01A9: C0 E0                 push    ACC
-01AB: E8                    mov     a,      r0
-01AC: C0 E0                 push    ACC
+01C3: C0 E0                push    ACC
+01C5: E8                   mov     a,      r0
+01C6: C0 E0                push    ACC
                    
-01AE: E4                    clr     a
-01AF: F8                    mov     r0,     a
+01C8: E4                   clr     a
+01C9: F8                   mov     r0,     a
                    print_text__loop:
-01B0: 93                    movc    a,      @dptr+a
-01B1: 60 06                 jz      print_text__end
-01B3: 31 A4                 acall   print_char
-01B5: 08                    inc     r0
-01B6: E8                    mov     a,      r0
-01B7: 70 F7                 jnz     print_text__loop
+01CA: 93                   movc    a,      @dptr+a
+01CB: 60 06                jz      print_text__end
+01CD: 31 BE                acall   print_char
+01CF: 08                   inc     r0
+01D0: E8                   mov     a,      r0
+01D1: 70 F7                jnz     print_text__loop
                    
                    print_text__end:
-01B9: D0 E0                 pop     ACC
-01BB: F8                    mov     r0,     a
-01BC: D0 E0                 pop     ACC
-01BE: 22                    ret
+01D3: D0 E0                pop     ACC
+01D5: F8                   mov     r0,     a
+01D6: D0 E0                pop     ACC
+01D8: 22                   ret
                    
                    ; *** print/hex.inc ***
                    
@@ -435,50 +470,50 @@
                    ; Print hexadecimal number from accumulator.
                    
                    print_hex_8:
-01BF: C4                    swap    a       ; high nibble first
-01C0: 31 C3                 acall   print_hex_8__nibble
-01C2: C4                    swap    a
+01D9: C4                   swap    a       ; high nibble first
+01DA: 31 DD                acall   print_hex_8__nibble
+01DC: C4                   swap    a
                    print_hex_8__nibble:
-01C3: C0 E0                 push    ACC
-01C5: 54 0F                 anl     a,      #0x0f
-01C7: 24 90                 add     a,      #0x90
-01C9: D4                    da      a
-01CA: 34 40                 addc    a,      #0x40
-01CC: D4                    da      a
-01CD: 44 20                 orl     a,      #0x20   ; lower case
-01CF: 31 A4                 acall   print_char
-01D1: D0 E0                 pop     ACC
-01D3: 22                    ret
+01DD: C0 E0                push    ACC
+01DF: 54 0F                anl     a,      #0x0f
+01E1: 24 90                add     a,      #0x90
+01E3: D4                   da      a
+01E4: 34 40                addc    a,      #0x40
+01E6: D4                   da      a
+01E7: 44 20                orl     a,      #0x20   ; lower case
+01E9: 31 BE                acall   print_char
+01EB: D0 E0                pop     ACC
+01ED: 22                   ret
                    
                    ; >> void print_hex_16(int r0r1) <<
                    
                    ; Print hexadecimal number from r0-r1.
                    
                    print_hex_16:
-01D4: C0 E0                 push    ACC
-01D6: E9                    mov     a,      r1      ; MSB first
-01D7: 31 BF                 acall   print_hex_8
-01D9: E8                    mov     a,      r0      ; LSB second
-01DA: 31 BF                 acall   print_hex_8
-01DC: D0 E0                 pop     ACC
-01DE: 22                    ret
+01EE: C0 E0                push    ACC
+01F0: E9                   mov     a,      r1      ; MSB first
+01F1: 31 D9                acall   print_hex_8
+01F3: E8                   mov     a,      r0      ; LSB second
+01F4: 31 D9                acall   print_hex_8
+01F6: D0 E0                pop     ACC
+01F8: 22                   ret
                    
                    ; >> void print_hex_32(long r0r1r2r3) <<
                    
                    ; Print hexadecimal number from r0-r3.
                    
                    print_hex_32:
-01DF: C0 E0                 push    ACC
-01E1: EB                    mov     a,      r3      ; MSB first
-01E2: 31 BF                 acall   print_hex_8
-01E4: EA                    mov     a,      r2
-01E5: 31 BF                 acall   print_hex_8
-01E7: E9                    mov     a,      r1
-01E8: 31 BF                 acall   print_hex_8
-01EA: E8                    mov     a,      r0      ; LSB last
-01EB: 31 BF                 acall   print_hex_8
-01ED: D0 E0                 pop     ACC
-01EF: 22                    ret
+01F9: C0 E0                push    ACC
+01FB: EB                   mov     a,      r3      ; MSB first
+01FC: 31 D9                acall   print_hex_8
+01FE: EA                   mov     a,      r2
+01FF: 31 D9                acall   print_hex_8
+0201: E9                   mov     a,      r1
+0202: 31 D9                acall   print_hex_8
+0204: E8                   mov     a,      r0      ; LSB last
+0205: 31 D9                acall   print_hex_8
+0207: D0 E0                pop     ACC
+0209: 22                   ret
                    
                    ; *** print/int.inc ***
                    
@@ -487,248 +522,248 @@
                    ; Print signed integer from accumulator.
                    
                    print_int_s8:
-01F0: C0 E0                 push    ACC
-01F2: C0 F0                 push    B
-01F4: 30 E7 10              jnb     ACC.7,  print_int_u8__1
-01F7: F5 F0                 mov     b,      a
-01F9: 74 2D                 mov     a,      #'-'
-01FB: 31 A4                 acall   print_char
-01FD: E5 F0                 mov     a,      b
-01FF: F4                    cpl     a
-0200: 04                    inc     a
-0201: 80 04                 sjmp    print_int_u8__1
+020A: C0 E0                push    ACC
+020C: C0 F0                push    B
+020E: 30 E7 10             jnb     ACC.7,  print_int_u8__1
+0211: F5 F0                mov     b,      a
+0213: 74 2D                mov     a,      #'-'
+0215: 31 BE                acall   print_char
+0217: E5 F0                mov     a,      b
+0219: F4                   cpl     a
+021A: 04                   inc     a
+021B: 80 04                sjmp    print_int_u8__1
                    
                    ; >> void print_int_u8(char a) <<
                    
                    ; Print unsingned integer from accumulator.
                    
                    print_int_u8:
-0203: C0 E0                 push    ACC
-0205: C0 F0                 push    B
+021D: C0 E0                push    ACC
+021F: C0 F0                push    B
                    print_int_u8__1:
-0207: 88 F0                 mov     b,      r0
-0209: C0 F0                 push    B
+0221: 88 F0                mov     b,      r0
+0223: C0 F0                push    B
                    
-020B: 78 00                 mov     r0,     #0
-020D: 75 F0 64              mov     b,      #100
-0210: 84                    div     ab
-0211: 60 05                 jz      print_int_u8__tens
-0213: 24 30                 add     a,      #'0'
-0215: 31 A4                 acall   print_char
-0217: 08                    inc     r0      ; stop skipping leading zeroes
+0225: 78 00                mov     r0,     #0
+0227: 75 F0 64             mov     b,      #100
+022A: 84                   div     ab
+022B: 60 05                jz      print_int_u8__tens
+022D: 24 30                add     a,      #'0'
+022F: 31 BE                acall   print_char
+0231: 08                   inc     r0      ; stop skipping leading zeroes
                    print_int_u8__tens:
-0218: E5 F0                 mov     a,      b
-021A: 75 F0 0A              mov     b,      #10
-021D: 84                    div     ab
-021E: 28                    add     a,      r0
-021F: 60 05                 jz      print_int_u8__ones
-0221: 98                    subb    a,      r0
-0222: 24 30                 add     a,      #'0'
-0224: 31 A4                 acall   print_char
+0232: E5 F0                mov     a,      b
+0234: 75 F0 0A             mov     b,      #10
+0237: 84                   div     ab
+0238: 28                   add     a,      r0
+0239: 60 05                jz      print_int_u8__ones
+023B: 98                   subb    a,      r0
+023C: 24 30                add     a,      #'0'
+023E: 31 BE                acall   print_char
                    print_int_u8__ones:
-0226: E5 F0                 mov     a,      b
-0228: 24 30                 add     a,      #'0'
-022A: 31 A4                 acall   print_char
+0240: E5 F0                mov     a,      b
+0242: 24 30                add     a,      #'0'
+0244: 31 BE                acall   print_char
                    
-022C: D0 E0                 pop     ACC
-022E: F8                    mov     r0,     a
-022F: D0 F0                 pop     B
-0231: D0 E0                 pop     ACC
-0233: 22                    ret
+0246: D0 E0                pop     ACC
+0248: F8                   mov     r0,     a
+0249: D0 F0                pop     B
+024B: D0 E0                pop     ACC
+024D: 22                   ret
                    
                    ; >> void print_int_s16(int r0r1) <<
                    
                    ; Print signed integer from r0-r1.
                    
                    print_int_s16:
-0234: C0 E0                 push    ACC
-0236: E8                    mov     a,      r0
-0237: C0 E0                 push    ACC
-0239: E9                    mov     a,      r1
-023A: C0 E0                 push    ACC
-023C: 30 E7 18              jnb     ACC.7,  print_int_u16__1
-023F: 74 2D                 mov     a,      #'-'
-0241: 31 A4                 acall   print_char
-0243: E8                    mov     a,      r0
-0244: F4                    cpl     a
-0245: 24 01                 add     a,      #1
-0247: F8                    mov     r0,     a
-0248: E9                    mov     a,      r1
-0249: F4                    cpl     a
-024A: 34 00                 addc    a,      #0
-024C: F9                    mov     r1,     a
-024D: 80 08                 sjmp    print_int_u16__1
+024E: C0 E0                push    ACC
+0250: E8                   mov     a,      r0
+0251: C0 E0                push    ACC
+0253: E9                   mov     a,      r1
+0254: C0 E0                push    ACC
+0256: 30 E7 18             jnb     ACC.7,  print_int_u16__1
+0259: 74 2D                mov     a,      #'-'
+025B: 31 BE                acall   print_char
+025D: E8                   mov     a,      r0
+025E: F4                   cpl     a
+025F: 24 01                add     a,      #1
+0261: F8                   mov     r0,     a
+0262: E9                   mov     a,      r1
+0263: F4                   cpl     a
+0264: 34 00                addc    a,      #0
+0266: F9                   mov     r1,     a
+0267: 80 08                sjmp    print_int_u16__1
                    
                    ; >> void print_int_u16(int r0r1) <<
                    
                    ; Print unsigned integer from r0-r1.
                    
                    print_int_u16:
-024F: C0 E0                 push    ACC
-0251: E8                    mov     a,      r0
-0252: C0 E0                 push    ACC
-0254: E9                    mov     a,      r1
-0255: C0 E0                 push    ACC
+0269: C0 E0                push    ACC
+026B: E8                   mov     a,      r0
+026C: C0 E0                push    ACC
+026E: E9                   mov     a,      r1
+026F: C0 E0                push    ACC
                    print_int_u16__1:
-0257: EB                    mov     a,      r3
-0258: C0 E0                 push    ACC
-025A: C0 F0                 push    B
+0271: EB                   mov     a,      r3
+0272: C0 E0                push    ACC
+0274: C0 F0                push    B
                    
-025C: 7A 00                 mov     r2,     #0 ; flag for leading zeroes
+0276: 7A 00                mov     r2,     #0 ; flag for leading zeroes
                    
-                            ; divide by 10000 (0x2710)
-                            ; collect quotient in b
-025E: 75 F0 FF              mov     b,      #-1
-0261: C3                    clr     c
+                           ; divide by 10000 (0x2710)
+                           ; collect quotient in b
+0278: 75 F0 FF             mov     b,      #-1
+027B: C3                   clr     c
                    print_int_u16__10k_loop:
-0262: E8                    mov     a,      r0
-0263: 94 10                 subb    a,      #0x10
-0265: F8                    mov     r0,     a
-0266: E9                    mov     a,      r1
-0267: 94 27                 subb    a,      #0x27
-0269: F9                    mov     r1,     a
-026A: 05 F0                 inc     b
-026C: 50 F4                 jnc     print_int_u16__10k_loop
-                            ; undo last subtraction to restore remainder
-026E: E8                    mov     a,      r0
-026F: 24 10                 add     a,      #0x10
-0271: F8                    mov     r0,     a
-0272: E9                    mov     a,      r1
-0273: 34 27                 addc    a,      #0x27
-0275: F9                    mov     r1,     a
-                            ; print tenthousands digit
-0276: E5 F0                 mov     a,      b
-0278: 60 05                 jz      print_int_u16__1k
-027A: 24 30                 add     a,      #'0'
-027C: 31 A4                 acall   print_char
-027E: 0A                    inc     r2
+027C: E8                   mov     a,      r0
+027D: 94 10                subb    a,      #0x10
+027F: F8                   mov     r0,     a
+0280: E9                   mov     a,      r1
+0281: 94 27                subb    a,      #0x27
+0283: F9                   mov     r1,     a
+0284: 05 F0                inc     b
+0286: 50 F4                jnc     print_int_u16__10k_loop
+                           ; undo last subtraction to restore remainder
+0288: E8                   mov     a,      r0
+0289: 24 10                add     a,      #0x10
+028B: F8                   mov     r0,     a
+028C: E9                   mov     a,      r1
+028D: 34 27                addc    a,      #0x27
+028F: F9                   mov     r1,     a
+                           ; print tenthousands digit
+0290: E5 F0                mov     a,      b
+0292: 60 05                jz      print_int_u16__1k
+0294: 24 30                add     a,      #'0'
+0296: 31 BE                acall   print_char
+0298: 0A                   inc     r2
                    print_int_u16__1k:
-                            ; divide by 1000 (0x03e8)
-                            ; collect quotient in b
-027F: 75 F0 FF              mov     b,      #-1
-0282: C3                    clr     c
+                           ; divide by 1000 (0x03e8)
+                           ; collect quotient in b
+0299: 75 F0 FF             mov     b,      #-1
+029C: C3                   clr     c
                    print_int_u16__1k_loop:
-0283: E8                    mov     a,      r0
-0284: 94 E8                 subb    a,      #0xe8
-0286: F8                    mov     r0,     a
-0287: E9                    mov     a,      r1
-0288: 94 03                 subb    a,      #0x03
-028A: F9                    mov     r1,     a
-028B: 05 F0                 inc     b
-028D: 50 F4                 jnc     print_int_u16__1k_loop
-                            ; undo last subtraction to restore remainder
-028F: E8                    mov     a,      r0
-0290: 24 E8                 add     a,      #0xe8
-0292: F8                    mov     r0,     a
-0293: E9                    mov     a,      r1
-0294: 34 03                 addc    a,      #0x03
-0296: F9                    mov     r1,     a
-                            ; print thousands digit
-0297: E5 F0                 mov     a,      b
-0299: 2A                    add     a,      r2
-029A: 60 06                 jz      print_int_u16__100
-029C: 9A                    subb    a,      r2
-029D: 24 30                 add     a,      #'0'
-029F: 31 A4                 acall   print_char
-02A1: 0A                    inc     r2
+029D: E8                   mov     a,      r0
+029E: 94 E8                subb    a,      #0xe8
+02A0: F8                   mov     r0,     a
+02A1: E9                   mov     a,      r1
+02A2: 94 03                subb    a,      #0x03
+02A4: F9                   mov     r1,     a
+02A5: 05 F0                inc     b
+02A7: 50 F4                jnc     print_int_u16__1k_loop
+                           ; undo last subtraction to restore remainder
+02A9: E8                   mov     a,      r0
+02AA: 24 E8                add     a,      #0xe8
+02AC: F8                   mov     r0,     a
+02AD: E9                   mov     a,      r1
+02AE: 34 03                addc    a,      #0x03
+02B0: F9                   mov     r1,     a
+                           ; print thousands digit
+02B1: E5 F0                mov     a,      b
+02B3: 2A                   add     a,      r2
+02B4: 60 06                jz      print_int_u16__100
+02B6: 9A                   subb    a,      r2
+02B7: 24 30                add     a,      #'0'
+02B9: 31 BE                acall   print_char
+02BB: 0A                   inc     r2
                    print_int_u16__100:
-                            ; divide by 100 (0x0064)
-                            ; collect quotient in b
-02A2: 75 F0 FF              mov     b,      #-1
-02A5: C3                    clr     c
+                           ; divide by 100 (0x0064)
+                           ; collect quotient in b
+02BC: 75 F0 FF             mov     b,      #-1
+02BF: C3                   clr     c
                    print_int_u16__100_loop:
-02A6: E8                    mov     a,      r0
-02A7: 94 64                 subb    a,      #0x64
-02A9: F8                    mov     r0,     a
-02AA: E9                    mov     a,      r1
-02AB: 94 00                 subb    a,      #0x00
-02AD: F9                    mov     r1,     a
-02AE: 05 F0                 inc     b
-02B0: 50 F4                 jnc     print_int_u16__100_loop
-                            ; undo last subtraction to restore remainder
-02B2: E8                    mov     a,      r0
-02B3: 24 64                 add     a,      #0x64
-02B5: F8                    mov     r0,     a
-02B6: E9                    mov     a,      r1
-02B7: 34 00                 addc    a,      #0x00
-02B9: F9                    mov     r1,     a
-                            ; print hundreds digit
-02BA: E5 F0                 mov     a,      b
-02BC: 2A                    add     a,      r2
-02BD: 60 06                 jz      print_int_u16__tens
-02BF: 9A                    subb    a,      r2
-02C0: 24 30                 add     a,      #'0'
-02C2: 31 A4                 acall   print_char
-02C4: 0A                    inc     r2
+02C0: E8                   mov     a,      r0
+02C1: 94 64                subb    a,      #0x64
+02C3: F8                   mov     r0,     a
+02C4: E9                   mov     a,      r1
+02C5: 94 00                subb    a,      #0x00
+02C7: F9                   mov     r1,     a
+02C8: 05 F0                inc     b
+02CA: 50 F4                jnc     print_int_u16__100_loop
+                           ; undo last subtraction to restore remainder
+02CC: E8                   mov     a,      r0
+02CD: 24 64                add     a,      #0x64
+02CF: F8                   mov     r0,     a
+02D0: E9                   mov     a,      r1
+02D1: 34 00                addc    a,      #0x00
+02D3: F9                   mov     r1,     a
+                           ; print hundreds digit
+02D4: E5 F0                mov     a,      b
+02D6: 2A                   add     a,      r2
+02D7: 60 06                jz      print_int_u16__tens
+02D9: 9A                   subb    a,      r2
+02DA: 24 30                add     a,      #'0'
+02DC: 31 BE                acall   print_char
+02DE: 0A                   inc     r2
                    print_int_u16__tens:
-                            ; divide by 10 (using div instruction)
-02C5: E8                    mov     a,      r0
-02C6: 75 F0 0A              mov     b,      #10
-02C9: 84                    div     ab
-                            ; print tens digit
-02CA: 2A                    add     a,      r2
-02CB: 60 05                 jz      print_int_u16__ones
-02CD: 9A                    subb    a,      r2
-02CE: 24 30                 add     a,      #'0'
-02D0: 31 A4                 acall   print_char
+                           ; divide by 10 (using div instruction)
+02DF: E8                   mov     a,      r0
+02E0: 75 F0 0A             mov     b,      #10
+02E3: 84                   div     ab
+                           ; print tens digit
+02E4: 2A                   add     a,      r2
+02E5: 60 05                jz      print_int_u16__ones
+02E7: 9A                   subb    a,      r2
+02E8: 24 30                add     a,      #'0'
+02EA: 31 BE                acall   print_char
                    print_int_u16__ones:
-                            ; print ones digit
-02D2: E5 F0                 mov     a,      b
-02D4: 24 30                 add     a,      #'0'
-02D6: 31 A4                 acall   print_char
+                           ; print ones digit
+02EC: E5 F0                mov     a,      b
+02EE: 24 30                add     a,      #'0'
+02F0: 31 BE                acall   print_char
                    
-02D8: D0 F0                 pop     B
-02DA: D0 E0                 pop     ACC
-02DC: FA                    mov     r2,     a
-02DD: D0 E0                 pop     ACC
-02DF: F9                    mov     r1,     a
-02E0: D0 E0                 pop     ACC
-02E2: F8                    mov     r0,     a
-02E3: D0 E0                 pop     ACC
-02E5: 22                    ret
+02F2: D0 F0                pop     B
+02F4: D0 E0                pop     ACC
+02F6: FA                   mov     r2,     a
+02F7: D0 E0                pop     ACC
+02F9: F9                   mov     r1,     a
+02FA: D0 E0                pop     ACC
+02FC: F8                   mov     r0,     a
+02FD: D0 E0                pop     ACC
+02FF: 22                   ret
                    
                    ; >> void print_int_s32(long r0r1r2r3) <<
                    
                    ; Print signed integer from r0-r3.
                    
                    print_int_s32:
-02E6: C0 E0                 push    acc
-02E8: C0 F0                 push    b
-02EA: C0 82                 push    dpl
-02EC: C0 83                 push    dph
-02EE: 71 AF                 acall   regbank_next
-                            ; r4-r7: value to print
-02F0: E6                    mov     a,      @r0
-02F1: FC                    mov     r4,     a
-02F2: 08                    inc     r0
-02F3: E6                    mov     a,      @r0
-02F4: FD                    mov     r5,     a
-02F5: 08                    inc     r0
-02F6: E6                    mov     a,      @r0
-02F7: FE                    mov     r6,     a
-02F8: 08                    inc     r0
-02F9: E6                    mov     a,      @r0
-02FA: FF                    mov     r7,     a
-02FB: 30 E7 2F              jnb     ACC.7,  print_int_u32__1
-02FE: 74 2D                 mov     a,      #'-'
-0300: 31 A4                 acall   print_char
-0302: EC                    mov     a,      r4
-0303: F4                    cpl     a
-0304: 24 01                 add     a,      #1
-0306: FC                    mov     r4,     a
-0307: ED                    mov     a,      r5
-0308: F4                    cpl     a
-0309: 34 00                 addc    a,      #0
-030B: FD                    mov     r5,     a
-030C: EE                    mov     a,      r6
-030D: F4                    cpl     a
-030E: 34 00                 addc    a,      #0
-0310: FE                    mov     r6,     a
-0311: EF                    mov     a,      r7
-0312: F4                    cpl     a
-0313: 34 00                 addc    a,      #0
-0315: FF                    mov     r7,     a
-0316: 80 15                 sjmp    print_int_u32__1
+0300: C0 E0                push    acc
+0302: C0 F0                push    b
+0304: C0 82                push    dpl
+0306: C0 83                push    dph
+0308: 71 C9                acall   regbank_next
+                           ; r4-r7: value to print
+030A: E6                   mov     a,      @r0
+030B: FC                   mov     r4,     a
+030C: 08                   inc     r0
+030D: E6                   mov     a,      @r0
+030E: FD                   mov     r5,     a
+030F: 08                   inc     r0
+0310: E6                   mov     a,      @r0
+0311: FE                   mov     r6,     a
+0312: 08                   inc     r0
+0313: E6                   mov     a,      @r0
+0314: FF                   mov     r7,     a
+0315: 30 E7 2F             jnb     ACC.7,  print_int_u32__1
+0318: 74 2D                mov     a,      #'-'
+031A: 31 BE                acall   print_char
+031C: EC                   mov     a,      r4
+031D: F4                   cpl     a
+031E: 24 01                add     a,      #1
+0320: FC                   mov     r4,     a
+0321: ED                   mov     a,      r5
+0322: F4                   cpl     a
+0323: 34 00                addc    a,      #0
+0325: FD                   mov     r5,     a
+0326: EE                   mov     a,      r6
+0327: F4                   cpl     a
+0328: 34 00                addc    a,      #0
+032A: FE                   mov     r6,     a
+032B: EF                   mov     a,      r7
+032C: F4                   cpl     a
+032D: 34 00                addc    a,      #0
+032F: FF                   mov     r7,     a
+0330: 80 15                sjmp    print_int_u32__1
                    
                    
                    ; >> void print_int_u32(long r0r1r2r3) <<
@@ -736,181 +771,181 @@
                    ; Print unsigned integer from r0-r3.
                    
                    print_int_u32:
-0318: C0 E0                 push    acc
-031A: C0 F0                 push    b
-031C: C0 82                 push    dpl
-031E: C0 83                 push    dph
-0320: 71 AF                 acall   regbank_next
-                            ; r4-r7: value to print
-0322: E6                    mov     a,      @r0
-0323: FC                    mov     r4,     a
-0324: 08                    inc     r0
-0325: E6                    mov     a,      @r0
-0326: FD                    mov     r5,     a
-0327: 08                    inc     r0
-0328: E6                    mov     a,      @r0
-0329: FE                    mov     r6,     a
-032A: 08                    inc     r0
-032B: E6                    mov     a,      @r0
-032C: FF                    mov     r7,     a
+0332: C0 E0                push    acc
+0334: C0 F0                push    b
+0336: C0 82                push    dpl
+0338: C0 83                push    dph
+033A: 71 C9                acall   regbank_next
+                           ; r4-r7: value to print
+033C: E6                   mov     a,      @r0
+033D: FC                   mov     r4,     a
+033E: 08                   inc     r0
+033F: E6                   mov     a,      @r0
+0340: FD                   mov     r5,     a
+0341: 08                   inc     r0
+0342: E6                   mov     a,      @r0
+0343: FE                   mov     r6,     a
+0344: 08                   inc     r0
+0345: E6                   mov     a,      @r0
+0346: FF                   mov     r7,     a
                    print_int_u32__1:
-032D: 75 F0 00              mov     b,      #0 ; flag for leading zeroes
-0330: 90 03 64              mov     dptr,   #print_int_u32__divisors
+0347: 75 F0 00             mov     b,      #0 ; flag for leading zeroes
+034A: 90 03 7E             mov     dptr,   #print_int_u32__divisors
                    print_int_u32__loop:
-                            ; get divisor
-0333: E4                    clr     a
-0334: 93                    movc    a,      @a+dptr
-0335: F8                    mov     r0,     a
-0336: A3                    inc     dptr
-0337: E4                    clr     a
-0338: 93                    movc    a,      @a+dptr
-0339: F9                    mov     r1,     a
-033A: A3                    inc     dptr
-033B: E4                    clr     a
-033C: 93                    movc    a,      @a+dptr
-033D: FA                    mov     r2,     a
-033E: A3                    inc     dptr
-033F: E4                    clr     a
-0340: 93                    movc    a,      @a+dptr
-0341: FB                    mov     r3,     a
-0342: A3                    inc     dptr
-                            ; divide r4-r7 by r0-r3
-0343: 71 88                 acall   print_int_u32__divide
-0345: 25 F0                 add     a,      b
-0347: 60 08                 jz      print_int_u32__skip ; leading zero
-0349: 95 F0                 subb    a,      b
-034B: 24 30                 add     a,      #'0'
-034D: 05 F0                 inc     b
-034F: 31 A4                 acall   print_char
+                           ; get divisor
+034D: E4                   clr     a
+034E: 93                   movc    a,      @a+dptr
+034F: F8                   mov     r0,     a
+0350: A3                   inc     dptr
+0351: E4                   clr     a
+0352: 93                   movc    a,      @a+dptr
+0353: F9                   mov     r1,     a
+0354: A3                   inc     dptr
+0355: E4                   clr     a
+0356: 93                   movc    a,      @a+dptr
+0357: FA                   mov     r2,     a
+0358: A3                   inc     dptr
+0359: E4                   clr     a
+035A: 93                   movc    a,      @a+dptr
+035B: FB                   mov     r3,     a
+035C: A3                   inc     dptr
+                           ; divide r4-r7 by r0-r3
+035D: 71 A2                acall   print_int_u32__divide
+035F: 25 F0                add     a,      b
+0361: 60 08                jz      print_int_u32__skip ; leading zero
+0363: 95 F0                subb    a,      b
+0365: 24 30                add     a,      #'0'
+0367: 05 F0                inc     b
+0369: 31 BE                acall   print_char
                    print_int_u32__skip:
-0351: B8 0A DF              cjne    r0,     #0x0a,  print_int_u32__loop
-0354: EC                    mov     a,      r4
-0355: 24 30                 add     a,      #'0'
-0357: 31 A4                 acall   print_char
+036B: B8 0A DF             cjne    r0,     #0x0a,  print_int_u32__loop
+036E: EC                   mov     a,      r4
+036F: 24 30                add     a,      #'0'
+0371: 31 BE                acall   print_char
                    
-0359: 71 C8                 acall   regbank_prev
-035B: D0 83                 pop     dph
-035D: D0 82                 pop     dpl
-035F: D0 F0                 pop     b
-0361: D0 E0                 pop     acc
-0363: 22                    ret
+0373: 71 E2                acall   regbank_prev
+0375: D0 83                pop     dph
+0377: D0 82                pop     dpl
+0379: D0 F0                pop     b
+037B: D0 E0                pop     acc
+037D: 22                   ret
                    ; Divisor table:
                    print_int_u32__divisors:
-                            ; 1,000,000,000 = 3b9aca00
-0364: 00 CA 9A 3B 
-                            .db     0x00, 0xca, 0x9a, 0x3b
-                            ;   100,000,000 = 05f5e100
-0368: 00 E1 F5 05 
-                            .db     0x00, 0xe1, 0xf5, 0x05
-                            ;    10,000,000 = 00989680
-036C: 80 96 98 00 
-                            .db     0x80, 0x96, 0x98, 0x00
-                            ;     1,000,000 = 000f4240
-0370: 40 42 0F 00 
-                            .db     0x40, 0x42, 0x0f, 0x00
-                            ;       100,000 = 000186a0
-0374: A0 86 01 00 
-                            .db     0xa0, 0x86, 0x01, 0x00
-                            ;        10,000 = 00002710
-0378: 10 27 00 00 
-                            .db     0x10, 0x27, 0x00, 0x00
-                            ;         1,000 = 000003e8
-037C: E8 03 00 00 
-                            .db     0xe8, 0x03, 0x00, 0x00
-                            ;           100 = 00000064
-0380: 64 00 00 00 
-                            .db     0x64, 0x00, 0x00, 0x00
-                            ;            10 = 0000000a
-0384: 0A 00 00 00 
-                            .db     0x0a, 0x00, 0x00, 0x00
+                           ; 1,000,000,000 = 3b9aca00
+037E: 00 CA 9A 3B 
+                           .db     0x00, 0xca, 0x9a, 0x3b
+                           ;   100,000,000 = 05f5e100
+0382: 00 E1 F5 05 
+                           .db     0x00, 0xe1, 0xf5, 0x05
+                           ;    10,000,000 = 00989680
+0386: 80 96 98 00 
+                           .db     0x80, 0x96, 0x98, 0x00
+                           ;     1,000,000 = 000f4240
+038A: 40 42 0F 00 
+                           .db     0x40, 0x42, 0x0f, 0x00
+                           ;       100,000 = 000186a0
+038E: A0 86 01 00 
+                           .db     0xa0, 0x86, 0x01, 0x00
+                           ;        10,000 = 00002710
+0392: 10 27 00 00 
+                           .db     0x10, 0x27, 0x00, 0x00
+                           ;         1,000 = 000003e8
+0396: E8 03 00 00 
+                           .db     0xe8, 0x03, 0x00, 0x00
+                           ;           100 = 00000064
+039A: 64 00 00 00 
+                           .db     0x64, 0x00, 0x00, 0x00
+                           ;            10 = 0000000a
+039E: 0A 00 00 00 
+                           .db     0x0a, 0x00, 0x00, 0x00
                    ; Divide r4-r7 by r0-r1 using repeated subtraction.
                    ; Quotient returned in a, remainder in r4-r7.
                    ; Since the quotient is at most 9,
                    ; this is faster than 'proper' division.
                    print_int_u32__divide:
-0388: C0 F0                 push    b
-038A: C3                    clr     c
-038B: 75 F0 FF              mov     b,      #-1
+03A2: C0 F0                push    b
+03A4: C3                   clr     c
+03A5: 75 F0 FF             mov     b,      #-1
                    print_int_u32__divide_loop:
-038E: EC                    mov     a,      r4
-038F: 98                    subb    a,      r0
-0390: FC                    mov     r4,     a
-0391: ED                    mov     a,      r5
-0392: 99                    subb    a,      r1
-0393: FD                    mov     r5,     a
-0394: EE                    mov     a,      r6
-0395: 9A                    subb    a,      r2
-0396: FE                    mov     r6,     a
-0397: EF                    mov     a,      r7
-0398: 9B                    subb    a,      r3
-0399: FF                    mov     r7,     a
-039A: 05 F0                 inc     b
-039C: 50 F0                 jnc     print_int_u32__divide_loop
-                            ; restore remainder
-039E: EC                    mov     a,      r4
-039F: 28                    add     a,      r0
-03A0: FC                    mov     r4,     a
-03A1: ED                    mov     a,      r5
-03A2: 39                    addc    a,      r1
-03A3: FD                    mov     r5,     a
-03A4: EE                    mov     a,      r6
-03A5: 3A                    addc    a,      r2
-03A6: FE                    mov     r6,     a
-03A7: EF                    mov     a,      r7
-03A8: 3B                    addc    a,      r3
-03A9: FF                    mov     r7,     a
-03AA: E5 F0                 mov     a,      b
-03AC: D0 F0                 pop     b
-03AE: 22                    ret
+03A8: EC                   mov     a,      r4
+03A9: 98                   subb    a,      r0
+03AA: FC                   mov     r4,     a
+03AB: ED                   mov     a,      r5
+03AC: 99                   subb    a,      r1
+03AD: FD                   mov     r5,     a
+03AE: EE                   mov     a,      r6
+03AF: 9A                   subb    a,      r2
+03B0: FE                   mov     r6,     a
+03B1: EF                   mov     a,      r7
+03B2: 9B                   subb    a,      r3
+03B3: FF                   mov     r7,     a
+03B4: 05 F0                inc     b
+03B6: 50 F0                jnc     print_int_u32__divide_loop
+                           ; restore remainder
+03B8: EC                   mov     a,      r4
+03B9: 28                   add     a,      r0
+03BA: FC                   mov     r4,     a
+03BB: ED                   mov     a,      r5
+03BC: 39                   addc    a,      r1
+03BD: FD                   mov     r5,     a
+03BE: EE                   mov     a,      r6
+03BF: 3A                   addc    a,      r2
+03C0: FE                   mov     r6,     a
+03C1: EF                   mov     a,      r7
+03C2: 3B                   addc    a,      r3
+03C3: FF                   mov     r7,     a
+03C4: E5 F0                mov     a,      b
+03C6: D0 F0                pop     b
+03C8: 22                   ret
                    
                    ; *** util/regbank.inc ***
                    
-                   ; >> void* regbank_next() <<
+                   ; >> void*{r0} regbank_next() <<
                    
                    ; Switch to next register bank.
                    ; Return pointer to r0 of old bank in new r0.
                    
                    regbank_next:
-03AF: C0 E0                 push    acc
-                            ; check if already at highest bank
-03B1: E5 D0                 mov     a,      psw
-03B3: 54 18                 anl     a,      #0x18
-03B5: B4 18 02              cjne    a,      #0x18,  regbank_next__continue
-03B8: 71 DB                 acall   panic   ; overflow
+03C9: C0 E0                push    acc
+                           ; check if already at highest bank
+03CB: E5 D0                mov     a,      psw
+03CD: 54 18                anl     a,      #0x18   ; mask off rs0 and rs1
+03CF: B4 18 02             cjne    a,      #0x18,  regbank_next__continue
+03D2: 71 F5                acall   panic   ; overflow
                    regbank_next__continue:
-                            ; switch to next bank
-03BA: E5 D0                 mov     a,      psw
-03BC: 24 08                 add     a,      #0x08
-03BE: F5 D0                 mov     psw,    a
-                            ; calculate pointer to old bank
-03C0: 54 18                 anl     a,      #0x18
-03C2: 24 F8                 add     a,      #0xf8
-03C4: F8                    mov     r0,     a
-                            ; done
-03C5: D0 E0                 pop     acc
-03C7: 22                    ret
+                           ; switch to next bank
+03D4: E5 D0                mov     a,      psw
+03D6: 24 08                add     a,      #0x08
+03D8: F5 D0                mov     psw,    a
+                           ; calculate pointer to old bank
+03DA: 54 18                anl     a,      #0x18
+03DC: 24 F8                add     a,      #0xf8 ; subtract 8
+03DE: F8                   mov     r0,     a
+                           ; done
+03DF: D0 E0                pop     acc
+03E1: 22                   ret
                    
                    ; >> void regbank_prev() <<
                    
                    ; Switch to previous register bank.
                    
                    regbank_prev:
-03C8: C0 E0                 push    acc
-                            ; check if already at lowest bank
-03CA: E5 D0                 mov     a,      psw
-03CC: 54 18                 anl     a,      #0x18
-03CE: 70 02                 jnz     regbank_prev__continue
-03D0: 71 DB                 acall   panic   ; underflow
+03E2: C0 E0                push    acc
+                           ; check if already at lowest bank
+03E4: E5 D0                mov     a,      psw
+03E6: 54 18                anl     a,      #0x18
+03E8: 70 02                jnz     regbank_prev__continue
+03EA: 71 F5                acall   panic   ; underflow
                    regbank_prev__continue:
-                            ; switch to previous bank
-03D2: E5 D0                 mov     a,      psw
-03D4: 24 F8                 add     a,      #0xf8
-03D6: F5 D0                 mov     psw,    a
-                            ; done
-03D8: D0 E0                 pop     acc
-03DA: 22                    ret
+                           ; switch to previous bank
+03EC: E5 D0                mov     a,      psw
+03EE: 24 F8                add     a,      #0xf8 ; subtract 8
+03F0: F5 D0                mov     psw,    a
+                           ; done
+03F2: D0 E0                pop     acc
+03F4: 22                   ret
                    
-03DB:              .equ panic_out, serial_tx
+03F5:              .equ panic_out, serial_tx
                    
                    ; *** panic/panic.inc ***
                    
@@ -920,22 +955,45 @@
                    ; Print caller address and halt.
                    
                    panic:
-03DB: C2 AF                 clr     ea      ; disable interrupts
-03DD: 90 01 9C              mov     dptr,   #panic_out
-03E0: 85 82 32              mov     out,    dpl
-03E3: 85 83 33              mov     out+1,  dph
-03E6: 90 03 F5              mov     dptr,   #panic_text
-03E9: 31 A9                 acall   print_text
-03EB: D0 E0                 pop     acc
-03ED: 31 BF                 acall   print_hex_8
-03EF: D0 E0                 pop     acc
-03F1: 31 BF                 acall   print_hex_8
-03F3: 80 FE                 sjmp    *
+03F5: C2 AF                clr     ea      ; disable interrupts
+03F7: F8                   mov     r0,a    ; save a
+                           ; display panic text
+03F8: 90 01 B6             mov     dptr,#panic_out
+03FB: 85 82 32             mov     out,dpl
+03FE: 85 83 33             mov     out+1,dph
+0401: 90 04 28             mov     dptr,#panic_text
+0404: 31 C3                acall   print_text
+                           ; get return address from stack
+0406: D0 E0                pop     acc
+0408: FA                   mov     r2,a
+0409: D0 E0                pop     acc
+                           ; subtract two to get call instruction address
+040B: C3                   clr     c
+040C: 94 02                subb    a,#2
+040E: F9                   mov     r1,a
+040F: EA                   mov     a,r2
+0410: 94 00                subb    a,#0
+                           ; print caller address (to look up cause in .lst fil
+0412: 31 D9                acall   print_hex_8
+0414: E9                   mov     a,r1
+0415: 31 D9                acall   print_hex_8
+                           ; print original value of a (error code / debug info
+0417: 74 20                mov     a,#' '
+0419: 31 BE                acall   print_char
+041B: E8                   mov     a,r0
+041C: 31 D9                acall   print_hex_8
+                           ; newline
+041E: 74 0D                mov     a,#13
+0420: 31 BE                acall   print_char
+0422: 74 0A                mov     a,#10
+0424: 31 BE                acall   print_char
+                           ; hang
+0426: 80 FE                sjmp    *
                    
                    panic_text:
-03F5: 0D 0A                 .db     13, 10
-03F7: 20 21 21 21 
+0428: 0D 0A                .db     13, 10
+042A: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
-                            .db     " !!! panic @"
-0403: 00                    .db     0
+                           .db     " !!! panic @"
+0436: 00                   .db     0

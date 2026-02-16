@@ -24,7 +24,7 @@
 
 	acall	serial_init
 
-.equ	scratch,	0x80
+.equ	scratch,	0xa0
 
 	push	out
 	push	out+1

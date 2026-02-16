@@ -12,6 +12,9 @@ memory_allocate:
 	push	acc
 	push	dpl
 	push	dph
+	inc	auxr1
+	push	dpl
+	push	dph
 
 	acall	regbank_next
 	mov	a,@r0
@@ -168,6 +171,9 @@ memory_allocate__success:
 	mov	@r0,a	; -'
 
 	acall	regbank_prev
+	pop	dph
+	pop	dpl
+	inc	auxr1
 	pop	dph
 	pop	dpl
 	pop	acc

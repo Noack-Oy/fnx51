@@ -2,7 +2,8 @@ SHELL=/bin/bash -o pipefail
 
 sources = serial.asm print.asm panic.asm dump.asm \
           stream_imem.asm stream_xram.asm \
-          read_hex.asm memory.asm
+          read_hex.asm memory.asm sd.asm block.asm \
+          fatfs.asm
 
 # Set REMOTE_HOST to run tests on remote machine, leave unset for local execution
 REMOTE_HOST ?= pi@192.168.1.159
@@ -33,3 +34,6 @@ endif
 %.d: %.asm
 	echo -n '$*.lst $*.hex: $*.asm ' > $@
 	grep -i '^\.inc' $< | awk '{print $$2}' | xargs >> $@
+
+clean:
+	rm -vf *.out *.fail

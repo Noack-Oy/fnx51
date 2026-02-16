@@ -12,48 +12,106 @@
                    ; * Header Definitions *
                    ; **********************
                    
+                   ; *** global/variables.equ ***
+                   
+                   ; variables in internal RAM
+                   
+                   ; 0x00-0x1f: register banks 0-3
+                   ; 0x20-0x2f: bit addressable variables
+                   
+0000:              .equ    in,             0x30    ; pointer to input handling 
+0000:              .equ    out,            0x32    ; pointer to ouput handling 
+                   
+0000:              .equ    stream_in,      0x34    ; input stream position
+0000:              .equ    stream_out,     0x36    ; output stream position
+                   
+0000:              .equ    memory_list,    0x38    ; pointer to heap list head
+0000:              .equ    memory_start,   0x40    ; first allocatable address
+0000:              .equ    memory_end,     0x42    ; last allocatable address
+                   
+0000:              .equ    block_read,     0x44    ; pointers to block device d
+0000:              .equ    block_write,    0x46    ; code (read and write funct
+0000:              .equ    block_cache,    0x48    ; pointer to block cache dat
+                   
+0000:              .equ    fatfs_info,     0x50    ; pointer to FAT file system
+                   
+0000:              .equ    stack,          0x60    ; beginning of stack (grows 
+                   
                    ; *** serial/sfr.equ ***
                    
                    ; Special function registers for serial interface.
                    ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
                    
                    ; Internal Baud Rate Generator (BRG), see datasheet page 52.
-0000:                       .equ    BRL,    0x9A    ; baud rate reload value
-0000:                       .equ    BDRCON, 0x9B    ; BRG control register
+0000:                      .equ    BRL,    0x9A    ; baud rate reload value
+0000:                      .equ    BDRCON, 0x9B    ; BRG control register
                    
                    
                    ; *************
                    ; * Main Code *
                    ; *************
                    
+0000:                      .org    0
+                   
+                   
+                   ; *** global/init.inc ***
+                   
+                   ; Initialize stack pointer and global variables.
+                   ; This must be included early in the main program.
+                   
+                   global_init:
+0000: 75 81 60             mov     SP,#STACK
+                   
+                   ; Select register bank zero, clear processor flags
+0003: 75 D0 00             mov     PSW,#0
+                   
+                   ; Fill internal RAM with markers for uninitialized data
+0006: 78 00                mov     r0,#0 ; write pointer
+                   
+0008: 74 3F                mov     a,#0x3f ; '?' for uninitialized registers
+                   global_init__1:
+000A: 08                   inc     r0 ; first iteration skips address 0, r0 liv
+000B: F6                   mov     @r0,a
+000C: B8 1F FB             cjne    r0,#0x1f,global_init__1
+                   
+000F: 74 2A                mov     a,#0x2a ; '*' for uninitialized variables
+                   global_init__2:
+0011: 08                   inc     r0
+0012: F6                   mov     @r0,a
+0013: B8 5F FB             cjne    r0,#STACK-1,global_init__2
+                   
+0016: 74 7E                mov     a,#0x7e ; '~' for stack and above
+                   global_init__3:
+0018: 08                   inc     r0
+0019: F6                   mov     @r0,a
+001A: B8 FF FB             cjne    r0,#0xff,global_init__3
+                   
                    ; *** test/serial.asm ***
                    
-0000:                       .org    0
+001D: 11 42                acall   serial_init
                    
-0000: 11 25                 acall   serial_init
-                   
-0002: 90 00 15              mov     dptr,   #hello_text
+001F: 90 00 32             mov     dptr,   #hello_text
                    hello_loop:
-0005: E4                    clr     a
-0006: 93                    movc    a,      @dptr+a
-0007: 60 05                 jz      hello_end
-0009: 11 2F                 acall   serial_tx
-000B: A3                    inc     dptr
-000C: 80 F7                 sjmp    hello_loop
+0022: E4                   clr     a
+0023: 93                   movc    a,      @dptr+a
+0024: 60 05                jz      hello_end
+0026: 11 5E                acall   serial_tx
+0028: A3                   inc     dptr
+0029: 80 F7                sjmp    hello_loop
                    hello_end:
                    
                    echo_loop:
-000E: 11 37                 acall   serial_rx
-0010: 04                    inc     a
-0011: 11 2F                 acall   serial_tx
-0013: 80 F9                 sjmp    echo_loop
+002B: 11 66                acall   serial_rx
+002D: 04                   inc     a
+002E: 11 5E                acall   serial_tx
+0030: 80 F9                sjmp    echo_loop
                    
                    hello_text:
-0015: 48 65 6C 6C 
+0032: 48 65 6C 6C 
       6F 2C 20 77 
       6F 72 6C 64 
-      21                    .byte   "Hello, world!"
-0022: 0D 0A 00              .byte   13, 10, 0
+      21                   .byte   "Hello, world!"
+003F: 0D 0A 00             .byte   13, 10, 0
                    
                    
                    ; *********************
@@ -74,10 +132,19 @@
                    ; also note oscillator diagram on page 16!
                    
                    serial_init:
-0025: 75 98 52              mov     SCON,   #0x52   ; SM1, REN, TI
-0028: 75 9A BF              mov     BRL,    #191    ; 9600 @20MHz CLK
-002B: 75 9B 1E              mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
-002E: 22                    ret
+0042: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
+0045: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
+0048: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
+                   
+004B: 90 00 66             mov     dptr,   #serial_rx
+004E: 85 82 30             mov     IN,     DPL
+0051: 85 83 31             mov     IN+1,   DPH
+                   
+0054: 90 00 5E             mov     dptr,   #serial_tx
+0057: 85 82 32             mov     OUT,    DPL
+005A: 85 83 33             mov     OUT+1,  DPH
+                   
+005D: 22                   ret
                    
                    ; *** serial/tx.inc ***
                    
@@ -86,10 +153,10 @@
                    ; Transmit byte from accumulator.
                    
                    serial_tx:
-002F: 30 99 FD              jnb     TI,     serial_tx
-0032: C2 99                 clr     TI
-0034: F5 99                 mov     SBUF,   a
-0036: 22                    ret
+005E: 30 99 FD             jnb     TI,     serial_tx
+0061: C2 99                clr     TI
+0063: F5 99                mov     SBUF,   a
+0065: 22                   ret
                    
                    ; *** serial/rx.inc ***
                    
@@ -98,7 +165,7 @@
                    ; Receive byte into accumulator.
                    
                    serial_rx:
-0037: 30 98 FD              jnb     RI,     serial_rx
-003A: C2 98                 clr     RI
-003C: E5 99                 mov     a,      SBUF
-003E: 22                    ret
+0066: 30 98 FD             jnb     RI,     serial_rx
+0069: C2 98                clr     RI
+006B: E5 99                mov     a,      SBUF
+006D: 22                   ret
