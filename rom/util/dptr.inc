@@ -1,6 +1,22 @@
 
 ; *** util/dptr.inc ***
 
+; >> void dptr_index(char *{dptr}&base, uint8{a} offset) <<
+
+; Add offset in a to dptr, preserving all registers including a.
+; Useful for accessing structure fields at known offsets.
+
+dptr_index:
+	push	acc
+	add	a,dpl
+	mov	dpl,a
+	clr	a
+	addc	a,dph
+	mov	dph,a
+	pop	acc
+	ret
+
+
 ; >> void dptr_copy(uint8{r0} n, char *{dptr} &dst, char *{dptr'} &src) <<
 
 ; Use dual data pointers to copy n (given in r0) bytes to dst (initial

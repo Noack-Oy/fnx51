@@ -57,6 +57,23 @@ __1:
 	mov	dptr,#newline
 	acall	print_text
 
+	; Load root directory cluster (from fatfs_info+17) into r0-r3
+	mov	dpl,fatfs_info
+	mov	dph,fatfs_info+1
+	mov	a,#fatfs_info_root_dir
+	acall	dptr_index
+	; now dptr points to fatfs_info + offset 17 (root directory cluster)
+	acall	dptr_read_32
+	; r0-r3 now contains the root cluster number - print it to verify
+	acall	print_hex_32
+	mov	dptr,#newline
+	acall	print_text
+	; now call cluster_to_lba with this value
+	acall	fatfs_cluster_to_lba
+	acall	print_hex_32
+	mov	dptr,#newline
+	acall	print_text
+
 halt:
 	sjmp	halt
 
@@ -94,6 +111,7 @@ newline:
 .inc ../block/flush.inc
 
 .inc ../fatfs/init.inc
+.inc ../fatfs/cluster.inc
 
 .inc ../math/arith32.inc
 
