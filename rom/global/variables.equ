@@ -1,10 +1,13 @@
 
 ; *** global/variables.equ ***
 
-; variables in internal ram
+; variables in internal RAM
 
-.equ	in,	0x30	; pointer to input code
-.equ	out,	0x32	; pointer to ouput code
+; 0x00-0x1f: register banks 0-3
+; 0x20-0x2f: bit addressable variables
+
+.equ	in,		0x30	; pointer to input handling routine
+.equ	out,		0x32	; pointer to ouput handling routine
 
 .equ	stream_in,	0x34	; input stream position
 .equ	stream_out,	0x36	; output stream position
@@ -17,4 +20,6 @@
 .equ	block_write,	0x46	; code (read and write functions)
 .equ	block_cache,	0x48	; pointer to block cache data in xram
 
-.equ	stack,	0x50	; beginning of stack
+.equ	fatfs_info,	0x50	; pointer to FAT file system metadata
+
+.equ	stack,		0x60	; beginning of stack (grows upwards)

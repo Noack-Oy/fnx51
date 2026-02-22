@@ -21,9 +21,26 @@
 .org 0
 .inc ../global/init.inc
 
-; *** test/stream.asm ***
+; *** test/stream_xram.asm ***
 
 	acall	serial_init
+
+	push	auxr
+	; use xram
+	anl	auxr,#0xe1	; clear extram, xrs0-2
+	orl	auxr,#0x10	; set xrs2 (size 1792 bytes)
+
+	; clear xram with dummy value
+	mov	dptr,#0
+memory_init__1:
+	mov	a,#0x24
+	movx	@dptr,a
+	inc	dptr
+	mov	a,#0x07 ; xram goes up to 0x06ff
+	cjne	a,dph,memory_init__1
+
+	; disable xram again, stram_xram should enable it temporarily
+	orl	auxr,#0x02	; set EXTRAM bit
 
 .equ	scratch,	0x180
 

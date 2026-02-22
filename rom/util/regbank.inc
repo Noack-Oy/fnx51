@@ -1,7 +1,7 @@
 
 ; *** util/regbank.inc ***
 
-; >> void* regbank_next() <<
+; >> void*{r0} regbank_next() <<
 
 ; Switch to next register bank.
 ; Return pointer to r0 of old bank in new r0.
@@ -10,7 +10,7 @@ regbank_next:
 	push	acc
 	; check if already at highest bank
 	mov	a,	psw
-	anl	a,	#0x18
+	anl	a,	#0x18	; mask off rs0 and rs1
 	cjne	a,	#0x18,	regbank_next__continue
 	acall	panic	; overflow
 regbank_next__continue:
@@ -20,7 +20,7 @@ regbank_next__continue:
 	mov	psw,	a
 	; calculate pointer to old bank
 	anl	a,	#0x18
-	add	a,	#0xf8
+	add	a,	#0xf8 ; subtract 8
 	mov	r0,	a
 	; done
 	pop	acc
@@ -40,7 +40,7 @@ regbank_prev:
 regbank_prev__continue:
 	; switch to previous bank
 	mov	a,	psw
-	add	a,	#0xf8
+	add	a,	#0xf8 ; subtract 8
 	mov	psw,	a
 	; done
 	pop	acc

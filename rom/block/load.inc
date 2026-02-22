@@ -1,7 +1,7 @@
 
 ; *** block/load.inc ***
 
-; >> char *{dptr}block_load(uint32{r0-r3} &block_address) <<
+; >> char *{dptr}block_load(uint32{r0-r3} block_address) <<
 
 ; Load a block into memory if necessary, return pointer to data.
 ; If the requested block is already cached, no read is done.
