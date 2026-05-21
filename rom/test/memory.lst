@@ -791,7 +791,7 @@
 02F5: ED                   mov     a,r5    ;  |
 02F6: FB                   mov     r3,a    ; -'
 02F7: 8C 82                mov     dpl,r4  ; -.
-02F9: 8D 82                mov     dpl,r5  ;  |
+02F9: 8D 83                mov     dph,r5  ;  |
 02FB: E0                   movx    a,@dptr ;  |
 02FC: FC                   mov     r4,a    ;  |- curr = curr->next
 02FD: A3                   inc     dptr    ;  |

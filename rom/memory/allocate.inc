@@ -105,7 +105,7 @@ memory_allocate__1:
 	mov	a,r5	;  |
 	mov	r3,a	; -'
 	mov	dpl,r4	; -.
-	mov	dpl,r5	;  |
+	mov	dph,r5	;  |
 	movx	a,@dptr ;  |
 	mov	r4,a	;  |- curr = curr->next
 	inc	dptr	;  |
