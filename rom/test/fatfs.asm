@@ -116,7 +116,6 @@ newline:
 .inc ../math/arith32.inc
 
 .inc ../util/delay.inc
-.inc ../util/regbank.inc
 .inc ../util/xch.inc
 .inc ../util/dptr.inc
 

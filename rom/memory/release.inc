@@ -8,29 +8,27 @@
 memory_release:
 	push	ie
 	clr	ea
-	
+
 	push	acc
 	push	dpl
 	push	dph
 
-	acall	regbank_next
+	; void function: r0-r7 all preserved
+	push	0
+	push	1
+	push	2
+	push	3
+	push	4
+	push	5
+	push	6
+	push	7
 
-	mov	a,r0
-	add	a,#3
-	mov	r0,a
-	; r6r7 <- size
-	mov	a,@r0
-	mov	r7,a
-	dec	r0
-	mov	a,@r0
+	; move size from r2r3 to r6r7
+	mov	a,r2
 	mov	r6,a
-	dec	r0
-	; r0r1 <- pointer to block
-	mov	a,@r0
-	mov	r1,a
-	dec	r0
-	mov	a,@r0
-	mov	r0,a
+	mov	a,r3
+	mov	r7,a
+	; r0r1 already holds the block address
 
 	; input parameter check
 	mov	a,r6
@@ -251,7 +249,14 @@ memory_release__end:
 	addc	a,r7
 	movx	@dptr,a
 
-	acall	regbank_prev
+	pop	7
+	pop	6
+	pop	5
+	pop	4
+	pop	3
+	pop	2
+	pop	1
+	pop	0
 	pop	dph
 	pop	dpl
 	pop	acc

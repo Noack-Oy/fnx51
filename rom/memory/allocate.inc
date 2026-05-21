@@ -16,12 +16,20 @@ memory_allocate:
 	push	dpl
 	push	dph
 
-	acall	regbank_next
-	mov	a,@r0
+	; r0,r1 = size (input, will be overwritten with return value)
+	; r2-r7 are clobbered, save them
+	push	2
+	push	3
+	push	4
+	push	5
+	push	6
+	push	7
+
+	; move size from r0r1 to r6r7
+	mov	a,r0
 	mov	r6,a
-	inc	r0
-	mov	a,@r0
-	mov	r7,a ; size param now in r6r7
+	mov	a,r1
+	mov	r7,a
 
 	mov	a,r6
 	orl	a,r7
@@ -164,13 +172,18 @@ memory_allocate__success:
 	subb	a,r7	;  |
 	movx	@dptr,a ; -'
 
-	mov	a,r5	; -.
-	mov	@r0,a	;  |
-	dec	r0	;  |- return curr
-	mov	a,r4	;  |
-	mov	@r0,a	; -'
+	; move return value from r4r5 into r0r1
+	mov	a,r4
+	mov	r0,a
+	mov	a,r5
+	mov	r1,a
 
-	acall	regbank_prev
+	pop	7
+	pop	6
+	pop	5
+	pop	4
+	pop	3
+	pop	2
 	pop	dph
 	pop	dpl
 	inc	auxr1

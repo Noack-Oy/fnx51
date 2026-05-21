@@ -7,10 +7,8 @@
 
 block_init:
 	push	acc
-	mov	a,r0
-	push	acc
-	mov	a,r1
-	push	acc
+	push	0
+	push	1
 	push	dpl
 	push	dph
 
@@ -35,9 +33,7 @@ block_init:
 
 	pop	dph
 	pop	dpl
-	pop	acc
-	mov	r1,a
-	pop	acc
-	mov	r0,a
+	pop	1
+	pop	0
 	pop	acc
 	ret

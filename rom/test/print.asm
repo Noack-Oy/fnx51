@@ -311,7 +311,6 @@ test__space:
 .inc ../print/text.inc
 .inc ../print/hex.inc
 .inc ../print/int.inc
-.inc ../util/regbank.inc
 
 .equ panic_out, serial_tx
 .inc ../util/panic.inc

@@ -6,7 +6,7 @@
 ; Initialize FAT file system.
 ; Search for a valid FAT file system on the current block device.
 ; Memory is allocated to store the necessary data to handle the file
-; system, and a pointer to that is put into the fatfs_info variable in 
+; system, and a pointer to that is put into the fatfs_info variable in
 ; internal RAM. Currently only FAT32 on MBR partition 0 is supported.
 
 fatfs_init:
@@ -17,7 +17,15 @@ fatfs_init:
 	inc	auxr1
 	push	dpl
 	push	dph
-	acall	regbank_next
+	; void function: r0-r7 all preserved
+	push	0
+	push	1
+	push	2
+	push	3
+	push	4
+	push	5
+	push	6
+	push	7
 
 	mov	r0,fatfs_info_size
 	mov	r1,#0
@@ -191,7 +199,14 @@ fatfs_init__nof_ok:
 
 	; phew! that was a lot of shunting data around. we are done now.
 
-	acall	regbank_prev
+	pop	7
+	pop	6
+	pop	5
+	pop	4
+	pop	3
+	pop	2
+	pop	1
+	pop	0
 	pop	dph
 	pop	dpl
 	inc	auxr1

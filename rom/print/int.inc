@@ -8,11 +8,12 @@
 print_int_s8:
 	push	ACC
 	push	B
+	push	0
 	jnb	ACC.7,	print_int_u8__1
-	mov	b,	a
+	mov	r0,	a	; save a in r0 (just pushed) while we print '-'
 	mov	a,	#'-'
 	acall	print_char
-	mov	a,	b
+	mov	a,	r0
 	cpl	a
 	inc	a
 	sjmp	print_int_u8__1
@@ -24,10 +25,8 @@ print_int_s8:
 print_int_u8:
 	push	ACC
 	push	B
+	push	0
 print_int_u8__1:
-	mov	b,	r0
-	push	B
-
 	mov	r0,	#0
 	mov	b,	#100
 	div	ab
@@ -49,8 +48,7 @@ print_int_u8__ones:
 	add	a,	#'0'
 	acall	print_char
 
-	pop	ACC
-	mov	r0,	a
+	pop	0
 	pop	B
 	pop	ACC
 	ret
@@ -61,10 +59,9 @@ print_int_u8__ones:
 
 print_int_s16:
 	push	ACC
-	mov	a,	r0
-	push	ACC
+	push	0
+	push	1
 	mov	a,	r1
-	push	ACC
 	jnb	ACC.7,	print_int_u16__1
 	mov	a,	#'-'
 	acall	print_char
@@ -84,13 +81,10 @@ print_int_s16:
 
 print_int_u16:
 	push	ACC
-	mov	a,	r0
-	push	ACC
-	mov	a,	r1
-	push	ACC
+	push	0
+	push	1
 print_int_u16__1:
-	mov	a,	r3
-	push	ACC
+	push	2
 	push	B
 
 	mov	r2,	#0 ; flag for leading zeroes
@@ -197,12 +191,9 @@ print_int_u16__ones:
 	acall	print_char
 
 	pop	B
-	pop	ACC
-	mov	r2,	a
-	pop	ACC
-	mov	r1,	a
-	pop	ACC
-	mov	r0,	a
+	pop	2
+	pop	1
+	pop	0
 	pop	ACC
 	ret
 
@@ -215,38 +206,43 @@ print_int_s32:
 	push	b
 	push	dpl
 	push	dph
-	acall	regbank_next
+	push	0
+	push	1
+	push	2
+	push	3
+	push	4
+	push	5
+	push	6
+	push	7
 	; r4-r7: value to print
-	mov	a,	@r0
-	mov	r4,	a
-	inc	r0
-	mov	a,	@r0
-	mov	r5,	a
-	inc	r0
-	mov	a,	@r0
-	mov	r6,	a
-	inc	r0
-	mov	a,	@r0
-	mov	r7,	a
+	mov	a,r0
+	mov	r4,a
+	mov	a,r1
+	mov	r5,a
+	mov	a,r2
+	mov	r6,a
+	mov	a,r3
+	mov	r7,a
+	; sign bit is now also in ACC (= r3 = r7)
 	jnb	ACC.7,	print_int_u32__1
-	mov	a,	#'-'
+	mov	a,#'-'
 	acall	print_char
-	mov	a,	r4
+	mov	a,r4
 	cpl	a
-	add	a,	#1
-	mov	r4,	a
-	mov	a,	r5
+	add	a,#1
+	mov	r4,a
+	mov	a,r5
 	cpl	a
-	addc	a,	#0
-	mov	r5,	a
-	mov	a,	r6
+	addc	a,#0
+	mov	r5,a
+	mov	a,r6
 	cpl	a
-	addc	a,	#0
-	mov	r6,	a
-	mov	a,	r7
+	addc	a,#0
+	mov	r6,a
+	mov	a,r7
 	cpl	a
-	addc	a,	#0
-	mov	r7,	a
+	addc	a,#0
+	mov	r7,a
 	sjmp	print_int_u32__1
 
 
@@ -259,55 +255,66 @@ print_int_u32:
 	push	b
 	push	dpl
 	push	dph
-	acall	regbank_next
+	push	0
+	push	1
+	push	2
+	push	3
+	push	4
+	push	5
+	push	6
+	push	7
 	; r4-r7: value to print
-	mov	a,	@r0
-	mov	r4,	a
-	inc	r0
-	mov	a,	@r0
-	mov	r5,	a
-	inc	r0
-	mov	a,	@r0
-	mov	r6,	a
-	inc	r0
-	mov	a,	@r0
-	mov	r7,	a
+	mov	a,r0
+	mov	r4,a
+	mov	a,r1
+	mov	r5,a
+	mov	a,r2
+	mov	r6,a
+	mov	a,r3
+	mov	r7,a
 print_int_u32__1:
-	mov	b,	#0 ; flag for leading zeroes
-	mov	dptr,	#print_int_u32__divisors
+	mov	b,#0 ; flag for leading zeroes
+	mov	dptr,#print_int_u32__divisors
 print_int_u32__loop:
 	; get divisor
 	clr	a
-	movc	a,	@a+dptr
-	mov	r0,	a
+	movc	a,@a+dptr
+	mov	r0,a
 	inc	dptr
 	clr	a
-	movc	a,	@a+dptr
-	mov	r1,	a
+	movc	a,@a+dptr
+	mov	r1,a
 	inc	dptr
 	clr	a
-	movc	a,	@a+dptr
-	mov	r2,	a
+	movc	a,@a+dptr
+	mov	r2,a
 	inc	dptr
 	clr	a
-	movc	a,	@a+dptr
-	mov	r3,	a
+	movc	a,@a+dptr
+	mov	r3,a
 	inc	dptr
 	; divide r4-r7 by r0-r3
 	acall	print_int_u32__divide
-	add	a,	b
+	add	a,b
 	jz	print_int_u32__skip ; leading zero
-	subb	a,	b
-	add	a,	#'0'
+	subb	a,b
+	add	a,#'0'
 	inc	b
 	acall	print_char
 print_int_u32__skip:
-	cjne	r0,	#0x0a,	print_int_u32__loop
-	mov	a,	r4
-	add	a,	#'0'
+	cjne	r0,#0x0a,	print_int_u32__loop
+	mov	a,r4
+	add	a,#'0'
 	acall	print_char
 
-	acall	regbank_prev
+	pop	7
+	pop	6
+	pop	5
+	pop	4
+	pop	3
+	pop	2
+	pop	1
+	pop	0
 	pop	dph
 	pop	dpl
 	pop	b
@@ -340,35 +347,35 @@ print_int_u32__divisors:
 print_int_u32__divide:
 	push	b
 	clr	c
-	mov	b,	#-1
+	mov	b,#-1
 print_int_u32__divide_loop:
-	mov	a,	r4
-	subb	a,	r0
-	mov	r4,	a
-	mov	a,	r5
-	subb	a,	r1
-	mov	r5,	a
-	mov	a,	r6
-	subb	a,	r2
-	mov	r6,	a
-	mov	a,	r7
-	subb	a,	r3
-	mov	r7,	a
+	mov	a,r4
+	subb	a,r0
+	mov	r4,a
+	mov	a,r5
+	subb	a,r1
+	mov	r5,a
+	mov	a,r6
+	subb	a,r2
+	mov	r6,a
+	mov	a,r7
+	subb	a,r3
+	mov	r7,a
 	inc	b
 	jnc	print_int_u32__divide_loop
 	; restore remainder
-	mov	a,	r4
-	add	a,	r0
-	mov	r4,	a
-	mov	a,	r5
-	addc	a,	r1
-	mov	r5,	a
-	mov	a,	r6
-	addc	a,	r2
-	mov	r6,	a
-	mov	a,	r7
-	addc	a,	r3
-	mov	r7,	a
-	mov	a,	b
+	mov	a,r4
+	add	a,r0
+	mov	r4,a
+	mov	a,r5
+	addc	a,r1
+	mov	r5,a
+	mov	a,r6
+	addc	a,r2
+	mov	r6,a
+	mov	a,r7
+	addc	a,r3
+	mov	r7,a
+	mov	a,b
 	pop	b
 	ret

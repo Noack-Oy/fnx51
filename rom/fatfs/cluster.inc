@@ -13,14 +13,10 @@ fatfs_cluster_to_lba:
 	push	b
 	push	dpl
 	push	dph
-	mov	a,r4
-	push	acc
-	mov	a,r5
-	push	acc
-	mov	a,r6
-	push	acc
-	mov	a,r7
-	push	acc
+	push	4
+	push	5
+	push	6
+	push	7
 
 	; Load cluster_size from fatfs_info+4
 	mov	dpl,fatfs_info
@@ -47,7 +43,7 @@ fatfs_cluster_to_lba__not_one:
 fatfs_cluster_to_lba__bad_size:
 	; Invalid cluster size (not a power of 2)
 	acall	panic
-	
+
 fatfs_cluster_to_lba__shifts_counted:
 	; Now r4 has the shift count
 	; Shift r0-r3 left by r4 positions (cluster * cluster_size)
@@ -69,14 +65,10 @@ fatfs_cluster_to_lba__shifts_counted:
 	; Add cluster offset: r0-r3 += r4-r7
 	acall	add_32
 
-	pop	acc
-	mov	r7,a
-	pop	acc
-	mov	r6,a
-	pop	acc
-	mov	r5,a
-	pop	acc
-	mov	r4,a
+	pop	7
+	pop	6
+	pop	5
+	pop	4
 	pop	dph
 	pop	dpl
 	pop	b

@@ -97,7 +97,6 @@ next:
 .inc ../print/text.inc
 .inc ../print/hex.inc
 .inc ../util/xch.inc
-.inc ../util/regbank.inc
 .inc ../util/dump.inc
 .inc ../stream/xram_read.inc
 .inc ../memory/init.inc
