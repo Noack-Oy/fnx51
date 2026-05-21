@@ -772,7 +772,7 @@
 0370: ED                   mov     a,r5    ;  |
 0371: FB                   mov     r3,a    ; -'
 0372: 8C 82                mov     dpl,r4  ; -.
-0374: 8D 82                mov     dpl,r5  ;  |
+0374: 8D 83                mov     dph,r5  ;  |
 0376: E0                   movx    a,@dptr ;  |
 0377: FC                   mov     r4,a    ;  |- curr = curr->next
 0378: A3                   inc     dptr    ;  |

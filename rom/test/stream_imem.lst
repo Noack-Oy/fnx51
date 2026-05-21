@@ -114,7 +114,7 @@
 0048: 90 00 9E             mov     dptr,   #stream_imem_read
 004B: 85 82 30             mov     in,     dpl
 004E: 85 83 31             mov     in+1,   dph
-0051: 51 DE                acall   dump
+0051: 51 CF                acall   dump
                    
 0053: 80 FE                sjmp    *
                    
@@ -530,36 +530,29 @@
 01FE: C0 05                push    5
 0200: C0 06                push    6
 0202: C0 07                push    7
-                           ; r4-r7: value to print
-0204: E8                   mov     a,r0
-0205: FC                   mov     r4,a
-0206: E9                   mov     a,r1
-0207: FD                   mov     r5,a
-0208: EA                   mov     a,r2
-0209: FE                   mov     r6,a
-020A: EB                   mov     a,r3
-020B: FF                   mov     r7,a
-                           ; sign bit is now also in ACC (= r3 = r7)
-020C: 30 E7 3A             jnb     ACC.7,  print_int_u32__1
-020F: 74 2D                mov     a,#'-'
-0211: 11 B4                acall   print_char
-0213: EC                   mov     a,r4
-0214: F4                   cpl     a
-0215: 24 01                add     a,#1
-0217: FC                   mov     r4,a
-0218: ED                   mov     a,r5
-0219: F4                   cpl     a
-021A: 34 00                addc    a,#0
-021C: FD                   mov     r5,a
-021D: EE                   mov     a,r6
-021E: F4                   cpl     a
-021F: 34 00                addc    a,#0
-0221: FE                   mov     r6,a
-0222: EF                   mov     a,r7
-0223: F4                   cpl     a
-0224: 34 00                addc    a,#0
-0226: FF                   mov     r7,a
-0227: 80 20                sjmp    print_int_u32__1
+                           ; check sign bit (high byte of value is in r3)
+0204: EB                   mov     a,r3
+0205: 30 E7 32             jnb     ACC.7,  print_int_u32__1
+0208: 74 2D                mov     a,#'-'
+020A: 11 B4                acall   print_char
+                           ; negate r0-r3
+020C: E8                   mov     a,r0
+020D: F4                   cpl     a
+020E: 24 01                add     a,#1
+0210: F8                   mov     r0,a
+0211: E9                   mov     a,r1
+0212: F4                   cpl     a
+0213: 34 00                addc    a,#0
+0215: F9                   mov     r1,a
+0216: EA                   mov     a,r2
+0217: F4                   cpl     a
+0218: 34 00                addc    a,#0
+021A: FA                   mov     r2,a
+021B: EB                   mov     a,r3
+021C: F4                   cpl     a
+021D: 34 00                addc    a,#0
+021F: FB                   mov     r3,a
+0220: 80 18                sjmp    print_int_u32__1
                    
                    
                    ; >> void print_int_u32(long r0r1r2r3) <<
@@ -567,143 +560,136 @@
                    ; Print unsigned integer from r0-r3.
                    
                    print_int_u32:
-0229: C0 E0                push    acc
-022B: C0 F0                push    b
-022D: C0 82                push    dpl
-022F: C0 83                push    dph
-0231: C0 00                push    0
-0233: C0 01                push    1
-0235: C0 02                push    2
-0237: C0 03                push    3
-0239: C0 04                push    4
-023B: C0 05                push    5
-023D: C0 06                push    6
-023F: C0 07                push    7
-                           ; r4-r7: value to print
-0241: E8                   mov     a,r0
-0242: FC                   mov     r4,a
-0243: E9                   mov     a,r1
-0244: FD                   mov     r5,a
-0245: EA                   mov     a,r2
-0246: FE                   mov     r6,a
-0247: EB                   mov     a,r3
-0248: FF                   mov     r7,a
+0222: C0 E0                push    acc
+0224: C0 F0                push    b
+0226: C0 82                push    dpl
+0228: C0 83                push    dph
+022A: C0 00                push    0
+022C: C0 01                push    1
+022E: C0 02                push    2
+0230: C0 03                push    3
+0232: C0 04                push    4
+0234: C0 05                push    5
+0236: C0 06                push    6
+0238: C0 07                push    7
                    print_int_u32__1:
-0249: 75 F0 00             mov     b,#0 ; flag for leading zeroes
-024C: 90 02 8E             mov     dptr,#print_int_u32__divisors
+                           ; value to print stays in r0-r3 throughout;
+                           ; each digit's divisor is loaded into r4-r7.
+023A: 75 F0 00             mov     b,#0 ; flag for leading zeroes
+023D: 90 02 7F             mov     dptr,#print_int_u32__divisors
                    print_int_u32__loop:
-                           ; get divisor
-024F: E4                   clr     a
-0250: 93                   movc    a,@a+dptr
-0251: F8                   mov     r0,a
-0252: A3                   inc     dptr
-0253: E4                   clr     a
-0254: 93                   movc    a,@a+dptr
-0255: F9                   mov     r1,a
-0256: A3                   inc     dptr
-0257: E4                   clr     a
-0258: 93                   movc    a,@a+dptr
-0259: FA                   mov     r2,a
-025A: A3                   inc     dptr
-025B: E4                   clr     a
-025C: 93                   movc    a,@a+dptr
-025D: FB                   mov     r3,a
-025E: A3                   inc     dptr
-                           ; divide r4-r7 by r0-r3
-025F: 51 B2                acall   print_int_u32__divide
-0261: 25 F0                add     a,b
-0263: 60 08                jz      print_int_u32__skip ; leading zero
-0265: 95 F0                subb    a,b
-0267: 24 30                add     a,#'0'
-0269: 05 F0                inc     b
-026B: 11 B4                acall   print_char
+                           ; load divisor into r4-r7
+0240: E4                   clr     a
+0241: 93                   movc    a,@a+dptr
+0242: FC                   mov     r4,a
+0243: A3                   inc     dptr
+0244: E4                   clr     a
+0245: 93                   movc    a,@a+dptr
+0246: FD                   mov     r5,a
+0247: A3                   inc     dptr
+0248: E4                   clr     a
+0249: 93                   movc    a,@a+dptr
+024A: FE                   mov     r6,a
+024B: A3                   inc     dptr
+024C: E4                   clr     a
+024D: 93                   movc    a,@a+dptr
+024E: FF                   mov     r7,a
+024F: A3                   inc     dptr
+                           ; divide r0-r3 by r4-r7 (quotient in a, remainder in
+0250: 51 A3                acall   print_int_u32__divide
+0252: 25 F0                add     a,b
+0254: 60 08                jz      print_int_u32__skip ; leading zero
+0256: 95 F0                subb    a,b
+0258: 24 30                add     a,#'0'
+025A: 05 F0                inc     b
+025C: 11 B4                acall   print_char
                    print_int_u32__skip:
-026D: B8 0A DF             cjne    r0,#0x0a,       print_int_u32__loop
-0270: EC                   mov     a,r4
-0271: 24 30                add     a,#'0'
-0273: 11 B4                acall   print_char
+025E: BC 0A DF             cjne    r4,#0x0a,       print_int_u32__loop
+0261: E8                   mov     a,r0
+0262: 24 30                add     a,#'0'
+0264: 11 B4                acall   print_char
                    
-0275: D0 07                pop     7
-0277: D0 06                pop     6
-0279: D0 05                pop     5
-027B: D0 04                pop     4
-027D: D0 03                pop     3
-027F: D0 02                pop     2
-0281: D0 01                pop     1
-0283: D0 00                pop     0
-0285: D0 83                pop     dph
-0287: D0 82                pop     dpl
-0289: D0 F0                pop     b
-028B: D0 E0                pop     acc
-028D: 22                   ret
+0266: D0 07                pop     7
+0268: D0 06                pop     6
+026A: D0 05                pop     5
+026C: D0 04                pop     4
+026E: D0 03                pop     3
+0270: D0 02                pop     2
+0272: D0 01                pop     1
+0274: D0 00                pop     0
+0276: D0 83                pop     dph
+0278: D0 82                pop     dpl
+027A: D0 F0                pop     b
+027C: D0 E0                pop     acc
+027E: 22                   ret
                    ; Divisor table:
                    print_int_u32__divisors:
                            ; 1,000,000,000 = 3b9aca00
-028E: 00 CA 9A 3B 
+027F: 00 CA 9A 3B 
                            .db     0x00, 0xca, 0x9a, 0x3b
                            ;   100,000,000 = 05f5e100
-0292: 00 E1 F5 05 
+0283: 00 E1 F5 05 
                            .db     0x00, 0xe1, 0xf5, 0x05
                            ;    10,000,000 = 00989680
-0296: 80 96 98 00 
+0287: 80 96 98 00 
                            .db     0x80, 0x96, 0x98, 0x00
                            ;     1,000,000 = 000f4240
-029A: 40 42 0F 00 
+028B: 40 42 0F 00 
                            .db     0x40, 0x42, 0x0f, 0x00
                            ;       100,000 = 000186a0
-029E: A0 86 01 00 
+028F: A0 86 01 00 
                            .db     0xa0, 0x86, 0x01, 0x00
                            ;        10,000 = 00002710
-02A2: 10 27 00 00 
+0293: 10 27 00 00 
                            .db     0x10, 0x27, 0x00, 0x00
                            ;         1,000 = 000003e8
-02A6: E8 03 00 00 
+0297: E8 03 00 00 
                            .db     0xe8, 0x03, 0x00, 0x00
                            ;           100 = 00000064
-02AA: 64 00 00 00 
+029B: 64 00 00 00 
                            .db     0x64, 0x00, 0x00, 0x00
                            ;            10 = 0000000a
-02AE: 0A 00 00 00 
+029F: 0A 00 00 00 
                            .db     0x0a, 0x00, 0x00, 0x00
-                   ; Divide r4-r7 by r0-r1 using repeated subtraction.
-                   ; Quotient returned in a, remainder in r4-r7.
+                   ; Divide r0-r3 by r4-r7 using repeated subtraction.
+                   ; Quotient returned in a, remainder in r0-r3.
                    ; Since the quotient is at most 9,
                    ; this is faster than 'proper' division.
                    print_int_u32__divide:
-02B2: C0 F0                push    b
-02B4: C3                   clr     c
-02B5: 75 F0 FF             mov     b,#-1
+02A3: C0 F0                push    b
+02A5: C3                   clr     c
+02A6: 75 F0 FF             mov     b,#-1
                    print_int_u32__divide_loop:
-02B8: EC                   mov     a,r4
-02B9: 98                   subb    a,r0
-02BA: FC                   mov     r4,a
-02BB: ED                   mov     a,r5
-02BC: 99                   subb    a,r1
-02BD: FD                   mov     r5,a
-02BE: EE                   mov     a,r6
-02BF: 9A                   subb    a,r2
-02C0: FE                   mov     r6,a
-02C1: EF                   mov     a,r7
-02C2: 9B                   subb    a,r3
-02C3: FF                   mov     r7,a
-02C4: 05 F0                inc     b
-02C6: 50 F0                jnc     print_int_u32__divide_loop
+02A9: E8                   mov     a,r0
+02AA: 9C                   subb    a,r4
+02AB: F8                   mov     r0,a
+02AC: E9                   mov     a,r1
+02AD: 9D                   subb    a,r5
+02AE: F9                   mov     r1,a
+02AF: EA                   mov     a,r2
+02B0: 9E                   subb    a,r6
+02B1: FA                   mov     r2,a
+02B2: EB                   mov     a,r3
+02B3: 9F                   subb    a,r7
+02B4: FB                   mov     r3,a
+02B5: 05 F0                inc     b
+02B7: 50 F0                jnc     print_int_u32__divide_loop
                            ; restore remainder
-02C8: EC                   mov     a,r4
-02C9: 28                   add     a,r0
-02CA: FC                   mov     r4,a
-02CB: ED                   mov     a,r5
-02CC: 39                   addc    a,r1
-02CD: FD                   mov     r5,a
-02CE: EE                   mov     a,r6
-02CF: 3A                   addc    a,r2
-02D0: FE                   mov     r6,a
-02D1: EF                   mov     a,r7
-02D2: 3B                   addc    a,r3
-02D3: FF                   mov     r7,a
-02D4: E5 F0                mov     a,b
-02D6: D0 F0                pop     b
-02D8: 22                   ret
+02B9: E8                   mov     a,r0
+02BA: 2C                   add     a,r4
+02BB: F8                   mov     r0,a
+02BC: E9                   mov     a,r1
+02BD: 3D                   addc    a,r5
+02BE: F9                   mov     r1,a
+02BF: EA                   mov     a,r2
+02C0: 3E                   addc    a,r6
+02C1: FA                   mov     r2,a
+02C2: EB                   mov     a,r3
+02C3: 3F                   addc    a,r7
+02C4: FB                   mov     r3,a
+02C5: E5 F0                mov     a,b
+02C7: D0 F0                pop     b
+02C9: 22                   ret
                    
                    ; *** read/char.inc ***
                    
@@ -713,9 +699,9 @@
                    ; Indirect call to function behind IN pointer.
                    
                    read_char:
-02D9: C0 30                push    IN
-02DB: C0 31                push    IN+1
-02DD: 22                   ret
+02CA: C0 30                push    IN
+02CC: C0 31                push    IN+1
+02CE: 22                   ret
                    
                    ; *** util/dump.inc ***
                    
@@ -727,13 +713,13 @@
                    ; r0-r3 contains next address upon exit.
                    
                    dump:
-02DE: C0 F0                push    b
-02E0: C0 E0                push    acc
-02E2: F5 F0                mov     b,      a
-02E4: C0 04                push    4
-02E6: C0 05                push    5
-02E8: C0 06                push    6
-02EA: C0 07                push    7
+02CF: C0 F0                push    b
+02D1: C0 E0                push    acc
+02D3: F5 F0                mov     b,      a
+02D5: C0 04                push    4
+02D7: C0 05                push    5
+02D9: C0 06                push    6
+02DB: C0 07                push    7
                    
                            ; b: total bytes remaining
                            ; r0: buffer pointer
@@ -741,144 +727,144 @@
                            ; r2: print loop counter
                    
                            ; r4-7: address label
-02EC: 71 92                acall   xch_r0123_r4567
+02DD: 71 83                acall   xch_r0123_r4567
                    
                            ; allocate 16 byte array on stack
-02EE: E5 81                mov     a,      sp
-02F0: F8                   mov     r0,     a
-02F1: 24 10                add     a,      #16
-02F3: F5 81                mov     sp,     a
+02DF: E5 81                mov     a,      sp
+02E1: F8                   mov     r0,     a
+02E2: 24 10                add     a,      #16
+02E4: F5 81                mov     sp,     a
                    
                    dump__line_loop:
                            ; read into buffer
-02F5: 79 10                mov     r1,     #16
+02E6: 79 10                mov     r1,     #16
                    dump__read_loop:
-02F7: 51 D9                acall   read_char
-02F9: 08                   inc     r0
-02FA: F6                   mov     @r0,    a
-02FB: D5 F0 03             djnz    b,      dump__read_continue
-02FE: 19                   dec     r1
-02FF: 80 02                sjmp    dump__read_end
+02E8: 51 CA                acall   read_char
+02EA: 08                   inc     r0
+02EB: F6                   mov     @r0,    a
+02EC: D5 F0 03             djnz    b,      dump__read_continue
+02EF: 19                   dec     r1
+02F0: 80 02                sjmp    dump__read_end
                    dump__read_continue:
-0301: D9 F4                djnz    r1,     dump__read_loop
+02F2: D9 F4                djnz    r1,     dump__read_loop
                    dump__read_end:
                    
                            ; print address column
-0303: 71 92                acall   xch_r0123_r4567
-0305: 11 EF                acall   print_hex_32
-0307: 71 92                acall   xch_r0123_r4567
-0309: 74 3A                mov     a,      #':'
-030B: 11 B4                acall   print_char
+02F4: 71 83                acall   xch_r0123_r4567
+02F6: 11 EF                acall   print_hex_32
+02F8: 71 83                acall   xch_r0123_r4567
+02FA: 74 3A                mov     a,      #':'
+02FC: 11 B4                acall   print_char
                    
                            ; if r1 is nonzero here, we have a shorter line
                            ; the value in r1 is the number of padding bytes
                    
                            ; wind back pointer
-030D: E8                   mov     a,      r0
-030E: 24 F0                add     a,      #-16
-0310: 29                   add     a,      r1
-0311: F8                   mov     r0,     a
+02FE: E8                   mov     a,      r0
+02FF: 24 F0                add     a,      #-16
+0301: 29                   add     a,      r1
+0302: F8                   mov     r0,     a
                    
                            ; print hex
-0312: 7A 10                mov     r2,     #16
+0303: 7A 10                mov     r2,     #16
                    dump__print_hex_loop:
-0314: 08                   inc     r0
-0315: EA                   mov     a,      r2
-0316: 54 03                anl     a,      #3      ; mod 4
-0318: 70 04                jnz     dump__print_hex_no_gap
-031A: 74 20                mov     a,      #' ' ; gap after every 4 bytes
-031C: 11 B4                acall   print_char
+0305: 08                   inc     r0
+0306: EA                   mov     a,      r2
+0307: 54 03                anl     a,      #3      ; mod 4
+0309: 70 04                jnz     dump__print_hex_no_gap
+030B: 74 20                mov     a,      #' ' ; gap after every 4 bytes
+030D: 11 B4                acall   print_char
                    dump__print_hex_no_gap:
-031E: EA                   mov     a,      r2
-031F: D3                   setb    c
-0320: 99                   subb    a,      r1
-0321: 50 08                jnc     dump__print_hex_no_padding
-0323: 74 20                mov     a,      #' ' ; padding for shorter line
-0325: 11 B4                acall   print_char
-0327: 11 B4                acall   print_char
-0329: 80 03                sjmp    dump__print_hex_next
+030F: EA                   mov     a,      r2
+0310: D3                   setb    c
+0311: 99                   subb    a,      r1
+0312: 50 08                jnc     dump__print_hex_no_padding
+0314: 74 20                mov     a,      #' ' ; padding for shorter line
+0316: 11 B4                acall   print_char
+0318: 11 B4                acall   print_char
+031A: 80 03                sjmp    dump__print_hex_next
                    dump__print_hex_no_padding:
-032B: E6                   mov     a,      @r0
-032C: 11 CF                acall   print_hex_8
+031C: E6                   mov     a,      @r0
+031D: 11 CF                acall   print_hex_8
                    dump__print_hex_next:
-032E: 74 20                mov     a,      #' ' ; space between bytes
-0330: 11 B4                acall   print_char
-0332: DA E0                djnz    r2,     dump__print_hex_loop
+031F: 74 20                mov     a,      #' ' ; space between bytes
+0321: 11 B4                acall   print_char
+0323: DA E0                djnz    r2,     dump__print_hex_loop
                    
                            ; wind back again
-0334: E8                   mov     a,      r0
-0335: 24 F0                add     a,      #-16
-0337: F8                   mov     r0,     a
+0325: E8                   mov     a,      r0
+0326: 24 F0                add     a,      #-16
+0328: F8                   mov     r0,     a
                    
                            ; print ascii
-0338: 74 20                mov     a,      #' '
-033A: 11 B4                acall   print_char
-033C: 74 7C                mov     a,      #'|'
-033E: 11 B4                acall   print_char
-0340: 74 10                mov     a,      #16
-0342: C3                   clr     c
-0343: 99                   subb    a,      r1
-0344: F9                   mov     r1,     a ; number of bytes to print
-0345: FA                   mov     r2,     a
+0329: 74 20                mov     a,      #' '
+032B: 11 B4                acall   print_char
+032D: 74 7C                mov     a,      #'|'
+032F: 11 B4                acall   print_char
+0331: 74 10                mov     a,      #16
+0333: C3                   clr     c
+0334: 99                   subb    a,      r1
+0335: F9                   mov     r1,     a ; number of bytes to print
+0336: FA                   mov     r2,     a
                    dump__print_ascii_loop:
-0346: 08                   inc     r0
-0347: E6                   mov     a,      @r0
-0348: B4 20 00             cjne    a,      #0x20,  dump__print_ascii_check1
+0337: 08                   inc     r0
+0338: E6                   mov     a,      @r0
+0339: B4 20 00             cjne    a,      #0x20,  dump__print_ascii_check1
                    dump__print_ascii_check1:
-034B: 40 05                jc      dump__print_ascii_replace
-034D: B4 7F 00             cjne    a,      #0x7f,  dump__print_ascii_check2
+033C: 40 05                jc      dump__print_ascii_replace
+033E: B4 7F 00             cjne    a,      #0x7f,  dump__print_ascii_check2
                    dump__print_ascii_check2:
-0350: 40 02                jc      dump__print_ascii_continue
+0341: 40 02                jc      dump__print_ascii_continue
                    dump__print_ascii_replace:
-0352: 74 2E                mov     a,      #'.'
+0343: 74 2E                mov     a,      #'.'
                    dump__print_ascii_continue:
-0354: 11 B4                acall   print_char
-0356: DA EE                djnz    r2,     dump__print_ascii_loop
-0358: 74 7C                mov     a,      #'|'
-035A: 11 B4                acall   print_char
-035C: 74 0D                mov     a,      #13
-035E: 11 B4                acall   print_char
-0360: 74 0A                mov     a,      #10
-0362: 11 B4                acall   print_char
+0345: 11 B4                acall   print_char
+0347: DA EE                djnz    r2,     dump__print_ascii_loop
+0349: 74 7C                mov     a,      #'|'
+034B: 11 B4                acall   print_char
+034D: 74 0D                mov     a,      #13
+034F: 11 B4                acall   print_char
+0351: 74 0A                mov     a,      #10
+0353: 11 B4                acall   print_char
                    
                            ; wind back again
-0364: E8                   mov     a,      r0
-0365: 24 F0                add     a,      #-16
-0367: F8                   mov     r0,     a
+0355: E8                   mov     a,      r0
+0356: 24 F0                add     a,      #-16
+0358: F8                   mov     r0,     a
                    
                            ; next address
-0368: EC                   mov     a,      r4
-0369: 29                   add     a,      r1
-036A: FC                   mov     r4,     a
-036B: ED                   mov     a,      r5
-036C: 34 00                addc    a,      #0
-036E: FD                   mov     r5,     a
-036F: EE                   mov     a,      r6
-0370: 34 00                addc    a,      #0
-0372: FE                   mov     r6,     a
-0373: EF                   mov     a,      r7
-0374: 34 00                addc    a,      #0
-0376: FF                   mov     r7,     a
+0359: EC                   mov     a,      r4
+035A: 29                   add     a,      r1
+035B: FC                   mov     r4,     a
+035C: ED                   mov     a,      r5
+035D: 34 00                addc    a,      #0
+035F: FD                   mov     r5,     a
+0360: EE                   mov     a,      r6
+0361: 34 00                addc    a,      #0
+0363: FE                   mov     r6,     a
+0364: EF                   mov     a,      r7
+0365: 34 00                addc    a,      #0
+0367: FF                   mov     r7,     a
                    
-0377: E5 F0                mov     a,      b
-0379: 60 02                jz      dump__end
-037B: 41 F5                ajmp    dump__line_loop
+0368: E5 F0                mov     a,      b
+036A: 60 02                jz      dump__end
+036C: 41 E6                ajmp    dump__line_loop
                    
                    dump__end:
                            ; deallocate array from stack
-037D: E5 81                mov     a,      sp
-037F: 24 F0                add     a,      #-16
-0381: F5 81                mov     sp,     a
+036E: E5 81                mov     a,      sp
+0370: 24 F0                add     a,      #-16
+0372: F5 81                mov     sp,     a
                    
-0383: 71 92                acall   xch_r0123_r4567
+0374: 71 83                acall   xch_r0123_r4567
                    
-0385: D0 07                pop     7
-0387: D0 06                pop     6
-0389: D0 05                pop     5
-038B: D0 04                pop     4
-038D: D0 E0                pop     acc
-038F: D0 F0                pop     b
-0391: 22                   ret
+0376: D0 07                pop     7
+0378: D0 06                pop     6
+037A: D0 05                pop     5
+037C: D0 04                pop     4
+037E: D0 E0                pop     acc
+0380: D0 F0                pop     b
+0382: 22                   ret
                    
                    ; *** util/xch.inc ***
                    
@@ -888,25 +874,25 @@
                    
                    xch_r0123_r4567:
                            ; r0 <-> r4
-0392: C8                   xch     a,      r0
-0393: CC                   xch     a,      r4
-0394: C8                   xch     a,      r0
+0383: C8                   xch     a,      r0
+0384: CC                   xch     a,      r4
+0385: C8                   xch     a,      r0
                            ; r1 <-> r5
-0395: C9                   xch     a,      r1
-0396: CD                   xch     a,      r5
-0397: C9                   xch     a,      r1
+0386: C9                   xch     a,      r1
+0387: CD                   xch     a,      r5
+0388: C9                   xch     a,      r1
                            ; r2 <-> r6
-0398: CA                   xch     a,      r2
-0399: CE                   xch     a,      r6
-039A: CA                   xch     a,      r2
+0389: CA                   xch     a,      r2
+038A: CE                   xch     a,      r6
+038B: CA                   xch     a,      r2
                            ; r3 <-> r7
-039B: CB                   xch     a,      r3
-039C: CF                   xch     a,      r7
-039D: CB                   xch     a,      r3
+038C: CB                   xch     a,      r3
+038D: CF                   xch     a,      r7
+038E: CB                   xch     a,      r3
                            ; a remains unchanged
-039E: 22                   ret
+038F: 22                   ret
                    
-039F:              .equ panic_out, serial_tx
+0390:              .equ panic_out, serial_tx
                    
                    ; *** panic/panic.inc ***
                    
@@ -916,45 +902,45 @@
                    ; Print caller address and halt.
                    
                    panic:
-039F: C2 AF                clr     ea      ; disable interrupts
-03A1: F8                   mov     r0,a    ; save a
+0390: C2 AF                clr     ea      ; disable interrupts
+0392: F8                   mov     r0,a    ; save a
                            ; display panic text
-03A2: 90 00 96             mov     dptr,#panic_out
-03A5: 85 82 32             mov     out,dpl
-03A8: 85 83 33             mov     out+1,dph
-03AB: 90 03 D2             mov     dptr,#panic_text
-03AE: 11 B9                acall   print_text
+0393: 90 00 96             mov     dptr,#panic_out
+0396: 85 82 32             mov     out,dpl
+0399: 85 83 33             mov     out+1,dph
+039C: 90 03 C3             mov     dptr,#panic_text
+039F: 11 B9                acall   print_text
                            ; get return address from stack
-03B0: D0 E0                pop     acc
-03B2: FA                   mov     r2,a
-03B3: D0 E0                pop     acc
+03A1: D0 E0                pop     acc
+03A3: FA                   mov     r2,a
+03A4: D0 E0                pop     acc
                            ; subtract two to get call instruction address
-03B5: C3                   clr     c
-03B6: 94 02                subb    a,#2
-03B8: F9                   mov     r1,a
-03B9: EA                   mov     a,r2
-03BA: 94 00                subb    a,#0
+03A6: C3                   clr     c
+03A7: 94 02                subb    a,#2
+03A9: F9                   mov     r1,a
+03AA: EA                   mov     a,r2
+03AB: 94 00                subb    a,#0
                            ; print caller address (to look up cause in .lst fil
-03BC: 11 CF                acall   print_hex_8
-03BE: E9                   mov     a,r1
-03BF: 11 CF                acall   print_hex_8
+03AD: 11 CF                acall   print_hex_8
+03AF: E9                   mov     a,r1
+03B0: 11 CF                acall   print_hex_8
                            ; print original value of a (error code / debug info
-03C1: 74 20                mov     a,#' '
-03C3: 11 B4                acall   print_char
-03C5: E8                   mov     a,r0
-03C6: 11 CF                acall   print_hex_8
+03B2: 74 20                mov     a,#' '
+03B4: 11 B4                acall   print_char
+03B6: E8                   mov     a,r0
+03B7: 11 CF                acall   print_hex_8
                            ; newline
-03C8: 74 0D                mov     a,#13
-03CA: 11 B4                acall   print_char
-03CC: 74 0A                mov     a,#10
-03CE: 11 B4                acall   print_char
+03B9: 74 0D                mov     a,#13
+03BB: 11 B4                acall   print_char
+03BD: 74 0A                mov     a,#10
+03BF: 11 B4                acall   print_char
                            ; hang
-03D0: 80 FE                sjmp    *
+03C1: 80 FE                sjmp    *
                    
                    panic_text:
-03D2: 0D 0A                .db     13, 10
-03D4: 20 21 21 21 
+03C3: 0D 0A                .db     13, 10
+03C5: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                            .db     " !!! panic @"
-03E0: 00                   .db     0
+03D1: 00                   .db     0

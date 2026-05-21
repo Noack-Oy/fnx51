@@ -214,35 +214,28 @@ print_int_s32:
 	push	5
 	push	6
 	push	7
-	; r4-r7: value to print
-	mov	a,r0
-	mov	r4,a
-	mov	a,r1
-	mov	r5,a
-	mov	a,r2
-	mov	r6,a
+	; check sign bit (high byte of value is in r3)
 	mov	a,r3
-	mov	r7,a
-	; sign bit is now also in ACC (= r3 = r7)
 	jnb	ACC.7,	print_int_u32__1
 	mov	a,#'-'
 	acall	print_char
-	mov	a,r4
+	; negate r0-r3
+	mov	a,r0
 	cpl	a
 	add	a,#1
-	mov	r4,a
-	mov	a,r5
+	mov	r0,a
+	mov	a,r1
 	cpl	a
 	addc	a,#0
-	mov	r5,a
-	mov	a,r6
+	mov	r1,a
+	mov	a,r2
 	cpl	a
 	addc	a,#0
-	mov	r6,a
-	mov	a,r7
+	mov	r2,a
+	mov	a,r3
 	cpl	a
 	addc	a,#0
-	mov	r7,a
+	mov	r3,a
 	sjmp	print_int_u32__1
 
 
@@ -263,37 +256,30 @@ print_int_u32:
 	push	5
 	push	6
 	push	7
-	; r4-r7: value to print
-	mov	a,r0
-	mov	r4,a
-	mov	a,r1
-	mov	r5,a
-	mov	a,r2
-	mov	r6,a
-	mov	a,r3
-	mov	r7,a
 print_int_u32__1:
+	; value to print stays in r0-r3 throughout;
+	; each digit's divisor is loaded into r4-r7.
 	mov	b,#0 ; flag for leading zeroes
 	mov	dptr,#print_int_u32__divisors
 print_int_u32__loop:
-	; get divisor
+	; load divisor into r4-r7
 	clr	a
 	movc	a,@a+dptr
-	mov	r0,a
+	mov	r4,a
 	inc	dptr
 	clr	a
 	movc	a,@a+dptr
-	mov	r1,a
+	mov	r5,a
 	inc	dptr
 	clr	a
 	movc	a,@a+dptr
-	mov	r2,a
+	mov	r6,a
 	inc	dptr
 	clr	a
 	movc	a,@a+dptr
-	mov	r3,a
+	mov	r7,a
 	inc	dptr
-	; divide r4-r7 by r0-r3
+	; divide r0-r3 by r4-r7 (quotient in a, remainder in r0-r3)
 	acall	print_int_u32__divide
 	add	a,b
 	jz	print_int_u32__skip ; leading zero
@@ -302,8 +288,8 @@ print_int_u32__loop:
 	inc	b
 	acall	print_char
 print_int_u32__skip:
-	cjne	r0,#0x0a,	print_int_u32__loop
-	mov	a,r4
+	cjne	r4,#0x0a,	print_int_u32__loop
+	mov	a,r0
 	add	a,#'0'
 	acall	print_char
 
@@ -340,8 +326,8 @@ print_int_u32__divisors:
 	.db	0x64, 0x00, 0x00, 0x00
 	;            10 = 0000000a
 	.db	0x0a, 0x00, 0x00, 0x00
-; Divide r4-r7 by r0-r1 using repeated subtraction.
-; Quotient returned in a, remainder in r4-r7.
+; Divide r0-r3 by r4-r7 using repeated subtraction.
+; Quotient returned in a, remainder in r0-r3.
 ; Since the quotient is at most 9,
 ; this is faster than 'proper' division.
 print_int_u32__divide:
@@ -349,33 +335,33 @@ print_int_u32__divide:
 	clr	c
 	mov	b,#-1
 print_int_u32__divide_loop:
-	mov	a,r4
-	subb	a,r0
-	mov	r4,a
-	mov	a,r5
-	subb	a,r1
-	mov	r5,a
-	mov	a,r6
-	subb	a,r2
-	mov	r6,a
-	mov	a,r7
-	subb	a,r3
-	mov	r7,a
+	mov	a,r0
+	subb	a,r4
+	mov	r0,a
+	mov	a,r1
+	subb	a,r5
+	mov	r1,a
+	mov	a,r2
+	subb	a,r6
+	mov	r2,a
+	mov	a,r3
+	subb	a,r7
+	mov	r3,a
 	inc	b
 	jnc	print_int_u32__divide_loop
 	; restore remainder
-	mov	a,r4
-	add	a,r0
-	mov	r4,a
-	mov	a,r5
-	addc	a,r1
-	mov	r5,a
-	mov	a,r6
-	addc	a,r2
-	mov	r6,a
-	mov	a,r7
-	addc	a,r3
-	mov	r7,a
+	mov	a,r0
+	add	a,r4
+	mov	r0,a
+	mov	a,r1
+	addc	a,r5
+	mov	r1,a
+	mov	a,r2
+	addc	a,r6
+	mov	r2,a
+	mov	a,r3
+	addc	a,r7
+	mov	r3,a
 	mov	a,b
 	pop	b
 	ret
