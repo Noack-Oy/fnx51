@@ -15,10 +15,8 @@ block_init:
 	mov	r0,#5	; 512+5
 	mov	r1,#2
 	acall	memory_allocate
-	mov	block_cache,r0
-	mov	block_cache+1,r1
-	mov	dpl,r0
-	mov	dph,r1
+	mov	block_cache,dpl
+	mov	block_cache+1,dph
 	mov	a,0xff
 	movx	@dptr,a	; invalid current block address (0xffffffff)
 	inc	dptr

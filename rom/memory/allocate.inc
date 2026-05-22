@@ -1,31 +1,31 @@
 
 ; *** memory/allocate.inc ***
 
-; >> r0r1 *memory_allocate(r0r1 size) <<
+; >> char *{dptr} memory_allocate(uint16{r0r1} size) <<
 
-; Allocate memory, return lowest address
+; Allocate `size` bytes, return pointer to the start of the block.
 
 memory_allocate:
 	push	ie
 	clr	ea
 
 	push	acc
-	push	dpl
-	push	dph
-	inc	auxr1
-	push	dpl
-	push	dph
-
-	; r0,r1 = size (input, will be overwritten with return value)
-	; r2-r7 are clobbered, save them
+	; r0,r1 = size (input, preserved); r2-r7 are clobbered
+	push	0
+	push	1
 	push	2
 	push	3
 	push	4
 	push	5
 	push	6
 	push	7
+	inc	auxr1
+	push	dpl
+	push	dph
 
-	; size lives in r0r1 throughout; replaced with result before exit
+	; size lives in r0r1 throughout (modified by the rounding step,
+	; restored by the matching pop at exit). The pointer is built up
+	; in r4r5 and copied into dptr just before returning.
 
 	mov	a,r0
 	orl	a,r1
@@ -168,11 +168,13 @@ memory_allocate__success:
 	subb	a,r1	;  |
 	movx	@dptr,a ; -'
 
-	; replace size in r0r1 with the result pointer (curr in r4r5)
-	mov	a,r4
-	mov	r0,a
-	mov	a,r5
-	mov	r1,a
+	; restore the alternate dptr, then set the main dptr to the
+	; result pointer that's been sitting in r4r5
+	pop	dph
+	pop	dpl
+	inc	auxr1
+	mov	dpl,r4
+	mov	dph,r5
 
 	pop	7
 	pop	6
@@ -180,11 +182,8 @@ memory_allocate__success:
 	pop	4
 	pop	3
 	pop	2
-	pop	dph
-	pop	dpl
-	inc	auxr1
-	pop	dph
-	pop	dpl
+	pop	1
+	pop	0
 	pop	acc
 
 	pop	ie

@@ -30,8 +30,8 @@ fatfs_init:
 	mov	r0,fatfs_info_size
 	mov	r1,#0
 	acall	memory_allocate
-	mov	fatfs_info,r0
-	mov	fatfs_info+1,r1
+	mov	fatfs_info,dpl
+	mov	fatfs_info+1,dph
 
 	; read sector 0 (MBR)
 	clr	a
