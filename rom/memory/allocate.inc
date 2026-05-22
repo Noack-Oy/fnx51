@@ -25,26 +25,22 @@ memory_allocate:
 	push	6
 	push	7
 
-	; move size from r0r1 to r6r7
-	mov	a,r0
-	mov	r6,a
-	mov	a,r1
-	mov	r7,a
+	; size lives in r0r1 throughout; replaced with result before exit
 
-	mov	a,r6
-	orl	a,r7
+	mov	a,r0
+	orl	a,r1
 	jnz	memory_allocate__0
 	acall	panic	; invalid size (0)
 
 memory_allocate__0:
 	; rounding to next multiple of 4
-	mov	a,r6
+	mov	a,r0
 	add	a,#3
 	anl	a,#0xfc
-	mov	r6,a
-	mov	a,r7
+	mov	r0,a
+	mov	a,r1
 	addc	a,#0
-	mov	r7,a
+	mov	r1,a
 
 	; set prev (r2,r3) and curr (r4r5) pointers
 	mov	r2,memory_list
@@ -69,14 +65,14 @@ memory_allocate__0a:
 	inc	dptr
 	inc	dptr	; dptr is now &(curr->size)
 	movx	a,@dptr
-	mov	r1,a	; store low byte for later (cannot easily dec dptr)
+	mov	r6,a	; store low byte for later (cannot easily dec dptr)
 	inc	dptr	; compare high byte first
 	clr	c
 	movx	a,@dptr
-	subb	a,r7
+	subb	a,r1
 	jnz	memory_allocate__1
-	mov	a,r1
-	subb	a,r6
+	mov	a,r6
+	subb	a,r0
 	jnz	memory_allocate__1
 
 	; block size is exact match
@@ -118,12 +114,12 @@ memory_allocate__2:
 	mov	dpl,r2	; prev
 	mov	dph,r3	;
 	mov	a,r4	; -.
-	add	a,r6	;  |
+	add	a,r0	;  |
 	mov	r2,a	;  |
 	movx	@dptr,a ;  |
 	inc	dptr	;  |- prev->next = curr+size
 	mov	a,r5	;  |               '---.---'
-	addc	a,r7	;  |  pointer to leftover block
+	addc	a,r1	;  |  pointer to leftover block
 	mov	r3,a	;  |  also gets stored in r2r3
 	movx	@dptr,a ; -' (prev is not needed anymore)
 
@@ -148,13 +144,13 @@ memory_allocate__2:
 	movx	a,@dptr ;  |
 	inc	dptr	;  |
 	clr	c	;  |
-	subb	a,r6	;  |
+	subb	a,r0	;  |
 	inc	auxr1	;* |
 	movx	@dptr,a ;  |- leftover->size = curr->size - size
 	inc	dptr	;  |
 	inc	auxr1	;* |
 	movx	a,@dptr ;  |
-	subb	a,r7	;  |
+	subb	a,r1	;  |
 	inc	auxr1	;* |
 	movx	@dptr,a ; -'
 
@@ -165,14 +161,14 @@ memory_allocate__success:
 	inc	dptr	;  |
 	movx	a,@dptr ;  |
 	clr	c	;  |
-	subb	a,r6	;  |- memory_list->free -= size
+	subb	a,r0	;  |- memory_list->free -= size
 	movx	@dptr,a ;  |
 	inc	dptr	;  |
 	movx	a,@dptr ;  |
-	subb	a,r7	;  |
+	subb	a,r1	;  |
 	movx	@dptr,a ; -'
 
-	; move return value from r4r5 into r0r1
+	; replace size in r0r1 with the result pointer (curr in r4r5)
 	mov	a,r4
 	mov	r0,a
 	mov	a,r5

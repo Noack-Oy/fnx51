@@ -141,7 +141,7 @@
 0067: F8                   mov     r0,a
 0068: ED                   mov     a,r5
 0069: F9                   mov     r1,a
-006A: 71 65                acall   memory_release
+006A: 71 61                acall   memory_release
 006C: 80 04                sjmp    next
                    __3:
 006E: 74 3F                mov     a,#'?'
@@ -709,174 +709,170 @@
 029A: C0 06                push    6
 029C: C0 07                push    7
                    
-                           ; move size from r0r1 to r6r7
-029E: E8                   mov     a,r0
-029F: FE                   mov     r6,a
-02A0: E9                   mov     a,r1
-02A1: FF                   mov     r7,a
+                           ; size lives in r0r1 throughout; replaced with resul
                    
-02A2: EE                   mov     a,r6
-02A3: 4F                   orl     a,r7
-02A4: 70 02                jnz     memory_allocate__0
-02A6: 91 9C                acall   panic   ; invalid size (0)
+029E: E8                   mov     a,r0
+029F: 49                   orl     a,r1
+02A0: 70 02                jnz     memory_allocate__0
+02A2: 91 98                acall   panic   ; invalid size (0)
                    
                    memory_allocate__0:
                            ; rounding to next multiple of 4
-02A8: EE                   mov     a,r6
-02A9: 24 03                add     a,#3
-02AB: 54 FC                anl     a,#0xfc
-02AD: FE                   mov     r6,a
-02AE: EF                   mov     a,r7
-02AF: 34 00                addc    a,#0
-02B1: FF                   mov     r7,a
+02A4: E8                   mov     a,r0
+02A5: 24 03                add     a,#3
+02A7: 54 FC                anl     a,#0xfc
+02A9: F8                   mov     r0,a
+02AA: E9                   mov     a,r1
+02AB: 34 00                addc    a,#0
+02AD: F9                   mov     r1,a
                    
                            ; set prev (r2,r3) and curr (r4r5) pointers
-02B2: AA 38                mov     r2,memory_list
-02B4: AB 39                mov     r3,memory_list+1
-02B6: 8A 82                mov     dpl,r2
-02B8: 8B 83                mov     dph,r3
-02BA: E0                   movx    a,@dptr
-02BB: FC                   mov     r4,a
-02BC: A3                   inc     dptr
-02BD: E0                   movx    a,@dptr
-02BE: FD                   mov     r5,a
+02AE: AA 38                mov     r2,memory_list
+02B0: AB 39                mov     r3,memory_list+1
+02B2: 8A 82                mov     dpl,r2
+02B4: 8B 83                mov     dph,r3
+02B6: E0                   movx    a,@dptr
+02B7: FC                   mov     r4,a
+02B8: A3                   inc     dptr
+02B9: E0                   movx    a,@dptr
+02BA: FD                   mov     r5,a
                    
                    memory_allocate__loop:
-02BF: EC                   mov     a,r4
-02C0: 4D                   orl     a,r5
-02C1: 70 02                jnz     memory_allocate__0a
-02C3: 91 9C                acall   panic   ; no large enough free block found
+02BB: EC                   mov     a,r4
+02BC: 4D                   orl     a,r5
+02BD: 70 02                jnz     memory_allocate__0a
+02BF: 91 98                acall   panic   ; no large enough free block found
                    memory_allocate__0a:
                            ; compare curr->size with required size
-02C5: 8C 82                mov     dpl,r4
-02C7: 8D 83                mov     dph,r5
-02C9: A3                   inc     dptr
-02CA: A3                   inc     dptr    ; dptr is now &(curr->size)
+02C1: 8C 82                mov     dpl,r4
+02C3: 8D 83                mov     dph,r5
+02C5: A3                   inc     dptr
+02C6: A3                   inc     dptr    ; dptr is now &(curr->size)
+02C7: E0                   movx    a,@dptr
+02C8: FE                   mov     r6,a    ; store low byte for later (cannot e
+02C9: A3                   inc     dptr    ; compare high byte first
+02CA: C3                   clr     c
 02CB: E0                   movx    a,@dptr
-02CC: F9                   mov     r1,a    ; store low byte for later (cannot e
-02CD: A3                   inc     dptr    ; compare high byte first
-02CE: C3                   clr     c
-02CF: E0                   movx    a,@dptr
-02D0: 9F                   subb    a,r7
-02D1: 70 1C                jnz     memory_allocate__1
-02D3: E9                   mov     a,r1
-02D4: 9E                   subb    a,r6
-02D5: 70 18                jnz     memory_allocate__1
+02CC: 99                   subb    a,r1
+02CD: 70 1C                jnz     memory_allocate__1
+02CF: EE                   mov     a,r6
+02D0: 98                   subb    a,r0
+02D1: 70 18                jnz     memory_allocate__1
                    
                            ; block size is exact match
-02D7: 8A 82                mov     dpl,r2  ; prev
-02D9: 8B 83                mov     dph,r3
-02DB: 05 A2                inc     auxr1   ;*switch data pointers
-02DD: 8C 82                mov     dpl,r4  ; curr
-02DF: 8D 83                mov     dph,r5
+02D3: 8A 82                mov     dpl,r2  ; prev
+02D5: 8B 83                mov     dph,r3
+02D7: 05 A2                inc     auxr1   ;*switch data pointers
+02D9: 8C 82                mov     dpl,r4  ; curr
+02DB: 8D 83                mov     dph,r5
                            ; prev->next = curr->next
-02E1: E0                   movx    a,@dptr
+02DD: E0                   movx    a,@dptr
+02DE: A3                   inc     dptr
+02DF: 05 A2                inc     auxr1   ;*
+02E1: F0                   movx    @dptr,a
 02E2: A3                   inc     dptr
 02E3: 05 A2                inc     auxr1   ;*
-02E5: F0                   movx    @dptr,a
-02E6: A3                   inc     dptr
-02E7: 05 A2                inc     auxr1   ;*
-02E9: E0                   movx    a,@dptr
-02EA: 05 A2                inc     auxr1   ;*
-02EC: F0                   movx    @dptr,a
-02ED: 80 47                sjmp    memory_allocate__success
+02E5: E0                   movx    a,@dptr
+02E6: 05 A2                inc     auxr1   ;*
+02E8: F0                   movx    @dptr,a
+02E9: 80 47                sjmp    memory_allocate__success
                    
                    memory_allocate__1:
-02EF: 50 0F                jnc     memory_allocate__2 ; jump if curr is larger 
+02EB: 50 0F                jnc     memory_allocate__2 ; jump if curr is larger 
                            ; too small, move on to next entry in list
-02F1: EC                   mov     a,r4    ; -.
-02F2: FA                   mov     r2,a    ;  |- prev = curr
-02F3: ED                   mov     a,r5    ;  |
-02F4: FB                   mov     r3,a    ; -'
-02F5: 8C 82                mov     dpl,r4  ; -.
-02F7: 8D 83                mov     dph,r5  ;  |
-02F9: E0                   movx    a,@dptr ;  |
-02FA: FC                   mov     r4,a    ;  |- curr = curr->next
-02FB: A3                   inc     dptr    ;  |
-02FC: E0                   movx    a,@dptr ;  |
-02FD: FD                   mov     r5,a    ; -'
-02FE: 80 BF                sjmp    memory_allocate__loop
+02ED: EC                   mov     a,r4    ; -.
+02EE: FA                   mov     r2,a    ;  |- prev = curr
+02EF: ED                   mov     a,r5    ;  |
+02F0: FB                   mov     r3,a    ; -'
+02F1: 8C 82                mov     dpl,r4  ; -.
+02F3: 8D 83                mov     dph,r5  ;  |
+02F5: E0                   movx    a,@dptr ;  |
+02F6: FC                   mov     r4,a    ;  |- curr = curr->next
+02F7: A3                   inc     dptr    ;  |
+02F8: E0                   movx    a,@dptr ;  |
+02F9: FD                   mov     r5,a    ; -'
+02FA: 80 BF                sjmp    memory_allocate__loop
                    
                    memory_allocate__2:
                            ; split big block
-0300: 8A 82                mov     dpl,r2  ; prev
-0302: 8B 83                mov     dph,r3  ;
-0304: EC                   mov     a,r4    ; -.
-0305: 2E                   add     a,r6    ;  |
-0306: FA                   mov     r2,a    ;  |
-0307: F0                   movx    @dptr,a ;  |
-0308: A3                   inc     dptr    ;  |- prev->next = curr+size
-0309: ED                   mov     a,r5    ;  |               '---.---'
-030A: 3F                   addc    a,r7    ;  |  pointer to leftover block
-030B: FB                   mov     r3,a    ;  |  also gets stored in r2r3
-030C: F0                   movx    @dptr,a ; -' (prev is not needed anymore)
+02FC: 8A 82                mov     dpl,r2  ; prev
+02FE: 8B 83                mov     dph,r3  ;
+0300: EC                   mov     a,r4    ; -.
+0301: 28                   add     a,r0    ;  |
+0302: FA                   mov     r2,a    ;  |
+0303: F0                   movx    @dptr,a ;  |
+0304: A3                   inc     dptr    ;  |- prev->next = curr+size
+0305: ED                   mov     a,r5    ;  |               '---.---'
+0306: 39                   addc    a,r1    ;  |  pointer to leftover block
+0307: FB                   mov     r3,a    ;  |  also gets stored in r2r3
+0308: F0                   movx    @dptr,a ; -' (prev is not needed anymore)
                    
-030D: 8A 82                mov     dpl,r2  ; leftover
-030F: 8B 83                mov     dph,r3
-0311: 05 A2                inc     auxr1   ;*switch data pointers
-0313: 8C 82                mov     dpl,r4  ; curr
-0315: 8D 83                mov     dph,r5
-0317: E0                   movx    a,@dptr ; -.
+0309: 8A 82                mov     dpl,r2  ; leftover
+030B: 8B 83                mov     dph,r3
+030D: 05 A2                inc     auxr1   ;*switch data pointers
+030F: 8C 82                mov     dpl,r4  ; curr
+0311: 8D 83                mov     dph,r5
+0313: E0                   movx    a,@dptr ; -.
+0314: A3                   inc     dptr    ;  |
+0315: 05 A2                inc     auxr1   ;* |
+0317: F0                   movx    @dptr,a ;  |
 0318: A3                   inc     dptr    ;  |
-0319: 05 A2                inc     auxr1   ;* |
-031B: F0                   movx    @dptr,a ;  |
+0319: 05 A2                inc     auxr1   ;* |- leftover->next = curr->next
+031B: E0                   movx    a,@dptr ;  |
 031C: A3                   inc     dptr    ;  |
-031D: 05 A2                inc     auxr1   ;* |- leftover->next = curr->next
-031F: E0                   movx    a,@dptr ;  |
-0320: A3                   inc     dptr    ;  |
-0321: 05 A2                inc     auxr1   ;* |
-0323: F0                   movx    @dptr,a ;  |
-0324: A3                   inc     dptr    ; -'
+031D: 05 A2                inc     auxr1   ;* |
+031F: F0                   movx    @dptr,a ;  |
+0320: A3                   inc     dptr    ; -'
                            ; data pointers are now &(leftover->size) and &(curr
-0325: 05 A2                inc     auxr1   ;*-.
-0327: E0                   movx    a,@dptr ;  |
-0328: A3                   inc     dptr    ;  |
-0329: C3                   clr     c       ;  |
-032A: 9E                   subb    a,r6    ;  |
+0321: 05 A2                inc     auxr1   ;*-.
+0323: E0                   movx    a,@dptr ;  |
+0324: A3                   inc     dptr    ;  |
+0325: C3                   clr     c       ;  |
+0326: 98                   subb    a,r0    ;  |
+0327: 05 A2                inc     auxr1   ;* |
+0329: F0                   movx    @dptr,a ;  |- leftover->size = curr->size - 
+032A: A3                   inc     dptr    ;  |
 032B: 05 A2                inc     auxr1   ;* |
-032D: F0                   movx    @dptr,a ;  |- leftover->size = curr->size - 
-032E: A3                   inc     dptr    ;  |
+032D: E0                   movx    a,@dptr ;  |
+032E: 99                   subb    a,r1    ;  |
 032F: 05 A2                inc     auxr1   ;* |
-0331: E0                   movx    a,@dptr ;  |
-0332: 9F                   subb    a,r7    ;  |
-0333: 05 A2                inc     auxr1   ;* |
-0335: F0                   movx    @dptr,a ; -'
+0331: F0                   movx    @dptr,a ; -'
                    
                    memory_allocate__success:
-0336: 85 38 82             mov     dpl,memory_list
-0339: 85 39 83             mov     dph,memory_list+1
-033C: A3                   inc     dptr    ; -.
-033D: A3                   inc     dptr    ;  |
-033E: E0                   movx    a,@dptr ;  |
-033F: C3                   clr     c       ;  |
-0340: 9E                   subb    a,r6    ;  |- memory_list->free -= size
-0341: F0                   movx    @dptr,a ;  |
-0342: A3                   inc     dptr    ;  |
-0343: E0                   movx    a,@dptr ;  |
-0344: 9F                   subb    a,r7    ;  |
-0345: F0                   movx    @dptr,a ; -'
+0332: 85 38 82             mov     dpl,memory_list
+0335: 85 39 83             mov     dph,memory_list+1
+0338: A3                   inc     dptr    ; -.
+0339: A3                   inc     dptr    ;  |
+033A: E0                   movx    a,@dptr ;  |
+033B: C3                   clr     c       ;  |
+033C: 98                   subb    a,r0    ;  |- memory_list->free -= size
+033D: F0                   movx    @dptr,a ;  |
+033E: A3                   inc     dptr    ;  |
+033F: E0                   movx    a,@dptr ;  |
+0340: 99                   subb    a,r1    ;  |
+0341: F0                   movx    @dptr,a ; -'
                    
-                           ; move return value from r4r5 into r0r1
-0346: EC                   mov     a,r4
-0347: F8                   mov     r0,a
-0348: ED                   mov     a,r5
-0349: F9                   mov     r1,a
+                           ; replace size in r0r1 with the result pointer (curr
+0342: EC                   mov     a,r4
+0343: F8                   mov     r0,a
+0344: ED                   mov     a,r5
+0345: F9                   mov     r1,a
                    
-034A: D0 07                pop     7
-034C: D0 06                pop     6
-034E: D0 05                pop     5
-0350: D0 04                pop     4
-0352: D0 03                pop     3
-0354: D0 02                pop     2
-0356: D0 83                pop     dph
-0358: D0 82                pop     dpl
-035A: 05 A2                inc     auxr1
-035C: D0 83                pop     dph
-035E: D0 82                pop     dpl
-0360: D0 E0                pop     acc
+0346: D0 07                pop     7
+0348: D0 06                pop     6
+034A: D0 05                pop     5
+034C: D0 04                pop     4
+034E: D0 03                pop     3
+0350: D0 02                pop     2
+0352: D0 83                pop     dph
+0354: D0 82                pop     dpl
+0356: 05 A2                inc     auxr1
+0358: D0 83                pop     dph
+035A: D0 82                pop     dpl
+035C: D0 E0                pop     acc
                    
-0362: D0 A8                pop     ie
-0364: 22                   ret
+035E: D0 A8                pop     ie
+0360: 22                   ret
                    
                    ; *** memory/release.inc ***
                    
@@ -885,264 +881,264 @@
                    ; Allocate memory, return lowest address
                    
                    memory_release:
-0365: C0 A8                push    ie
-0367: C2 AF                clr     ea
+0361: C0 A8                push    ie
+0363: C2 AF                clr     ea
                    
-0369: C0 E0                push    acc
-036B: C0 82                push    dpl
-036D: C0 83                push    dph
+0365: C0 E0                push    acc
+0367: C0 82                push    dpl
+0369: C0 83                push    dph
                    
                            ; void function: r0-r7 all preserved
-036F: C0 00                push    0
-0371: C0 01                push    1
-0373: C0 02                push    2
-0375: C0 03                push    3
-0377: C0 04                push    4
-0379: C0 05                push    5
-037B: C0 06                push    6
-037D: C0 07                push    7
+036B: C0 00                push    0
+036D: C0 01                push    1
+036F: C0 02                push    2
+0371: C0 03                push    3
+0373: C0 04                push    4
+0375: C0 05                push    5
+0377: C0 06                push    6
+0379: C0 07                push    7
                    
                            ; move size from r2r3 to r6r7
-037F: EA                   mov     a,r2
-0380: FE                   mov     r6,a
-0381: EB                   mov     a,r3
-0382: FF                   mov     r7,a
+037B: EA                   mov     a,r2
+037C: FE                   mov     r6,a
+037D: EB                   mov     a,r3
+037E: FF                   mov     r7,a
                            ; r0r1 already holds the block address
                    
                            ; input parameter check
-0383: EE                   mov     a,r6
-0384: 4F                   orl     a,r7
-0385: 70 02                jnz     memory_release__1
-0387: 91 9C                acall   panic   ; invalid size (0)
+037F: EE                   mov     a,r6
+0380: 4F                   orl     a,r7
+0381: 70 02                jnz     memory_release__1
+0383: 91 98                acall   panic   ; invalid size (0)
                    memory_release__1:
-0389: E9                   mov     a,r1
-038A: B5 41 04             cjne    a,memory_start+1,memory_release__2
-038D: E8                   mov     a,r0
-038E: B5 40 00             cjne    a,memory_start,memory_release__2
+0385: E9                   mov     a,r1
+0386: B5 41 04             cjne    a,memory_start+1,memory_release__2
+0389: E8                   mov     a,r0
+038A: B5 40 00             cjne    a,memory_start,memory_release__2
                    memory_release__2:
-0391: 50 02                jnc     memory_release__3
-0393: 91 9C                acall   panic   ; invalid address (< memory_start)
+038D: 50 02                jnc     memory_release__3
+038F: 91 98                acall   panic   ; invalid address (< memory_start)
                    memory_release__3:
-0395: E9                   mov     a,r1
-0396: B5 43 04             cjne    a,memory_end+1,memory_release__4
-0399: E8                   mov     a,r0
-039A: B5 42 00             cjne    a,memory_end,memory_release__4
+0391: E9                   mov     a,r1
+0392: B5 43 04             cjne    a,memory_end+1,memory_release__4
+0395: E8                   mov     a,r0
+0396: B5 42 00             cjne    a,memory_end,memory_release__4
                    memory_release__4:
-039D: 40 02                jc      memory_release__5
-039F: 91 9C                acall   panic   ; invalid address (>= memory_end)
+0399: 40 02                jc      memory_release__5
+039B: 91 98                acall   panic   ; invalid address (>= memory_end)
                    memory_release__5:
                    
                            ; rounding
-03A1: EE                   mov     a,r6
-03A2: 24 03                add     a,#3
-03A4: 54 FC                anl     a,#0xfc
-03A6: FE                   mov     r6,a
-03A7: EF                   mov     a,r7
-03A8: 34 00                addc    a,#0
-03AA: FF                   mov     r7,a
+039D: EE                   mov     a,r6
+039E: 24 03                add     a,#3
+03A0: 54 FC                anl     a,#0xfc
+03A2: FE                   mov     r6,a
+03A3: EF                   mov     a,r7
+03A4: 34 00                addc    a,#0
+03A6: FF                   mov     r7,a
                    
                            ; find position in list
                            ; r2r3: prev pointer
                            ; r4r5: next pointer
-03AB: AA 38                mov     r2,memory_list
-03AD: AB 39                mov     r3,memory_list+1
-03AF: 8A 82                mov     dpl,r2
-03B1: 8B 83                mov     dph,r3
-03B3: E0                   movx    a,@dptr
-03B4: FC                   mov     r4,a
-03B5: A3                   inc     dptr
-03B6: E0                   movx    a,@dptr
-03B7: FD                   mov     r5,a
+03A7: AA 38                mov     r2,memory_list
+03A9: AB 39                mov     r3,memory_list+1
+03AB: 8A 82                mov     dpl,r2
+03AD: 8B 83                mov     dph,r3
+03AF: E0                   movx    a,@dptr
+03B0: FC                   mov     r4,a
+03B1: A3                   inc     dptr
+03B2: E0                   movx    a,@dptr
+03B3: FD                   mov     r5,a
                    memory_release__loop:
-03B8: EC                   mov     a,r4
-03B9: 4D                   orl     a,r5
-03BA: 60 1C                jz      memory_release__7       ; next == null
-03BC: C3                   clr     c
-03BD: ED                   mov     a,r5
-03BE: 99                   subb    a,r1
-03BF: 70 06                jnz     memory_release__6
-03C1: EC                   mov     a,r4
-03C2: 98                   subb    a,r0
-03C3: 70 02                jnz     memory_release__6
-03C5: 91 9C                acall   panic   ; double free   (next == block)
+03B4: EC                   mov     a,r4
+03B5: 4D                   orl     a,r5
+03B6: 60 1C                jz      memory_release__7       ; next == null
+03B8: C3                   clr     c
+03B9: ED                   mov     a,r5
+03BA: 99                   subb    a,r1
+03BB: 70 06                jnz     memory_release__6
+03BD: EC                   mov     a,r4
+03BE: 98                   subb    a,r0
+03BF: 70 02                jnz     memory_release__6
+03C1: 91 98                acall   panic   ; double free   (next == block)
                    memory_release__6:
-03C7: 50 0F                jnc     memory_release__7       ; next > block
-03C9: EC                   mov     a,r4    ; -.
-03CA: FA                   mov     r2,a    ;  |- prev = next
-03CB: ED                   mov     a,r5    ;  |
-03CC: FB                   mov     r3,a    ; -'
-03CD: 8C 82                mov     dpl,r4  ; -.
-03CF: 8D 83                mov     dph,r5  ;  |
-03D1: E0                   movx    a,@dptr ;  |
-03D2: FC                   mov     r4,a    ;  |- next = next->next
-03D3: A3                   inc     dptr    ;  |
-03D4: E0                   movx    a,@dptr ;  |
-03D5: FD                   mov     r5,a    ; -'
+03C3: 50 0F                jnc     memory_release__7       ; next > block
+03C5: EC                   mov     a,r4    ; -.
+03C6: FA                   mov     r2,a    ;  |- prev = next
+03C7: ED                   mov     a,r5    ;  |
+03C8: FB                   mov     r3,a    ; -'
+03C9: 8C 82                mov     dpl,r4  ; -.
+03CB: 8D 83                mov     dph,r5  ;  |
+03CD: E0                   movx    a,@dptr ;  |
+03CE: FC                   mov     r4,a    ;  |- next = next->next
+03CF: A3                   inc     dptr    ;  |
+03D0: E0                   movx    a,@dptr ;  |
+03D1: FD                   mov     r5,a    ; -'
                    
-03D6: 80 E0                sjmp    memory_release__loop
+03D2: 80 E0                sjmp    memory_release__loop
                    
                    memory_release__7:
                            ; if (prev == memory_list) ...
-03D8: EB                   mov     a,r3
-03D9: B5 39 06             cjne    a,memory_list+1,memory_release__8
-03DC: EA                   mov     a,r2
-03DD: B5 38 02             cjne    a,memory_list,memory_release__8
-03E0: 80 30                sjmp    memory_release__link_new ; ... link as new f
+03D4: EB                   mov     a,r3
+03D5: B5 39 06             cjne    a,memory_list+1,memory_release__8
+03D8: EA                   mov     a,r2
+03D9: B5 38 02             cjne    a,memory_list,memory_release__8
+03DC: 80 30                sjmp    memory_release__link_new ; ... link as new f
                            ; ... else:
                    memory_release__8:
                            ; compute top of previous block
-03E2: 8A 82                mov     dpl,r2
-03E4: 8B 83                mov     dph,r3
-03E6: A3                   inc     dptr
-03E7: A3                   inc     dptr    ; prev->size
+03DE: 8A 82                mov     dpl,r2
+03E0: 8B 83                mov     dph,r3
+03E2: A3                   inc     dptr
+03E3: A3                   inc     dptr    ; prev->size
                            ; top = prev + prev->size
-03E8: E0                   movx    a,@dptr
-03E9: 2A                   add     a,r2
-03EA: C0 E0                push    acc     ;-.
-03EC: A3                   inc     dptr    ; |
-03ED: E0                   movx    a,@dptr ; |
-03EE: 3B                   addc    a,r3    ; |
-03EF: F5 83                mov     dph,a   ; |
-03F1: D0 82                pop     dpl     ;<' dptr = top
+03E4: E0                   movx    a,@dptr
+03E5: 2A                   add     a,r2
+03E6: C0 E0                push    acc     ;-.
+03E8: A3                   inc     dptr    ; |
+03E9: E0                   movx    a,@dptr ; |
+03EA: 3B                   addc    a,r3    ; |
+03EB: F5 83                mov     dph,a   ; |
+03ED: D0 82                pop     dpl     ;<' dptr = top
                    
                            ; if (block == top) ...
-03F3: E9                   mov     a,r1
-03F4: B5 83 17             cjne    a,dph,memory_release__9
-03F7: E8                   mov     a,r0
-03F8: B5 82 13             cjne    a,dpl,memory_release__9
+03EF: E9                   mov     a,r1
+03F0: B5 83 17             cjne    a,dph,memory_release__9
+03F3: E8                   mov     a,r0
+03F4: B5 82 13             cjne    a,dpl,memory_release__9
                            ; ... coalsece with previous block ...
-03FB: 8A 82                mov     dpl,r2
-03FD: 8B 83                mov     dph,r3
-03FF: A3                   inc     dptr
-0400: A3                   inc     dptr    ; prev->size
-0401: E0                   movx    a,@dptr ; -.
-0402: 2E                   add     a,r6    ;  |- += size
-0403: F0                   movx    @dptr,a ;  |
-0404: A3                   inc     dptr    ;  |
-0405: E0                   movx    a,@dptr ;  |
-0406: 3F                   addc    a,r7    ;  |
-0407: F0                   movx    @dptr,a ; -'
-0408: EA                   mov     a,r2    ; -.
-0409: F8                   mov     r0,a    ;  |- block = prev
-040A: EB                   mov     a,r3    ;  |
-040B: F9                   mov     r1,a    ; -'
-040C: 80 1C                sjmp    memory_release__10
+03F7: 8A 82                mov     dpl,r2
+03F9: 8B 83                mov     dph,r3
+03FB: A3                   inc     dptr
+03FC: A3                   inc     dptr    ; prev->size
+03FD: E0                   movx    a,@dptr ; -.
+03FE: 2E                   add     a,r6    ;  |- += size
+03FF: F0                   movx    @dptr,a ;  |
+0400: A3                   inc     dptr    ;  |
+0401: E0                   movx    a,@dptr ;  |
+0402: 3F                   addc    a,r7    ;  |
+0403: F0                   movx    @dptr,a ; -'
+0404: EA                   mov     a,r2    ; -.
+0405: F8                   mov     r0,a    ;  |- block = prev
+0406: EB                   mov     a,r3    ;  |
+0407: F9                   mov     r1,a    ; -'
+0408: 80 1C                sjmp    memory_release__10
                            ; ... else:
                    memory_release__9:
-040E: 50 02                jnc     memory_release__link_new ; ... link as new b
-0410: 91 9C                acall   panic   ; error: block < top (overlap)
+040A: 50 02                jnc     memory_release__link_new ; ... link as new b
+040C: 91 98                acall   panic   ; error: block < top (overlap)
                    
                    memory_release__link_new:
                            ; link into list as new node
-0412: 88 82                mov     dpl,r0  ; -.
-0414: 89 83                mov     dph,r1  ;  |
-0416: EC                   mov     a,r4    ;  |
-0417: F0                   movx    @dptr,a ;  |- block->next = next
-0418: A3                   inc     dptr    ;  |
-0419: ED                   mov     a,r5    ;  |
-041A: F0                   movx    @dptr,a ; -'
-041B: A3                   inc     dptr    ; -.
-041C: EE                   mov     a,r6    ;  |
-041D: F0                   movx    @dptr,a ;  |- block->size = size
-041E: A3                   inc     dptr    ;  |
-041F: EF                   mov     a,r7    ;  |
-0420: F0                   movx    @dptr,a ; -'
-0421: 8A 82                mov     dpl,r2  ; -.
-0423: 8B 83                mov     dph,r3  ;  |
-0425: E8                   mov     a,r0    ;  |
-0426: F0                   movx    @dptr,a ;  |- prev->next = block
-0427: A3                   inc     dptr    ;  |
-0428: E9                   mov     a,r1    ;  |
-0429: F0                   movx    @dptr,a ; -'
+040E: 88 82                mov     dpl,r0  ; -.
+0410: 89 83                mov     dph,r1  ;  |
+0412: EC                   mov     a,r4    ;  |
+0413: F0                   movx    @dptr,a ;  |- block->next = next
+0414: A3                   inc     dptr    ;  |
+0415: ED                   mov     a,r5    ;  |
+0416: F0                   movx    @dptr,a ; -'
+0417: A3                   inc     dptr    ; -.
+0418: EE                   mov     a,r6    ;  |
+0419: F0                   movx    @dptr,a ;  |- block->size = size
+041A: A3                   inc     dptr    ;  |
+041B: EF                   mov     a,r7    ;  |
+041C: F0                   movx    @dptr,a ; -'
+041D: 8A 82                mov     dpl,r2  ; -.
+041F: 8B 83                mov     dph,r3  ;  |
+0421: E8                   mov     a,r0    ;  |
+0422: F0                   movx    @dptr,a ;  |- prev->next = block
+0423: A3                   inc     dptr    ;  |
+0424: E9                   mov     a,r1    ;  |
+0425: F0                   movx    @dptr,a ; -'
                            ; last use of prev in r2r3
                    
                    memory_release__10:
                            ; check if block is touching next block
-042A: 88 82                mov     dpl,r0
-042C: 89 83                mov     dph,r1
-042E: A3                   inc     dptr
-042F: A3                   inc     dptr    ; block->size
+0426: 88 82                mov     dpl,r0
+0428: 89 83                mov     dph,r1
+042A: A3                   inc     dptr
+042B: A3                   inc     dptr    ; block->size
+042C: E0                   movx    a,@dptr
+042D: 28                   add     a,r0
+042E: FA                   mov     r2,a    ; r2 used as temp storage here
+042F: A3                   inc     dptr
 0430: E0                   movx    a,@dptr
-0431: 28                   add     a,r0
-0432: FA                   mov     r2,a    ; r2 used as temp storage here
-0433: A3                   inc     dptr
-0434: E0                   movx    a,@dptr
-0435: 39                   addc    a,r1
-0436: F5 83                mov     dph,a
-0438: 8A 82                mov     dpl,r2 ; dptr: block + block->size
+0431: 39                   addc    a,r1
+0432: F5 83                mov     dph,a
+0434: 8A 82                mov     dpl,r2 ; dptr: block + block->size
                    
-043A: ED                   mov     a,r5
-043B: B5 83 32             cjne    a,dph,memory_release__11
-043E: EC                   mov     a,r4
-043F: B5 82 2E             cjne    a,dpl,memory_release__11
+0436: ED                   mov     a,r5
+0437: B5 83 32             cjne    a,dph,memory_release__11
+043A: EC                   mov     a,r4
+043B: B5 82 2E             cjne    a,dpl,memory_release__11
                    
                            ; coalesce with next block
-0442: 88 82                mov     dpl,r0  ; -.
-0444: 89 83                mov     dph,r1  ;  |
-0446: 05 A2                inc     auxr1   ; *|
-0448: 8C 82                mov     dpl,r4  ;  |
-044A: 8D 83                mov     dph,r5  ;  |
-044C: E0                   movx    a,@dptr ;  |
+043E: 88 82                mov     dpl,r0  ; -.
+0440: 89 83                mov     dph,r1  ;  |
+0442: 05 A2                inc     auxr1   ; *|
+0444: 8C 82                mov     dpl,r4  ;  |
+0446: 8D 83                mov     dph,r5  ;  |
+0448: E0                   movx    a,@dptr ;  |
+0449: A3                   inc     dptr    ;  |
+044A: 05 A2                inc     auxr1   ;* |- block->next = next->next
+044C: F0                   movx    @dptr,a ;  |
 044D: A3                   inc     dptr    ;  |
-044E: 05 A2                inc     auxr1   ;* |- block->next = next->next
-0450: F0                   movx    @dptr,a ;  |
+044E: 05 A2                inc     auxr1   ; *|
+0450: E0                   movx    a,@dptr ;  |
 0451: A3                   inc     dptr    ;  |
-0452: 05 A2                inc     auxr1   ; *|
-0454: E0                   movx    a,@dptr ;  |
-0455: A3                   inc     dptr    ;  |
-0456: 05 A2                inc     auxr1   ;* |
-0458: F0                   movx    @dptr,a ; -'
-0459: A3                   inc     dptr    ; -.
-045A: 05 A2                inc     auxr1   ; *|
-045C: E0                   movx    a,@dptr ;  |
-045D: A3                   inc     dptr    ;  |
-045E: FA                   mov     r2,a    ;  |
-045F: 05 A2                inc     auxr1   ;* |
-0461: E0                   movx    a,@dptr ;  |
-0462: 2A                   add     a,r2    ;  |
-0463: F0                   movx    @dptr,a ;  |- block->size += next->size
-0464: A3                   inc     dptr    ;  |
-0465: 05 A2                inc     auxr1   ; *|
+0452: 05 A2                inc     auxr1   ;* |
+0454: F0                   movx    @dptr,a ; -'
+0455: A3                   inc     dptr    ; -.
+0456: 05 A2                inc     auxr1   ; *|
+0458: E0                   movx    a,@dptr ;  |
+0459: A3                   inc     dptr    ;  |
+045A: FA                   mov     r2,a    ;  |
+045B: 05 A2                inc     auxr1   ;* |
+045D: E0                   movx    a,@dptr ;  |
+045E: 2A                   add     a,r2    ;  |
+045F: F0                   movx    @dptr,a ;  |- block->size += next->size
+0460: A3                   inc     dptr    ;  |
+0461: 05 A2                inc     auxr1   ; *|
+0463: E0                   movx    a,@dptr ;  |
+0464: FB                   mov     r3,a    ;  |
+0465: 05 A2                inc     auxr1   ;* |
 0467: E0                   movx    a,@dptr ;  |
-0468: FB                   mov     r3,a    ;  |
-0469: 05 A2                inc     auxr1   ;* |
-046B: E0                   movx    a,@dptr ;  |
-046C: 3B                   addc    a,r3    ;  |
-046D: F0                   movx    @dptr,a ; -'
-046E: 80 04                sjmp    memory_release__end
+0468: 3B                   addc    a,r3    ;  |
+0469: F0                   movx    @dptr,a ; -'
+046A: 80 04                sjmp    memory_release__end
                    
                    memory_release__11:
-0470: 50 02                jnc     memory_release__end
-0472: 91 9C                acall   panic   ; error: next < block+block->size
+046C: 50 02                jnc     memory_release__end
+046E: 91 98                acall   panic   ; error: next < block+block->size
                    
                    memory_release__end:
-0474: 85 38 82             mov     dpl,memory_list
-0477: 85 39 83             mov     dph,memory_list+1
-047A: A3                   inc     dptr
+0470: 85 38 82             mov     dpl,memory_list
+0473: 85 39 83             mov     dph,memory_list+1
+0476: A3                   inc     dptr
+0477: A3                   inc     dptr
+0478: E0                   movx    a,@dptr
+0479: 2E                   add     a,r6
+047A: F0                   movx    @dptr,a
 047B: A3                   inc     dptr
 047C: E0                   movx    a,@dptr
-047D: 2E                   add     a,r6
+047D: 3F                   addc    a,r7
 047E: F0                   movx    @dptr,a
-047F: A3                   inc     dptr
-0480: E0                   movx    a,@dptr
-0481: 3F                   addc    a,r7
-0482: F0                   movx    @dptr,a
                    
-0483: D0 07                pop     7
-0485: D0 06                pop     6
-0487: D0 05                pop     5
-0489: D0 04                pop     4
-048B: D0 03                pop     3
-048D: D0 02                pop     2
-048F: D0 01                pop     1
-0491: D0 00                pop     0
-0493: D0 83                pop     dph
-0495: D0 82                pop     dpl
-0497: D0 E0                pop     acc
-0499: D0 A8                pop     ie
-049B: 22                   ret
+047F: D0 07                pop     7
+0481: D0 06                pop     6
+0483: D0 05                pop     5
+0485: D0 04                pop     4
+0487: D0 03                pop     3
+0489: D0 02                pop     2
+048B: D0 01                pop     1
+048D: D0 00                pop     0
+048F: D0 83                pop     dph
+0491: D0 82                pop     dpl
+0493: D0 E0                pop     acc
+0495: D0 A8                pop     ie
+0497: 22                   ret
                    
-049C:              .equ panic_out, serial_tx
+0498:              .equ panic_out, serial_tx
                    
                    ; *** panic/panic.inc ***
                    
@@ -1152,45 +1148,45 @@
                    ; Print caller address and halt.
                    
                    panic:
-049C: C2 AF                clr     ea      ; disable interrupts
-049E: F8                   mov     r0,a    ; save a
+0498: C2 AF                clr     ea      ; disable interrupts
+049A: F8                   mov     r0,a    ; save a
                            ; display panic text
-049F: 90 00 98             mov     dptr,#panic_out
-04A2: 85 82 32             mov     out,dpl
-04A5: 85 83 33             mov     out+1,dph
-04A8: 90 04 CF             mov     dptr,#panic_text
-04AB: 31 0D                acall   print_text
+049B: 90 00 98             mov     dptr,#panic_out
+049E: 85 82 32             mov     out,dpl
+04A1: 85 83 33             mov     out+1,dph
+04A4: 90 04 CB             mov     dptr,#panic_text
+04A7: 31 0D                acall   print_text
                            ; get return address from stack
-04AD: D0 E0                pop     acc
-04AF: FA                   mov     r2,a
-04B0: D0 E0                pop     acc
+04A9: D0 E0                pop     acc
+04AB: FA                   mov     r2,a
+04AC: D0 E0                pop     acc
                            ; subtract two to get call instruction address
-04B2: C3                   clr     c
-04B3: 94 02                subb    a,#2
-04B5: F9                   mov     r1,a
-04B6: EA                   mov     a,r2
-04B7: 94 00                subb    a,#0
+04AE: C3                   clr     c
+04AF: 94 02                subb    a,#2
+04B1: F9                   mov     r1,a
+04B2: EA                   mov     a,r2
+04B3: 94 00                subb    a,#0
                            ; print caller address (to look up cause in .lst fil
-04B9: 31 21                acall   print_hex_8
-04BB: E9                   mov     a,r1
-04BC: 31 21                acall   print_hex_8
+04B5: 31 21                acall   print_hex_8
+04B7: E9                   mov     a,r1
+04B8: 31 21                acall   print_hex_8
                            ; print original value of a (error code / debug info
-04BE: 74 20                mov     a,#' '
-04C0: 31 08                acall   print_char
-04C2: E8                   mov     a,r0
-04C3: 31 21                acall   print_hex_8
+04BA: 74 20                mov     a,#' '
+04BC: 31 08                acall   print_char
+04BE: E8                   mov     a,r0
+04BF: 31 21                acall   print_hex_8
                            ; newline
-04C5: 74 0D                mov     a,#13
+04C1: 74 0D                mov     a,#13
+04C3: 31 08                acall   print_char
+04C5: 74 0A                mov     a,#10
 04C7: 31 08                acall   print_char
-04C9: 74 0A                mov     a,#10
-04CB: 31 08                acall   print_char
                            ; hang
-04CD: 80 FE                sjmp    *
+04C9: 80 FE                sjmp    *
                    
                    panic_text:
-04CF: 0D 0A                .db     13, 10
-04D1: 20 21 21 21 
+04CB: 0D 0A                .db     13, 10
+04CD: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                            .db     " !!! panic @"
-04DD: 00                   .db     0
+04D9: 00                   .db     0
