@@ -171,21 +171,19 @@
                    
                    print_text:
 00B9: C0 E0                push    ACC
-00BB: E8                   mov     a,      r0
-00BC: C0 E0                push    ACC
+00BB: C0 00                push    0
                    
-00BE: E4                   clr     a
-00BF: F8                   mov     r0,     a
+00BD: E4                   clr     a
+00BE: F8                   mov     r0,     a
                    print_text__loop:
-00C0: 93                   movc    a,      @dptr+a
-00C1: 60 07                jz      print_text__end
-00C3: 12 00 B4             lcall   print_char
-00C6: 08                   inc     r0
-00C7: E8                   mov     a,      r0
-00C8: 70 F6                jnz     print_text__loop
+00BF: 93                   movc    a,      @dptr+a
+00C0: 60 06                jz      print_text__end
+00C2: 11 B4                acall   print_char
+00C4: 08                   inc     r0
+00C5: E8                   mov     a,      r0
+00C6: 70 F7                jnz     print_text__loop
                    
                    print_text__end:
+00C8: D0 00                pop     0
 00CA: D0 E0                pop     ACC
-00CC: F8                   mov     r0,     a
-00CD: D0 E0                pop     ACC
-00CF: 22                   ret
+00CC: 22                   ret

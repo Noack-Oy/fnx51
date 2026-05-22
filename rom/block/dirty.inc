@@ -6,4 +6,4 @@
 ; Set dirty flag on current block.
 
 block_dirty:
-	acall	panic ; not implemented yet
+	lcall	panic ; not implemented yet

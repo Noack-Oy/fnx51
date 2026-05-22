@@ -6,4 +6,4 @@
 ; Flush the current block. Writes data and clears dirty flag.
 
 block_flush:
-	acall	panic ; not implemented yet
+	lcall	panic ; not implemented yet
