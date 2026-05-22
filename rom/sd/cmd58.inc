@@ -5,8 +5,7 @@
 
 ; CMD58: read operation conditions register
 sd_cmd58:
-	mov	a,r4
-	push	acc
+	push	4
 	clr	a
 	mov	r0,a
 	mov	r1,a
@@ -16,7 +15,5 @@ sd_cmd58:
 	mov	a,#58
 	acall	sd_command
 	acall	sd_response3
-	mov	r4,a
-	pop	acc
-	xch	a,r4
+	pop	4
 	ret

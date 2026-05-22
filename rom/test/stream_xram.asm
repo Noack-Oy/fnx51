@@ -96,7 +96,6 @@ test_message_end:
 .inc ../read/char.inc
 .inc ../util/dump.inc
 .inc ../util/xch.inc
-.inc ../util/regbank.inc
 
 .equ panic_out, serial_tx
 .inc ../util/panic.inc
