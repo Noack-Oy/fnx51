@@ -23,16 +23,12 @@ memory_release:
 	push	6
 	push	7
 
-	; move size from r2r3 to r6r7
-	mov	a,r2
-	mov	r6,a
-	mov	a,r3
-	mov	r7,a
-	; r0r1 already holds the block address
+	; size lives in r2r3, address in r0r1 (both as passed in by caller);
+	; r6r7 takes over the prev-pointer role during the list walk.
 
 	; input parameter check
-	mov	a,r6
-	orl	a,r7
+	mov	a,r2
+	orl	a,r3
 	jnz	memory_release__1
 	acall	panic	; invalid size (0)
 memory_release__1:
@@ -54,21 +50,21 @@ memory_release__4:
 memory_release__5:
 
 	; rounding
-	mov	a,r6
+	mov	a,r2
 	add	a,#3
 	anl	a,#0xfc
-	mov	r6,a
-	mov	a,r7
+	mov	r2,a
+	mov	a,r3
 	addc	a,#0
-	mov	r7,a
+	mov	r3,a
 
 	; find position in list
-	; r2r3: prev pointer
+	; r6r7: prev pointer
 	; r4r5: next pointer
-	mov	r2,memory_list
-	mov	r3,memory_list+1
-	mov	dpl,r2
-	mov	dph,r3
+	mov	r6,memory_list
+	mov	r7,memory_list+1
+	mov	dpl,r6
+	mov	dph,r7
 	movx	a,@dptr
 	mov	r4,a
 	inc	dptr
@@ -89,9 +85,9 @@ memory_release__loop:
 memory_release__6:
 	jnc	memory_release__7	; next > block
 	mov	a,r4	; -.
-	mov	r2,a	;  |- prev = next
+	mov	r6,a	;  |- prev = next
 	mov	a,r5	;  |
-	mov	r3,a	; -'
+	mov	r7,a	; -'
 	mov	dpl,r4	; -.
 	mov	dph,r5	;  |
 	movx	a,@dptr ;  |
@@ -104,25 +100,25 @@ memory_release__6:
 
 memory_release__7:
 	; if (prev == memory_list) ...
-	mov	a,r3
+	mov	a,r7
 	cjne	a,memory_list+1,memory_release__8
-	mov	a,r2
+	mov	a,r6
 	cjne	a,memory_list,memory_release__8
 	sjmp	memory_release__link_new ; ... link as new first block ...
 	; ... else:
 memory_release__8:
 	; compute top of previous block
-	mov	dpl,r2
-	mov	dph,r3
+	mov	dpl,r6
+	mov	dph,r7
 	inc	dptr
 	inc	dptr	; prev->size
 	; top = prev + prev->size
 	movx	a,@dptr
-	add	a,r2
+	add	a,r6
 	push	acc	;-.
 	inc	dptr	; |
 	movx	a,@dptr ; |
-	addc	a,r3	; |
+	addc	a,r7	; |
 	mov	dph,a	; |
 	pop	dpl	;<' dptr = top
 
@@ -132,20 +128,20 @@ memory_release__8:
 	mov	a,r0
 	cjne	a,dpl,memory_release__9
 	; ... coalsece with previous block ...
-	mov	dpl,r2
-	mov	dph,r3
+	mov	dpl,r6
+	mov	dph,r7
 	inc	dptr
 	inc	dptr	; prev->size
 	movx	a,@dptr ; -.
-	add	a,r6	;  |- += size
+	add	a,r2	;  |- += size
 	movx	@dptr,a ;  |
 	inc	dptr	;  |
 	movx	a,@dptr ;  |
-	addc	a,r7	;  |
+	addc	a,r3	;  |
 	movx	@dptr,a ; -'
-	mov	a,r2	; -.
+	mov	a,r6	; -.
 	mov	r0,a	;  |- block = prev
-	mov	a,r3	;  |
+	mov	a,r7	;  |
 	mov	r1,a	; -'
 	sjmp	memory_release__10
 	; ... else:
@@ -163,19 +159,19 @@ memory_release__link_new:
 	mov	a,r5	;  |
 	movx	@dptr,a ; -'
 	inc	dptr	; -.
-	mov	a,r6	;  |
+	mov	a,r2	;  |
 	movx	@dptr,a ;  |- block->size = size
 	inc	dptr	;  |
-	mov	a,r7	;  |
+	mov	a,r3	;  |
 	movx	@dptr,a ; -'
-	mov	dpl,r2	; -.
-	mov	dph,r3	;  |
+	mov	dpl,r6	; -.
+	mov	dph,r7	;  |
 	mov	a,r0	;  |
 	movx	@dptr,a ;  |- prev->next = block
 	inc	dptr	;  |
 	mov	a,r1	;  |
 	movx	@dptr,a ; -'
-	; last use of prev in r2r3
+	; last use of prev in r6r7
 
 memory_release__10:
 	; check if block is touching next block
@@ -185,12 +181,12 @@ memory_release__10:
 	inc	dptr	; block->size
 	movx	a,@dptr
 	add	a,r0
-	mov	r2,a	; r2 used as temp storage here
+	mov	r6,a	; r6 used as temp storage here (prev is done with)
 	inc	dptr
 	movx	a,@dptr
 	addc	a,r1
 	mov	dph,a
-	mov	dpl,r2 ; dptr: block + block->size
+	mov	dpl,r6 ; dptr: block + block->size
 
 	mov	a,r5
 	cjne	a,dph,memory_release__11
@@ -217,18 +213,18 @@ memory_release__10:
 	inc	auxr1	; *|
 	movx	a,@dptr ;  |
 	inc	dptr	;  |
-	mov	r2,a	;  |
+	mov	r6,a	;  |
 	inc	auxr1	;* |
 	movx	a,@dptr ;  |
-	add	a,r2	;  |
+	add	a,r6	;  |
 	movx	@dptr,a ;  |- block->size += next->size
 	inc	dptr	;  |
 	inc	auxr1	; *|
 	movx	a,@dptr ;  |
-	mov	r3,a	;  |
+	mov	r7,a	;  |
 	inc	auxr1	;* |
 	movx	a,@dptr ;  |
-	addc	a,r3	;  |
+	addc	a,r7	;  |
 	movx	@dptr,a ; -'
 	sjmp	memory_release__end
 
@@ -242,11 +238,11 @@ memory_release__end:
 	inc	dptr
 	inc	dptr
 	movx	a,@dptr
-	add	a,r6
+	add	a,r2
 	movx	@dptr,a
 	inc	dptr
 	movx	a,@dptr
-	addc	a,r7
+	addc	a,r3
 	movx	@dptr,a
 
 	pop	7
