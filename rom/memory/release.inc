@@ -1,7 +1,7 @@
 
 ; *** memory/release.inc ***
 
-; >> void memory_release(char *{dptr} addr, uint16{r2r3} size) <<
+; >> void memory_release(char *{dptr} addr, uint16{r0r1} size) <<
 
 ; Release a previously allocated block. `addr` must be the pointer
 ; returned by memory_allocate, `size` the same value passed to it.
@@ -24,11 +24,13 @@ memory_release:
 	push	6
 	push	7
 
-	; copy address from dptr into r0r1 for the body's use
+	; move size to r2r3, then copy address from dptr into r0r1 for the body's use
+	mov	r2,r0
+	mov	r3,r1
 	mov	r0,dpl
 	mov	r1,dph
 
-	; size lives in r2r3 (as passed in by caller);
+	; size lives in r2r3;
 	; r6r7 takes over the prev-pointer role during the list walk.
 
 	; input parameter check

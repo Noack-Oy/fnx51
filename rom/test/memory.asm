@@ -63,11 +63,7 @@ __2:
 	acall	read_hex_32	; addr in r0r1; stash in dptr (preserved by next call)
 	mov	dpl,r0
 	mov	dph,r1
-	acall	read_hex_32	; size in r0r1; move to r2r3
-	mov	a,r0
-	mov	r2,a
-	mov	a,r1
-	mov	r3,a
+	acall	read_hex_32	; size in r0r1
 	acall	memory_release
 	sjmp	next
 __3:
