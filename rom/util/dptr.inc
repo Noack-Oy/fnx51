@@ -25,8 +25,7 @@ dptr_index:
 
 dptr_copy:
 	push	acc
-	mov	a,r0
-	push	acc
+	push	0
 
 dptr_copy__loop:
 	inc	auxr1
@@ -37,8 +36,7 @@ dptr_copy__loop:
 	inc	dptr
 	djnz	r0,dptr_copy__loop
 
-	pop	acc
-	mov	r0,a
+	pop	0
 	pop	acc
 	ret
 

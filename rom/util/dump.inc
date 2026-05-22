@@ -12,14 +12,10 @@ dump:
 	push	b
 	push	acc
 	mov	b,	a
-	mov	a,	r4
-	push	acc
-	mov	a,	r5
-	push	acc
-	mov	a,	r6
-	push	acc
-	mov	a,	r7
-	push	acc
+	push	4
+	push	5
+	push	6
+	push	7
 
 	; b: total bytes remaining
 	; r0: buffer pointer
@@ -158,14 +154,10 @@ dump__end:
 
 	acall	xch_r0123_r4567
 
-	pop	acc
-	mov	r7,	a
-	pop	acc
-	mov	r6,	a
-	pop	acc
-	mov	r5,	a
-	pop	acc
-	mov	r4,	a
+	pop	7
+	pop	6
+	pop	5
+	pop	4
 	pop	acc
 	pop	b
 	ret

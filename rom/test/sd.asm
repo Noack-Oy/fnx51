@@ -97,7 +97,6 @@ halt:
 .inc ../sd/block_read.inc
 
 .inc ../util/delay.inc
-.inc ../util/regbank.inc
 .inc ../print/char.inc
 .inc ../print/hex.inc
 .inc ../print/text.inc

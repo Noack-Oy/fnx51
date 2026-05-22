@@ -54,24 +54,16 @@ __1:
 	cjne	a,#'A',__2
 	acall	read_hex_32
 	acall	memory_allocate
+	mov	r0,dpl		; print_hex_16 reads from r0r1
+	mov	r1,dph
 	acall	print_hex_16
 	sjmp	next
 __2:
 	cjne	a,#'R',__3
-	acall	read_hex_32
-	mov	a,r0
-	mov	r4,a
-	mov	a,r1
-	mov	r5,a
-	acall	read_hex_32
-	mov	a,r0
-	mov	r2,a
-	mov	a,r1
-	mov	r3,a
-	mov	a,r4
-	mov	r0,a
-	mov	a,r5
-	mov	r1,a
+	acall	read_hex_32	; addr in r0r1; stash in dptr (preserved by next call)
+	mov	dpl,r0
+	mov	dph,r1
+	acall	read_hex_32	; size in r0r1
 	acall	memory_release
 	sjmp	next
 __3:
@@ -97,7 +89,6 @@ next:
 .inc ../print/text.inc
 .inc ../print/hex.inc
 .inc ../util/xch.inc
-.inc ../util/regbank.inc
 .inc ../util/dump.inc
 .inc ../stream/xram_read.inc
 .inc ../memory/init.inc

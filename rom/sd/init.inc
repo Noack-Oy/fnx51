@@ -5,8 +5,8 @@
 
 ; Initialize SD card, return error code in a, OCR in r0-r3.
 sd_init:
-	mov	a,r5	; r5 is used as temp store for error code
-	push	acc
+	; r5 is used as temp store for error code
+	push	5
 	push	dpl
 	push	dph
 
@@ -48,8 +48,8 @@ sd_init__continue:
 	mov	block_read+1,dph
 
 sd_init__end:
+	mov	a,r5	; error code -> return value
 	pop	dph
 	pop	dpl
-	pop	acc
-	xch	a,r5
+	pop	5
 	ret

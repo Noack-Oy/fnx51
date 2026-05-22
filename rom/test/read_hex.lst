@@ -89,7 +89,7 @@
                    
                    loop:
 001F: 11 56                acall   read_hex_32
-0021: 11 DA                acall   print_hex_32
+0021: 11 D6                acall   print_hex_32
 0023: 80 FA                sjmp    loop
                    
                    
@@ -170,86 +170,82 @@
                    
                    read_hex_32:
 0056: C0 E0                push    acc
-0058: EC                   mov     a,      r4
-0059: C0 E0                push    acc
-005B: ED                   mov     a,      r5
-005C: C0 E0                push    acc
+0058: C0 04                push    4
+005A: C0 05                push    5
                    
-005E: E4                   clr     a
-005F: F8                   mov     r0,     a
-0060: F9                   mov     r1,     a
-0061: FA                   mov     r2,     a
-0062: FB                   mov     r3,     a
+005C: E4                   clr     a
+005D: F8                   mov     r0,     a
+005E: F9                   mov     r1,     a
+005F: FA                   mov     r2,     a
+0060: FB                   mov     r3,     a
                    
                    read_hex_32__loop:
-0063: 11 51                acall   read_char
+0061: 11 51                acall   read_char
                    
-0065: C3                   clr     c
-0066: 94 30                subb    a,      #0x30   ; ascii '0'
-0068: 40 42                jc      read_hex_32__end
-006A: B4 0A 00             cjne    a,      #10,    read_hex_32__1
+0063: C3                   clr     c
+0064: 94 30                subb    a,      #0x30   ; ascii '0'
+0066: 40 42                jc      read_hex_32__end
+0068: B4 0A 00             cjne    a,      #10,    read_hex_32__1
                    read_hex_32__1:
-006D: 40 0D                jc      read_hex_32__3
-006F: 94 11                subb    a,      #17     ; chars between '0' and 'A'
-0071: 40 39                jc      read_hex_32__end
-0073: 24 0A                add     a,      #10
-0075: 54 DF                anl     a,      #0xdf   ; allow lowercase
-0077: B4 10 00             cjne    a,      #0x10,  read_hex_32__2
+006B: 40 0D                jc      read_hex_32__3
+006D: 94 11                subb    a,      #17     ; chars between '0' and 'A'
+006F: 40 39                jc      read_hex_32__end
+0071: 24 0A                add     a,      #10
+0073: 54 DF                anl     a,      #0xdf   ; allow lowercase
+0075: B4 10 00             cjne    a,      #0x10,  read_hex_32__2
                    read_hex_32__2:
-007A: 50 30                jnc     read_hex_32__end
+0078: 50 30                jnc     read_hex_32__end
                    
                    read_hex_32__3:
-007C: FC                   mov     r4,     a
-007D: E8                   mov     a,      r0
-007E: C4                   swap    a
-007F: FD                   mov     r5,     a
-0080: 54 F0                anl     a,      #0xf0
-0082: 4C                   orl     a,      r4
-0083: F8                   mov     r0,     a
-0084: ED                   mov     a,      r5
-0085: 54 0F                anl     a,      #0x0f
+007A: FC                   mov     r4,     a
+007B: E8                   mov     a,      r0
+007C: C4                   swap    a
+007D: FD                   mov     r5,     a
+007E: 54 F0                anl     a,      #0xf0
+0080: 4C                   orl     a,      r4
+0081: F8                   mov     r0,     a
+0082: ED                   mov     a,      r5
+0083: 54 0F                anl     a,      #0x0f
                    
-0087: FC                   mov     r4,     a
-0088: E9                   mov     a,      r1
-0089: C4                   swap    a
-008A: FD                   mov     r5,     a
-008B: 54 F0                anl     a,      #0xf0
-008D: 4C                   orl     a,      r4
-008E: F9                   mov     r1,     a
-008F: ED                   mov     a,      r5
-0090: 54 0F                anl     a,      #0x0f
+0085: FC                   mov     r4,     a
+0086: E9                   mov     a,      r1
+0087: C4                   swap    a
+0088: FD                   mov     r5,     a
+0089: 54 F0                anl     a,      #0xf0
+008B: 4C                   orl     a,      r4
+008C: F9                   mov     r1,     a
+008D: ED                   mov     a,      r5
+008E: 54 0F                anl     a,      #0x0f
                    
-0092: FC                   mov     r4,     a
-0093: EA                   mov     a,      r2
-0094: C4                   swap    a
-0095: FD                   mov     r5,     a
-0096: 54 F0                anl     a,      #0xf0
-0098: 4C                   orl     a,      r4
-0099: FA                   mov     r2,     a
-009A: ED                   mov     a,      r5
-009B: 54 0F                anl     a,      #0x0f
+0090: FC                   mov     r4,     a
+0091: EA                   mov     a,      r2
+0092: C4                   swap    a
+0093: FD                   mov     r5,     a
+0094: 54 F0                anl     a,      #0xf0
+0096: 4C                   orl     a,      r4
+0097: FA                   mov     r2,     a
+0098: ED                   mov     a,      r5
+0099: 54 0F                anl     a,      #0x0f
                    
-009D: FC                   mov     r4,     a
-009E: EB                   mov     a,      r3
-009F: C4                   swap    a
-00A0: FD                   mov     r5,     a
-00A1: 54 F0                anl     a,      #0xf0
-00A3: 4C                   orl     a,      r4
-00A4: FB                   mov     r3,     a
-00A5: ED                   mov     a,      r5
-00A6: 54 0F                anl     a,      #0x0f
+009B: FC                   mov     r4,     a
+009C: EB                   mov     a,      r3
+009D: C4                   swap    a
+009E: FD                   mov     r5,     a
+009F: 54 F0                anl     a,      #0xf0
+00A1: 4C                   orl     a,      r4
+00A2: FB                   mov     r3,     a
+00A3: ED                   mov     a,      r5
+00A4: 54 0F                anl     a,      #0x0f
                    
-00A8: 70 02                jnz     read_hex_32__end        ; overflow
-00AA: 80 B7                sjmp    read_hex_32__loop
+00A6: 70 02                jnz     read_hex_32__end        ; overflow
+00A8: 80 B7                sjmp    read_hex_32__loop
                    
                    
                    read_hex_32__end:
-00AC: D0 E0                pop     acc
-00AE: FD                   mov     r5,     a
-00AF: D0 E0                pop     acc
-00B1: FC                   mov     r4,     a
-00B2: D0 E0                pop     acc
-00B4: 22                   ret
+00AA: D0 05                pop     5
+00AC: D0 04                pop     4
+00AE: D0 E0                pop     acc
+00B0: 22                   ret
                    
                    ; *** print/char.inc ***
                    
@@ -259,9 +255,9 @@
                    ; Indirect call to function behind OUT pointer.
                    
                    print_char:
-00B5: C0 32                push    OUT
-00B7: C0 33                push    OUT+1
-00B9: 22                   ret
+00B1: C0 32                push    OUT
+00B3: C0 33                push    OUT+1
+00B5: 22                   ret
                    
                    ; *** print/hex.inc ***
                    
@@ -270,47 +266,47 @@
                    ; Print hexadecimal number from accumulator.
                    
                    print_hex_8:
-00BA: C4                   swap    a       ; high nibble first
-00BB: 11 BE                acall   print_hex_8__nibble
-00BD: C4                   swap    a
+00B6: C4                   swap    a       ; high nibble first
+00B7: 11 BA                acall   print_hex_8__nibble
+00B9: C4                   swap    a
                    print_hex_8__nibble:
-00BE: C0 E0                push    ACC
-00C0: 54 0F                anl     a,      #0x0f
-00C2: 24 90                add     a,      #0x90
-00C4: D4                   da      a
-00C5: 34 40                addc    a,      #0x40
-00C7: D4                   da      a
-00C8: 44 20                orl     a,      #0x20   ; lower case
-00CA: 11 B5                acall   print_char
-00CC: D0 E0                pop     ACC
-00CE: 22                   ret
+00BA: C0 E0                push    ACC
+00BC: 54 0F                anl     a,      #0x0f
+00BE: 24 90                add     a,      #0x90
+00C0: D4                   da      a
+00C1: 34 40                addc    a,      #0x40
+00C3: D4                   da      a
+00C4: 44 20                orl     a,      #0x20   ; lower case
+00C6: 11 B1                acall   print_char
+00C8: D0 E0                pop     ACC
+00CA: 22                   ret
                    
                    ; >> void print_hex_16(int r0r1) <<
                    
                    ; Print hexadecimal number from r0-r1.
                    
                    print_hex_16:
-00CF: C0 E0                push    ACC
-00D1: E9                   mov     a,      r1      ; MSB first
-00D2: 11 BA                acall   print_hex_8
-00D4: E8                   mov     a,      r0      ; LSB second
-00D5: 11 BA                acall   print_hex_8
-00D7: D0 E0                pop     ACC
-00D9: 22                   ret
+00CB: C0 E0                push    ACC
+00CD: E9                   mov     a,      r1      ; MSB first
+00CE: 11 B6                acall   print_hex_8
+00D0: E8                   mov     a,      r0      ; LSB second
+00D1: 11 B6                acall   print_hex_8
+00D3: D0 E0                pop     ACC
+00D5: 22                   ret
                    
                    ; >> void print_hex_32(long r0r1r2r3) <<
                    
                    ; Print hexadecimal number from r0-r3.
                    
                    print_hex_32:
-00DA: C0 E0                push    ACC
-00DC: EB                   mov     a,      r3      ; MSB first
-00DD: 11 BA                acall   print_hex_8
-00DF: EA                   mov     a,      r2
-00E0: 11 BA                acall   print_hex_8
-00E2: E9                   mov     a,      r1
-00E3: 11 BA                acall   print_hex_8
-00E5: E8                   mov     a,      r0      ; LSB last
-00E6: 11 BA                acall   print_hex_8
-00E8: D0 E0                pop     ACC
-00EA: 22                   ret
+00D6: C0 E0                push    ACC
+00D8: EB                   mov     a,      r3      ; MSB first
+00D9: 11 B6                acall   print_hex_8
+00DB: EA                   mov     a,      r2
+00DC: 11 B6                acall   print_hex_8
+00DE: E9                   mov     a,      r1
+00DF: 11 B6                acall   print_hex_8
+00E1: E8                   mov     a,      r0      ; LSB last
+00E2: 11 B6                acall   print_hex_8
+00E4: D0 E0                pop     ACC
+00E6: 22                   ret
