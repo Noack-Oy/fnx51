@@ -87,6 +87,26 @@ shuffling left over from the bank-agnostic era:
   shifts from r2/r3 to r6/r7 (same logic — those are the registers
   that are free at that point).
 
+### Phase 4 — pointers via dptr for memory_{allocate,release}
+
+Following the convention's "dptr for pointers to data" preference,
+`memory_allocate` now returns its pointer in `dptr` instead of `r0r1`,
+and `memory_release` takes its address in `dptr` instead of `r0r1`.
+Size keeps its old register slot in each (`r0r1` for `allocate`,
+`r2r3` for `release`).
+
+Inside `memory_allocate` this removes the exit shuffle (no more
+`r4r5 → r0r1`) and the return-value dptr no longer needs to be
+saved/restored. Inside `memory_release` the cost is two `mov Rn,
+direct` ops at entry to copy `dptr → r0r1` for the body, but the
+test caller drops six instructions because the address survives
+across the second `read_hex_32` call in `dptr` (which `read_hex_32`
+preserves), instead of having to be ferried through `r4/r5`.
+
+The other two callers (`block_init`, `fatfs_init`) get a small win
+or a wash: `block_init` drops the now-redundant `mov dpl,r0 ; mov
+dph,r1`, and `fatfs_init` reads `dpl/dph` instead of `r0/r1`.
+
 ## acall vs lcall (red herring)
 
 While converting `regbank_next/regbank_prev` calls, the assembler
