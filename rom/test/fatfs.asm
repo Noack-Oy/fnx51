@@ -90,19 +90,9 @@ __1:
 	; open chain; dptr = handle on return
 	lcall	fatfs_chain_open
 
-	; Stash the handle in dptr' (the alternate dptr) so we don't
-	; have to save it on the stack across ensure_block / dump /
-	; print_text. ensure_block returns the cache pointer in dptr
-	; and is contractually required to preserve dptr'.
-	mov	r4,dpl
-	mov	r5,dph
-	inc	auxr1
-	mov	dpl,r4
-	mov	dph,r5
-	inc	auxr1
-	; both dptr and dptr' now point at the handle
-
-	; ensure block 0 of the chain is loaded; dptr = cached block
+	; ensure block 0 of the chain is loaded. ensure_block preserves
+	; the handle in dptr and returns the borrowed cached pointer in
+	; dptr'.
 	clr	a
 	mov	r0,a
 	mov	r1,a
@@ -110,27 +100,32 @@ __1:
 	mov	r3,a
 	lcall	fatfs_chain_ensure_block
 
-	; dump the first 32 bytes of the cached block (one dir entry).
-	; stream_in is the base address; the dump function reads via the
-	; routine pointed to by `in`, starting at offset r0-r3 (zero).
+	; Read cached pointer out of dptr' into stream_in, then reuse
+	; the same slot to load the read helper for dump. dptr (handle)
+	; survives throughout.
+	inc	auxr1
 	mov	stream_in,dpl
 	mov	stream_in+1,dph
+	mov	dptr,#stream_xram_read
+	mov	in,dpl
+	mov	in+1,dph
+	inc	auxr1
+
 	clr	a
 	mov	r0,a
 	mov	r1,a
 	mov	r2,a
 	mov	r3,a
-	mov	dptr,#stream_xram_read
-	mov	in,dpl
-	mov	in+1,dph
 	mov	a,#32
 	lcall	dump
 
+	; print_text wants its string pointer in the active dptr; park
+	; the immediate in dptr' so the handle in dptr survives.
+	inc	auxr1
 	mov	dptr,#newline
 	lcall	print_text
-
-	; close the chain — handle is sitting in dptr', swap to dptr
 	inc	auxr1
+
 	lcall	fatfs_chain_close
 
 halt:

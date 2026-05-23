@@ -84,10 +84,12 @@ fatfs_chain_close:
 	ret
 
 
-; >> char *{dptr} fatfs_chain_ensure_block(char *{dptr} handle, uint32{r0-r3} block) <<
+; >> char *{dptr'} fatfs_chain_ensure_block(char *{dptr} handle, uint32{r0-r3} block) <<
 
 ; Make sure the chain's `block`-th 512-byte block is loaded in the
-; block cache, and return a borrowed dptr into the cached data.
+; block cache, and return a borrowed dptr to the cached data in dptr'
+; (the alternate data pointer). dptr (the handle) is preserved so
+; callers don't have to stash it across the call.
 ;
 ; Borrowed: valid only until the next block_load (e.g. another
 ; ensure_block call on any chain). Caller must copy out what it needs
@@ -103,6 +105,8 @@ fatfs_chain_ensure_block:
 	push	1
 	push	2
 	push	3
+	push	dpl			; preserve dptr (handle) for the caller
+	push	dph
 
 	; verify block == 0 (stub limitation)
 	mov	a,r0
@@ -114,15 +118,20 @@ fatfs_chain_ensure_block:
 fatfs_chain_ensure_block__zero:
 
 	; read first cluster number from handle[first] into r0-r3.
-	; dptr now points past the field; we don't need it after this.
 	lcall	dptr_read_32
 
 	; convert cluster number to first sector LBA
 	lcall	fatfs_cluster_to_lba
 
-	; load that block; dptr returns pointing at cached data
-	lcall	block_load
+	; load that block into the alternate dptr so the caller's dptr
+	; (= handle) survives. We switch slots, block_load writes the
+	; cached pointer into the now-active slot, then we switch back.
+	inc	auxr1
+	lcall	block_load	; dptr' (now active) = cached
+	inc	auxr1		; back to the caller's slot
 
+	pop	dph
+	pop	dpl
 	pop	3
 	pop	2
 	pop	1
@@ -141,41 +150,55 @@ fatfs_chain_ensure_block__zero:
 ; ensure_block so they can copy only the bytes they actually need.
 
 fatfs_chain_load_block:
-	; save active slot (handle pointer)
-	push	dpl
-	push	dph
-	inc	auxr1
-	; save alternate slot (dst pointer)
-	push	dpl
-	push	dph
-	inc	auxr1
-	; r0 is the only general register we modify here (dptr_copy's
-	; count). r1-r7 are preserved across ensure_block and dptr_copy.
-	push	0
+	push	0			; dptr_copy uses r0 as count
 
-	; ensure_block uses the active dptr as handle, block in r0-r3;
-	; on return, active dptr = cached block data. ensure_block now
-	; preserves r0-r3.
+	; Save handle (slot 0). ensure_block preserves it, but we'll
+	; temporarily overwrite slot 0 with dst to feed dptr_copy; need
+	; the handle back at exit.
+	push	dpl
+	push	dph
+
+	; Save dst (slot 1) — ensure_block will overwrite it with the
+	; cached pointer.
+	inc	auxr1
+	push	dpl
+	push	dph
+	inc	auxr1
+
+	; ensure_block leaves slot 0 = handle (preserved) and slot 1 =
+	; cached (the borrowed pointer). dst is on the stack.
 	lcall	fatfs_chain_ensure_block
 
-	; swap so that the active dptr is dst (where dptr_copy writes),
-	; and the alternate dptr is the cached block (where dptr_copy
-	; reads).
-	inc	auxr1
+	; Pop dst into slot 0 (overwriting handle for now). Stack top is
+	; dst.dph; below: dst.dpl; below: handle.dph, handle.dpl.
+	pop	dph
+	pop	dpl
+	; slot 0 = dst, slot 1 = cached.
 
 	; dptr_copy with r0 = 0 copies 256 bytes (djnz wraps). Twice = 512.
 	mov	r0,#0
 	lcall	dptr_copy
 	mov	r0,#0
 	lcall	dptr_copy
+	; slot 0 = dst+512, slot 1 = cached+512.
+
+	; Restore dst (slot 0): two `dec dph` subtract 512 (dpl rolled
+	; around an even number of times during the 512 inc dptrs).
+	dec	dph
+	dec	dph
+
+	; Move dst from slot 0 to slot 1 via the stack, then pop the
+	; saved handle into slot 0.
+	push	dpl
+	push	dph
+	inc	auxr1
+	pop	dph
+	pop	dpl
+	; slot 1 = dst.
+	inc	auxr1
+	pop	dph
+	pop	dpl
+	; slot 0 = handle.
 
 	pop	0
-	; active slot currently holds dst+512; restore it.
-	pop	dph
-	pop	dpl
-	inc	auxr1
-	; alternate slot currently holds cached+512; restore it
-	; (back to the original handle pointer).
-	pop	dph
-	pop	dpl
 	ret
