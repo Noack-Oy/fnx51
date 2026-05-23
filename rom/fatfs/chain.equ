@@ -4,6 +4,12 @@
 ; offsets for the chain handle data structure (see chain.inc).
 ; Extension types (dir, file) add their own fields after fatfs_chain_size.
 
-.equ	fatfs_chain_first,	0;..3	first cluster number (uint32)
-.equ	fatfs_chain_current,	4;..7	current cluster number (uint32)
-.equ	fatfs_chain_size,	8
+.equ	fatfs_chain_first,		0;..3	first cluster number (uint32)
+.equ	fatfs_chain_current,		4;..7	current cluster number (uint32)
+.equ	fatfs_chain_current_idx,	8;..11	current cluster's index within
+;						the chain (uint32) — 0 for the
+;						first cluster, 1 for the next.
+;						Lets ensure_block decide between
+;						walking forward from current and
+;						restarting from first.
+.equ	fatfs_chain_size,		12

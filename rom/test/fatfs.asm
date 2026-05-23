@@ -17,6 +17,11 @@
 .inc ../fatfs/info.equ
 .inc ../fatfs/chain.equ
 
+; iram scratch local to this test program (just below the stack at 0x60)
+.equ	test_name_buf,		0x5A	; ..0x5B, name buffer pointer in xram
+.equ	test_dst_buf,		0x5C	; ..0x5D, file_read dst buffer pointer
+.equ	test_file_handle,	0x5E	; ..0x5F, file handle pointer
+
 ; *************
 ; * Main Code *
 ; *************
@@ -173,6 +178,103 @@ dir_loop:
 dir_done:
 	lcall	fatfs_dir_close
 
+	; *** file open/read/close exercise ***
+	; allocate an 11-byte xram buffer, write "ALICE'~1TXT" into it,
+	; open the file, read 32 bytes into a 32-byte xram buffer, dump,
+	; close.
+
+	; allocate 11-byte name buffer
+	mov	r0,#11
+	mov	r1,#0
+	lcall	memory_allocate
+	mov	test_name_buf,dpl
+	mov	test_name_buf+1,dph
+
+	; write "ALICE'~1TXT" (11 bytes) to the buffer
+	mov	a,#'A'
+	movx	@dptr,a
+	inc	dptr
+	mov	a,#'L'
+	movx	@dptr,a
+	inc	dptr
+	mov	a,#'I'
+	movx	@dptr,a
+	inc	dptr
+	mov	a,#'C'
+	movx	@dptr,a
+	inc	dptr
+	mov	a,#'E'
+	movx	@dptr,a
+	inc	dptr
+	mov	a,#'\''
+	movx	@dptr,a
+	inc	dptr
+	mov	a,#'~'
+	movx	@dptr,a
+	inc	dptr
+	mov	a,#'1'
+	movx	@dptr,a
+	inc	dptr
+	mov	a,#'T'
+	movx	@dptr,a
+	inc	dptr
+	mov	a,#'X'
+	movx	@dptr,a
+	inc	dptr
+	mov	a,#'T'
+	movx	@dptr,a
+
+	; allocate 32-byte dst buffer
+	mov	r0,#32
+	mov	r1,#0
+	lcall	memory_allocate
+	mov	test_dst_buf,dpl
+	mov	test_dst_buf+1,dph
+
+	; file_open(name in dptr)
+	mov	dpl,test_name_buf
+	mov	dph,test_name_buf+1
+	lcall	fatfs_file_open
+	; dptr = file handle, a = status
+	jz	file_open_ok
+	lcall	panic	; file not found
+file_open_ok:
+
+	; remember file handle
+	mov	test_file_handle,dpl
+	mov	test_file_handle+1,dph
+
+	; file_read(handle in dptr, n=32 in a, dst in dptr')
+	inc	auxr1
+	mov	dpl,test_dst_buf
+	mov	dph,test_dst_buf+1
+	inc	auxr1
+	mov	a,#32
+	lcall	fatfs_file_read
+	; a = bytes read (should be 32)
+
+	; dump 32 bytes from dst buffer
+	mov	stream_in,test_dst_buf
+	mov	stream_in+1,test_dst_buf+1
+	clr	a
+	mov	r0,a
+	mov	r1,a
+	mov	r2,a
+	mov	r3,a
+	mov	dptr,#stream_xram_read
+	mov	in,dpl
+	mov	in+1,dph
+	mov	a,#32
+	lcall	dump
+
+	mov	dptr,#newline
+	lcall	print_text
+
+	; close file
+	mov	dpl,test_file_handle
+	mov	dph,test_file_handle+1
+	lcall	fatfs_file_close
+
 halt:
 	sjmp	halt
 
@@ -214,6 +316,7 @@ newline:
 .inc ../fatfs/cluster.inc
 .inc ../fatfs/chain.inc
 .inc ../fatfs/dir_iter.inc
+.inc ../fatfs/file.inc
 
 .inc ../math/arith32.inc
 
