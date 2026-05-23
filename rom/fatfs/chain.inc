@@ -95,9 +95,11 @@ fatfs_chain_close:
 ; ensure_block call on any chain). Caller must copy out what it needs
 ; and not retain the pointer.
 ;
-; Step 1 stub: only block == 0 is supported. Real traversal lands when
-; the first caller needs to follow a chain past its first cluster, at
-; which point fatfs_chain_next_cluster joins this file too.
+; Step 2 stub: any block within the first cluster is supported
+; (cluster_idx == 0, sector_in_cluster = block). Anything past the
+; first cluster still panics — chain traversal and the matching
+; fatfs_chain_next_cluster routine land when an actual caller needs
+; to follow a chain that far.
 
 fatfs_chain_ensure_block:
 	push	acc
@@ -105,39 +107,85 @@ fatfs_chain_ensure_block:
 	push	1
 	push	2
 	push	3
+	push	4
+	push	5
+	push	6
+	push	7
 	push	dpl			; preserve dptr (handle) for the caller
 	push	dph
 
-	; verify block == 0 (stub limitation)
-	mov	a,r0
-	orl	a,r1
+	; high three bytes of block must be zero (block fits in a byte;
+	; cluster_size is at most 128).
+	mov	a,r1
 	orl	a,r2
 	orl	a,r3
-	jz	fatfs_chain_ensure_block__zero
-	lcall	panic	; chain traversal not implemented yet
-fatfs_chain_ensure_block__zero:
+	jnz	fatfs_chain_ensure_block__panic
 
-	; read first cluster number from handle[first] into r0-r3.
+	; stash handle in r4r5 so we can use dptr to load cluster_size
+	; and still get back to the handle for dptr_read_32.
+	mov	r4,dpl
+	mov	r5,dph
+
+	mov	dpl,fatfs_info
+	mov	dph,fatfs_info+1
+	mov	a,#fatfs_info_cluster_size
+	lcall	dptr_index
+	movx	a,@dptr			; a = cluster_size
+
+	; block < cluster_size? (cluster_idx == 0 iff block < cluster_size)
+	clr	c
+	subb	a,r0			; a = cluster_size - r0
+	jc	fatfs_chain_ensure_block__panic	; block > cluster_size
+	jz	fatfs_chain_ensure_block__panic	; block == cluster_size
+
+	; restore dptr = handle
+	mov	dpl,r4
+	mov	dph,r5
+
+	; sector_in_cluster = r0. Park it in a — dptr_read_32 and
+	; cluster_to_lba both push/pop acc, so it survives.
+	mov	a,r0
+
+	; read first_cluster from handle[fatfs_chain_first..] into r0-r3.
 	lcall	dptr_read_32
 
-	; convert cluster number to first sector LBA
+	; convert to first sector LBA of that cluster
 	lcall	fatfs_cluster_to_lba
 
-	; load that block into the alternate dptr so the caller's dptr
-	; (= handle) survives. We switch slots, block_load writes the
-	; cached pointer into the now-active slot, then we switch back.
+	; LBA += sector_in_cluster (still in a)
+	add	a,r0
+	mov	r0,a
+	clr	a
+	addc	a,r1
+	mov	r1,a
+	clr	a
+	addc	a,r2
+	mov	r2,a
+	clr	a
+	addc	a,r3
+	mov	r3,a
+
+	; load the block into the alternate dptr so the caller's dptr
+	; (= handle) survives.
 	inc	auxr1
-	lcall	block_load	; dptr' (now active) = cached
-	inc	auxr1		; back to the caller's slot
+	lcall	block_load		; dptr' (now active) = cached
+	inc	auxr1			; back to the caller's slot
 
 	pop	dph
 	pop	dpl
+	pop	7
+	pop	6
+	pop	5
+	pop	4
 	pop	3
 	pop	2
 	pop	1
 	pop	0
 	pop	acc
 	ret
+
+fatfs_chain_ensure_block__panic:
+	lcall	panic	; chain traversal not implemented yet
 
 
 ; >> void fatfs_chain_load_block(char *{dptr} handle, uint32{r0-r3} block, char *{dptr'} dst) <<

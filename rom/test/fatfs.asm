@@ -128,6 +128,51 @@ __1:
 
 	lcall	fatfs_chain_close
 
+	; *** dir iterator exercise ***
+	; open a dir iterator on the root cluster, dump each short-name
+	; entry until end-of-directory, close.
+
+	mov	dpl,fatfs_info
+	mov	dph,fatfs_info+1
+	mov	a,#fatfs_info_root_dir
+	lcall	dptr_index
+	lcall	dptr_read_32
+	lcall	fatfs_dir_open		; dptr = dir handle
+
+dir_loop:
+	; dir_next preserves dptr (handle in dptr), returns status in a
+	; and entry pointer in dptr'.
+	lcall	fatfs_dir_next
+	jnz	dir_done
+
+	; Swap dptr roles so the dump / print_text below can clobber the
+	; active dptr freely while the handle hides in dptr'. dir_next
+	; is contractually required to preserve dptr', so we'll get the
+	; handle back with a second swap before looping.
+	inc	auxr1
+	mov	stream_in,dpl		; (active = entry buffer pointer)
+	mov	stream_in+1,dph
+
+	clr	a
+	mov	r0,a
+	mov	r1,a
+	mov	r2,a
+	mov	r3,a
+	mov	dptr,#stream_xram_read
+	mov	in,dpl
+	mov	in+1,dph
+	mov	a,#32
+	lcall	dump
+
+	mov	dptr,#newline
+	lcall	print_text
+
+	inc	auxr1			; swap back: active = handle
+	sjmp	dir_loop
+
+dir_done:
+	lcall	fatfs_dir_close
+
 halt:
 	sjmp	halt
 
@@ -136,7 +181,7 @@ ok_string:
 newline: 
 	.db	13, 10, 0
 
-.org	0x0100
+.org	0x0200
 
 ; *********************
 ; * Library Functions *
@@ -168,6 +213,7 @@ newline:
 .inc ../fatfs/init.inc
 .inc ../fatfs/cluster.inc
 .inc ../fatfs/chain.inc
+.inc ../fatfs/dir_iter.inc
 
 .inc ../math/arith32.inc
 

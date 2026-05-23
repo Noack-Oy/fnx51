@@ -27,5 +27,24 @@ def run_test(pe):
     pe.expect_exact("00000010: 00 00 00 00  00 00 53 aa  5d 59 00 00  00 00 00 00")
     pe.expect_exact("\r\n")
 
+    # Dir iterator walk over the root directory on the reference card.
+    # Three short-name entries: the volume label, a Windows system
+    # directory, and an archived text file. LFN entries (if any) are
+    # silently skipped by dir_next.
+    pe.expect_exact("00000000: 46 4e 58 35  31 20 20 20  20 20 20 08  00 00 00 00")
+    pe.expect_exact("\r\n")
+    pe.expect_exact("00000010: 00 00 00 00  00 00 53 aa  5d 59 00 00  00 00 00 00")
+    pe.expect_exact("\r\n")
+
+    pe.expect_exact("00000000: 53 59 53 54  45 4d 7e 31  20 20 20 16  00 4b 52 aa")
+    pe.expect_exact("\r\n")
+    pe.expect_exact("00000010: 5d 59 5d 59  00 00 53 aa  5d 59 03 00  00 00 00 00")
+    pe.expect_exact("\r\n")
+
+    pe.expect_exact("00000000: 41 4c 49 43  45 27 7e 31  54 58 54 20  00 a3 0e ac")
+    pe.expect_exact("\r\n")
+    pe.expect_exact("00000010: 5d 59 5d 59  00 00 0f ac  5d 59 06 00  5e 44 02 00")
+    pe.expect_exact("\r\n")
+
 if __name__ == '__main__':
     test_main(run_test, "fatfs.hex")
