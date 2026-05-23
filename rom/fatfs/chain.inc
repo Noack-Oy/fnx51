@@ -187,18 +187,14 @@ fatfs_chain_load_block:
 	dec	dph
 	dec	dph
 
-	; Move dst from slot 0 to slot 1 via the stack, then pop the
-	; saved handle into slot 0.
-	push	dpl
-	push	dph
+	; Pop the saved handle into slot 1. The slots end up physically
+	; swapped relative to entry (slot 0 = dst, slot 1 = handle), but
+	; the calling convention only cares about `dptr` and `dptr'`
+	; holding the right values, not which physical slot they live in.
 	inc	auxr1
 	pop	dph
 	pop	dpl
-	; slot 1 = dst.
-	inc	auxr1
-	pop	dph
-	pop	dpl
-	; slot 0 = handle.
+	; active (slot 1) = handle, inactive (slot 0) = dst.
 
 	pop	0
 	ret
