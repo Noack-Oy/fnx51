@@ -46,5 +46,11 @@ def run_test(pe):
     pe.expect_exact("00000010: 5d 59 5d 59  00 00 0f ac  5d 59 06 00  5e 44 02 00")
     pe.expect_exact("\r\n")
 
+    # File open + read: dump the first 32 bytes of ALICE'~1TXT.
+    pe.expect_exact("00000000: 41 6c 69 63  65 27 73 20  41 64 76 65  6e 74 75 72")
+    pe.expect_exact("\r\n")
+    pe.expect_exact("00000010: 65 73 20 69  6e 20 57 6f  6e 64 65 72  6c 61 6e 64")
+    pe.expect_exact("\r\n")
+
 if __name__ == '__main__':
     test_main(run_test, "fatfs.hex")

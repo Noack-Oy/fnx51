@@ -10,12 +10,12 @@
 ; one shot; dir_close releases it the same way. We never allocate or
 ; free the chain prefix separately.
 ;
-; Layout (45 bytes; memory_allocate rounds to 48):
-;   bytes 0..7   chain handle (first cluster, current cluster)
-;   bytes 8..11  relative block number within the chain (uint32)
-;   byte  12     entry index within the current block (0..16)
+; Layout (49 bytes; memory_allocate rounds to 52):
+;   bytes 0..11  chain handle (first cluster, current cluster, current idx)
+;   bytes 12..15 relative block number within the chain (uint32)
+;   byte  16     entry index within the current block (0..16)
 ;                  (16 = "consumed the whole block, advance on next call")
-;   bytes 13..44 embedded 32-byte directory entry buffer
+;   bytes 17..48 embedded 32-byte directory entry buffer
 ;
 ; The embedded buffer is what dir_next returns to callers — we can't
 ; hand back a pointer into the block cache because we don't own its

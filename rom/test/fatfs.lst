@@ -98,9 +98,20 @@
                    ; offsets for the chain handle data structure (see chain.inc
                    ; Extension types (dir, file) add their own fields after fat
                    
-0000:              .equ    fatfs_chain_first,      0;..3   first cluster number
-0000:              .equ    fatfs_chain_current,    4;..7   current cluster numb
-0000:              .equ    fatfs_chain_size,       8
+0000:              .equ    fatfs_chain_first,              0;..3   first cluste
+0000:              .equ    fatfs_chain_current,            4;..7   current clus
+0000:              .equ    fatfs_chain_current_idx,        8;..11  current clus
+                   ;                                               the chain (u
+                   ;                                               first cluste
+                   ;                                               Lets ensure_
+                   ;                                               walking forw
+                   ;                                               restarting f
+0000:              .equ    fatfs_chain_size,               12
+                   
+                   ; iram scratch local to this test program (just below the st
+0000:              .equ    test_name_buf,          0x5A    ; ..0x5B, name buffe
+0000:              .equ    test_dst_buf,           0x5C    ; ..0x5D, file_read 
+0000:              .equ    test_file_handle,       0x5E    ; ..0x5F, file handl
                    
                    ; *************
                    ; * Main Code *
@@ -146,12 +157,12 @@
 0020: 12 03 B1             lcall   memory_init
 0023: 12 02 37             lcall   sd_init
 0026: 60 03                jz      __1
-0028: 12 0B FF             lcall   panic ; sd init error
+0028: 12 0F 83             lcall   panic ; sd init error
                    __1:
 002B: 12 06 1D             lcall   block_init
                    
-002E: 90 00 FC             mov     dptr,#ok_string
-0031: 12 0B 11             lcall   print_text
+002E: 90 01 8C             mov     dptr,#ok_string
+0031: 12 0E 95             lcall   print_text
                    
                            ; this is where the interesting part starts
 0034: 12 06 9C             lcall   fatfs_init
@@ -165,31 +176,31 @@
 003F: F9                   mov     r1,a
 0040: FA                   mov     r2,a
 0041: FB                   mov     r3,a
-0042: 90 0B 25             mov     dptr,#stream_xram_read
+0042: 90 0E A9             mov     dptr,#stream_xram_read
 0045: 85 82 30             mov     in,dpl
 0048: 85 83 31             mov     in+1,dph
 004B: 74 15                mov     a,#fatfs_info_size
-004D: 12 0B 4B             lcall   dump
+004D: 12 0E CF             lcall   dump
                    
-0050: 90 00 FE             mov     dptr,#newline
-0053: 12 0B 11             lcall   print_text
+0050: 90 01 8E             mov     dptr,#newline
+0053: 12 0E 95             lcall   print_text
                    
                            ; Load root directory cluster (from fatfs_info+17) i
 0056: 85 50 82             mov     dpl,fatfs_info
 0059: 85 51 83             mov     dph,fatfs_info+1
 005C: 74 11                mov     a,#fatfs_info_root_dir
-005E: 12 0A 98             lcall   dptr_index
+005E: 12 0E 1C             lcall   dptr_index
                            ; now dptr points to fatfs_info + offset 17 (root di
-0061: 12 0A B9             lcall   dptr_read_32
+0061: 12 0E 3D             lcall   dptr_read_32
                            ; r0-r3 now contains the root cluster number - print
-0064: 12 0B 00             lcall   print_hex_32
-0067: 90 00 FE             mov     dptr,#newline
-006A: 12 0B 11             lcall   print_text
+0064: 12 0E 84             lcall   print_hex_32
+0067: 90 01 8E             mov     dptr,#newline
+006A: 12 0E 95             lcall   print_text
                            ; now call cluster_to_lba with this value
 006D: 12 07 EC             lcall   fatfs_cluster_to_lba
-0070: 12 0B 00             lcall   print_hex_32
-0073: 90 00 FE             mov     dptr,#newline
-0076: 12 0B 11             lcall   print_text
+0070: 12 0E 84             lcall   print_hex_32
+0073: 90 01 8E             mov     dptr,#newline
+0076: 12 0E 95             lcall   print_text
                    
                            ; *** chain handle exercise ***
                            ; open a chain on the root directory cluster, ensure
@@ -200,11 +211,11 @@
 0079: 85 50 82             mov     dpl,fatfs_info
 007C: 85 51 83             mov     dph,fatfs_info+1
 007F: 74 11                mov     a,#fatfs_info_root_dir
-0081: 12 0A 98             lcall   dptr_index
-0084: 12 0A B9             lcall   dptr_read_32
+0081: 12 0E 1C             lcall   dptr_index
+0084: 12 0E 3D             lcall   dptr_read_32
                    
                            ; open chain; dptr = handle on return
-0087: 12 08 58             lcall   fatfs_chain_open
+0087: 12 08 70             lcall   fatfs_chain_open
                    
                            ; ensure block 0 of the chain is loaded. ensure_bloc
                            ; the handle in dptr and returns the borrowed cached
@@ -214,7 +225,7 @@
 008C: F9                   mov     r1,a
 008D: FA                   mov     r2,a
 008E: FB                   mov     r3,a
-008F: 12 08 7E             lcall   fatfs_chain_ensure_block
+008F: 12 08 F3             lcall   fatfs_chain_ensure_block
                    
                            ; Read cached pointer out of dptr' into stream_in, t
                            ; the same slot to load the read helper for dump. dp
@@ -222,7 +233,7 @@
 0092: 05 A2                inc     auxr1
 0094: 85 82 34             mov     stream_in,dpl
 0097: 85 83 35             mov     stream_in+1,dph
-009A: 90 0B 25             mov     dptr,#stream_xram_read
+009A: 90 0E A9             mov     dptr,#stream_xram_read
 009D: 85 82 30             mov     in,dpl
 00A0: 85 83 31             mov     in+1,dph
 00A3: 05 A2                inc     auxr1
@@ -233,16 +244,16 @@
 00A8: FA                   mov     r2,a
 00A9: FB                   mov     r3,a
 00AA: 74 20                mov     a,#32
-00AC: 12 0B 4B             lcall   dump
+00AC: 12 0E CF             lcall   dump
                    
                            ; print_text wants its string pointer in the active 
                            ; the immediate in dptr' so the handle in dptr survi
 00AF: 05 A2                inc     auxr1
-00B1: 90 00 FE             mov     dptr,#newline
-00B4: 12 0B 11             lcall   print_text
+00B1: 90 01 8E             mov     dptr,#newline
+00B4: 12 0E 95             lcall   print_text
 00B7: 05 A2                inc     auxr1
                    
-00B9: 12 08 6B             lcall   fatfs_chain_close
+00B9: 12 08 83             lcall   fatfs_chain_close
                    
                            ; *** dir iterator exercise ***
                            ; open a dir iterator on the root cluster, dump each
@@ -251,14 +262,14 @@
 00BC: 85 50 82             mov     dpl,fatfs_info
 00BF: 85 51 83             mov     dph,fatfs_info+1
 00C2: 74 11                mov     a,#fatfs_info_root_dir
-00C4: 12 0A 98             lcall   dptr_index
-00C7: 12 0A B9             lcall   dptr_read_32
-00CA: 12 09 12             lcall   fatfs_dir_open          ; dptr = dir handle
+00C4: 12 0E 1C             lcall   dptr_index
+00C7: 12 0E 3D             lcall   dptr_read_32
+00CA: 12 0A 5D             lcall   fatfs_dir_open          ; dptr = dir handle
                    
                    dir_loop:
                            ; dir_next preserves dptr (handle in dptr), returns 
                            ; and entry pointer in dptr'.
-00CD: 12 09 58             lcall   fatfs_dir_next
+00CD: 12 0A A3             lcall   fatfs_dir_next
 00D0: 70 25                jnz     dir_done
                    
                            ; Swap dptr roles so the dump / print_text below can
@@ -274,28 +285,125 @@
 00DC: F9                   mov     r1,a
 00DD: FA                   mov     r2,a
 00DE: FB                   mov     r3,a
-00DF: 90 0B 25             mov     dptr,#stream_xram_read
+00DF: 90 0E A9             mov     dptr,#stream_xram_read
 00E2: 85 82 30             mov     in,dpl
 00E5: 85 83 31             mov     in+1,dph
 00E8: 74 20                mov     a,#32
-00EA: 12 0B 4B             lcall   dump
+00EA: 12 0E CF             lcall   dump
                    
-00ED: 90 00 FE             mov     dptr,#newline
-00F0: 12 0B 11             lcall   print_text
+00ED: 90 01 8E             mov     dptr,#newline
+00F0: 12 0E 95             lcall   print_text
                    
 00F3: 05 A2                inc     auxr1                   ; swap back: active 
 00F5: 80 D6                sjmp    dir_loop
                    
                    dir_done:
-00F7: 12 09 41             lcall   fatfs_dir_close
+00F7: 12 0A 8C             lcall   fatfs_dir_close
+                   
+                           ; *** file open/read/close exercise ***
+                           ; allocate an 11-byte xram buffer, write "ALICE'~1TX
+                           ; open the file, read 32 bytes into a 32-byte xram b
+                           ; close.
+                   
+                           ; allocate 11-byte name buffer
+00FA: 78 0B                mov     r0,#11
+00FC: 79 00                mov     r1,#0
+00FE: 12 03 FF             lcall   memory_allocate
+0101: 85 82 5A             mov     test_name_buf,dpl
+0104: 85 83 5B             mov     test_name_buf+1,dph
+                   
+                           ; write "ALICE'~1TXT" (11 bytes) to the buffer
+0107: 74 41                mov     a,#'A'
+0109: F0                   movx    @dptr,a
+010A: A3                   inc     dptr
+010B: 74 4C                mov     a,#'L'
+010D: F0                   movx    @dptr,a
+010E: A3                   inc     dptr
+010F: 74 49                mov     a,#'I'
+0111: F0                   movx    @dptr,a
+0112: A3                   inc     dptr
+0113: 74 43                mov     a,#'C'
+0115: F0                   movx    @dptr,a
+0116: A3                   inc     dptr
+0117: 74 45                mov     a,#'E'
+0119: F0                   movx    @dptr,a
+011A: A3                   inc     dptr
+011B: 74 27                mov     a,#'\''
+011D: F0                   movx    @dptr,a
+011E: A3                   inc     dptr
+011F: 74 7E                mov     a,#'~'
+0121: F0                   movx    @dptr,a
+0122: A3                   inc     dptr
+0123: 74 31                mov     a,#'1'
+0125: F0                   movx    @dptr,a
+0126: A3                   inc     dptr
+0127: 74 54                mov     a,#'T'
+0129: F0                   movx    @dptr,a
+012A: A3                   inc     dptr
+012B: 74 58                mov     a,#'X'
+012D: F0                   movx    @dptr,a
+012E: A3                   inc     dptr
+012F: 74 54                mov     a,#'T'
+0131: F0                   movx    @dptr,a
+                   
+                           ; allocate 32-byte dst buffer
+0132: 78 20                mov     r0,#32
+0134: 79 00                mov     r1,#0
+0136: 12 03 FF             lcall   memory_allocate
+0139: 85 82 5C             mov     test_dst_buf,dpl
+013C: 85 83 5D             mov     test_dst_buf+1,dph
+                   
+                           ; file_open(name in dptr)
+013F: 85 5A 82             mov     dpl,test_name_buf
+0142: 85 5B 83             mov     dph,test_name_buf+1
+0145: 12 0B 77             lcall   fatfs_file_open
+                           ; dptr = file handle, a = status
+0148: 60 03                jz      file_open_ok
+014A: 12 0F 83             lcall   panic   ; file not found
+                   file_open_ok:
+                   
+                           ; remember file handle
+014D: 85 82 5E             mov     test_file_handle,dpl
+0150: 85 83 5F             mov     test_file_handle+1,dph
+                   
+                           ; file_read(handle in dptr, n=32 in a, dst in dptr')
+0153: 05 A2                inc     auxr1
+0155: 85 5C 82             mov     dpl,test_dst_buf
+0158: 85 5D 83             mov     dph,test_dst_buf+1
+015B: 05 A2                inc     auxr1
+015D: 74 20                mov     a,#32
+015F: 12 0C 93             lcall   fatfs_file_read
+                           ; a = bytes read (should be 32)
+                   
+                           ; dump 32 bytes from dst buffer
+0162: 85 5C 34             mov     stream_in,test_dst_buf
+0165: 85 5D 35             mov     stream_in+1,test_dst_buf+1
+0168: E4                   clr     a
+0169: F8                   mov     r0,a
+016A: F9                   mov     r1,a
+016B: FA                   mov     r2,a
+016C: FB                   mov     r3,a
+016D: 90 0E A9             mov     dptr,#stream_xram_read
+0170: 85 82 30             mov     in,dpl
+0173: 85 83 31             mov     in+1,dph
+0176: 74 20                mov     a,#32
+0178: 12 0E CF             lcall   dump
+                   
+017B: 90 01 8E             mov     dptr,#newline
+017E: 12 0E 95             lcall   print_text
+                   
+                           ; close file
+0181: 85 5E 82             mov     dpl,test_file_handle
+0184: 85 5F 83             mov     dph,test_file_handle+1
+0187: 12 0C 7C             lcall   fatfs_file_close
                    
                    halt:
-00FA: 80 FE                sjmp    halt
+018A: 80 FE                sjmp    halt
                    
                    ok_string:
-00FC: 4F 4B                .db     "OK" 
+018C: 4F 4B                .db     "OK" 
                    newline: 
-00FE: 0D 0A 00             .db     13, 10, 0
+018E: 0D 0A 00             .db     13, 10, 0
                    
 0200:              .org    0x0200
                    
@@ -406,7 +514,7 @@
 0264: 12 02 E4             lcall   sd_acmd41
 0267: 60 0B                jz      sd_init__continue
 0269: 74 0A                mov     a,#10
-026B: 12 0A 6F             lcall   delay_ms_8
+026B: 12 0D F3             lcall   delay_ms_8
 026E: DD F4                djnz    r5,sd_init__loop
 0270: 7D 02                mov     r5,#2   ; 2: acmd41 ready response timeout
 0272: 80 0F                sjmp    sd_init__end
@@ -798,7 +906,7 @@
 041B: E8                   mov     a,r0
 041C: 49                   orl     a,r1
 041D: 70 03                jnz     memory_allocate__0
-041F: 12 0B FF             lcall   panic   ; invalid size (0)
+041F: 12 0F 83             lcall   panic   ; invalid size (0)
                    
                    memory_allocate__0:
                            ; rounding to next multiple of 4
@@ -825,7 +933,7 @@
 0439: EC                   mov     a,r4
 043A: 4D                   orl     a,r5
 043B: 70 03                jnz     memory_allocate__0a
-043D: 12 0B FF             lcall   panic   ; no large enough free block found
+043D: 12 0F 83             lcall   panic   ; no large enough free block found
                    memory_allocate__0a:
                            ; compare curr->size with required size
 0440: 8C 82                mov     dpl,r4
@@ -994,7 +1102,7 @@
 04FE: E8                   mov     a,r0
 04FF: 49                   orl     a,r1
 0500: 70 03                jnz     memory_release__1
-0502: 12 0B FF             lcall   panic   ; invalid size (0)
+0502: 12 0F 83             lcall   panic   ; invalid size (0)
                    memory_release__1:
 0505: EB                   mov     a,r3
 0506: B5 41 04             cjne    a,memory_start+1,memory_release__2
@@ -1002,7 +1110,7 @@
 050A: B5 40 00             cjne    a,memory_start,memory_release__2
                    memory_release__2:
 050D: 50 03                jnc     memory_release__3
-050F: 12 0B FF             lcall   panic   ; invalid address (< memory_start)
+050F: 12 0F 83             lcall   panic   ; invalid address (< memory_start)
                    memory_release__3:
 0512: EB                   mov     a,r3
 0513: B5 43 04             cjne    a,memory_end+1,memory_release__4
@@ -1010,7 +1118,7 @@
 0517: B5 42 00             cjne    a,memory_end,memory_release__4
                    memory_release__4:
 051A: 40 03                jc      memory_release__5
-051C: 12 0B FF             lcall   panic   ; invalid address (>= memory_end)
+051C: 12 0F 83             lcall   panic   ; invalid address (>= memory_end)
                    memory_release__5:
                    
                            ; rounding
@@ -1045,7 +1153,7 @@
 053F: EC                   mov     a,r4
 0540: 9A                   subb    a,r2
 0541: 70 03                jnz     memory_release__6
-0543: 12 0B FF             lcall   panic   ; double free   (next == block)
+0543: 12 0F 83             lcall   panic   ; double free   (next == block)
                    memory_release__6:
 0546: 50 0F                jnc     memory_release__7       ; next > block
 0548: EC                   mov     a,r4    ; -.
@@ -1111,7 +1219,7 @@
                            ; ... else:
                    memory_release__9:
 058D: 50 03                jnc     memory_release__link_new ; ... link as new b
-058F: 12 0B FF             lcall   panic   ; error: block < top (overlap)
+058F: 12 0F 83             lcall   panic   ; error: block < top (overlap)
                    
                    memory_release__link_new:
                            ; link into list as new node
@@ -1194,7 +1302,7 @@
                    
                    memory_release__11:
 05F0: 50 03                jnc     memory_release__end
-05F2: 12 0B FF             lcall   panic   ; error: next < block+block->size
+05F2: 12 0F 83             lcall   panic   ; error: next < block+block->size
                    
                    memory_release__end:
 05F5: 85 38 82             mov     dpl,memory_list
@@ -1362,7 +1470,7 @@
                    ; Flush the current block. Writes data and clears dirty flag
                    
                    block_flush:
-0699: 12 0B FF             lcall   panic ; not implemented yet
+0699: 12 0F 83             lcall   panic ; not implemented yet
                    
                    
                    ; *** fatfs/init.inc ***
@@ -1423,7 +1531,7 @@
 06E2: 60 06                jz      fatfs_init__type_code_ok
 06E4: 14                   dec     a ; also accept 0x0c
 06E5: 60 03                jz      fatfs_init__type_code_ok
-06E7: 12 0B FF             lcall   panic ; invalid type code
+06E7: 12 0F 83             lcall   panic ; invalid type code
                    fatfs_init__type_code_ok:
                    
                            ; read partition start LBA at another +4 offset from
@@ -1436,12 +1544,12 @@
 06F0: 85 50 82             mov     dpl,fatfs_info
 06F3: 85 51 83             mov     dph,fatfs_info+1
 06F6: 78 04                mov     r0,#4
-06F8: 12 0A A6             lcall   dptr_copy
+06F8: 12 0E 2A             lcall   dptr_copy
                    
                            ; read FAT32 volume ID (first sector in partition)
 06FB: 85 50 82             mov     dpl,fatfs_info
 06FE: 85 51 83             mov     dph,fatfs_info+1
-0701: 12 0A B9             lcall   dptr_read_32
+0701: 12 0E 3D             lcall   dptr_read_32
 0704: 12 06 4A             lcall   block_load
                    
 0707: 12 07 C9             lcall   fatfs_init__check_signature
@@ -1455,26 +1563,26 @@
 0714: F5 83                mov     dph,a
 0716: E0                   movx    a,@dptr ; low byte: must be 0x00
 0717: 60 03                jz      fatfs_init__bps_ok_1
-0719: 12 0B FF             lcall   panic   ; invalid bytes per sector
+0719: 12 0F 83             lcall   panic   ; invalid bytes per sector
                    fatfs_init__bps_ok_1:
 071C: A3                   inc     dptr
 071D: E0                   movx    a,@dptr ; high byte: must be 0x02
 071E: 64 02                xrl     a,#0x02
 0720: 60 03                jz      fatfs_init__bps_ok_2
-0722: 12 0B FF             lcall   panic   ; invalid bytes per sector
+0722: 12 0F 83             lcall   panic   ; invalid bytes per sector
                    fatfs_init__bps_ok_2:
 0725: A3                   inc     dptr
                    
                            ; read sectors per cluster (offset 0x0d) and validat
 0726: E0                   movx    a,@dptr
 0727: 70 03                jnz     fatfs_init__spc_ok_1
-0729: 12 0B FF             lcall   panic   ; zero sectors per cluster not allow
+0729: 12 0F 83             lcall   panic   ; zero sectors per cluster not allow
                    fatfs_init__spc_ok_1:
 072C: F5 F0                mov     b,a
 072E: 14                   dec     a
 072F: 55 F0                anl     a,b     ; power of two check: (x & (x-1)) ==
 0731: 60 03                jz      fatfs_init__spc_ok_2
-0733: 12 0B FF             lcall   panic   ; sectors per cluster must be power 
+0733: 12 0F 83             lcall   panic   ; sectors per cluster must be power 
                    fatfs_init__spc_ok_2:
 0736: E5 F0                mov     a,b     ; value in b is also used later belo
                            ; ... and store into fatfs_info data structure at of
@@ -1503,18 +1611,18 @@
 0751: 05 A2                inc     auxr1
 0753: 85 50 82             mov     dpl,fatfs_info
 0756: 85 51 83             mov     dph,fatfs_info+1
-0759: 12 0A B9             lcall   dptr_read_32 ; also moves dptr forward to of
-075C: 12 0A 2C             lcall   add_32
+0759: 12 0E 3D             lcall   dptr_read_32 ; also moves dptr forward to of
+075C: 12 0D 90             lcall   add_32
                            ; and store into fatfs_info data structure at offset
 075F: A3                   inc     dptr
-0760: 12 0A CA             lcall   dptr_write_32 ; advances to offset 9
+0760: 12 0E 4E             lcall   dptr_write_32 ; advances to offset 9
 0763: 05 A2                inc     auxr1 ; swich back to block read pointer
                    
                            ; validate number of FATs at offset 0x10, must alway
 0765: E0                   movx    a,@dptr
 0766: 64 02                xrl     a,#0x02
 0768: 60 03                jz      fatfs_init__nof_ok
-076A: 12 0B FF             lcall   panic   ; invalid number of FATs
+076A: 12 0F 83             lcall   panic   ; invalid number of FATs
                    fatfs_init__nof_ok:
                    
                            ; skip forward to offset 0x24 (+0x14)
@@ -1526,18 +1634,18 @@
 0777: F5 83                mov     dph,a
                    
                            ; r0-r3 still has fat1_lba here from above, shunt in
-0779: 12 0A 8B             lcall   xch_r0123_r4567
+0779: 12 0E 0F             lcall   xch_r0123_r4567
                    
                            ; read sectors per fat at offset 0x24
-077C: 12 0A B9             lcall   dptr_read_32    ; advances to offset 0x28
+077C: 12 0E 3D             lcall   dptr_read_32    ; advances to offset 0x28
                            ; now calculate fat2_lba by adding sectors per FAT t
-077F: 12 0A 8B             lcall   xch_r0123_r4567
-0782: 12 0A 2C             lcall   add_32
+077F: 12 0E 0F             lcall   xch_r0123_r4567
+0782: 12 0D 90             lcall   add_32
                            ; and store into fatfs_info data structure at offset
 0785: 05 A2                inc     auxr1 ; swich to fatfs_info write pointer
-0787: 12 0A CA             lcall   dptr_write_32   ; advances to offset 13
+0787: 12 0E 4E             lcall   dptr_write_32   ; advances to offset 13
                            ; now if we add sectors per FAT again, get cluster_l
-078A: 12 0A 2C             lcall   add_32
+078A: 12 0D 90             lcall   add_32
                            ; however, that is the address of cluster 2,
                            ; we wind back to the (nonexistent) cluster 0,
                            ; this makes math easier later
@@ -1546,10 +1654,10 @@
 0790: FD                   mov     r5,a
 0791: FE                   mov     r6,a
 0792: FF                   mov     r7,a
-0793: 12 0A 3D             lcall   sub_32
-0796: 12 0A 3D             lcall   sub_32
+0793: 12 0D A1             lcall   sub_32
+0796: 12 0D A1             lcall   sub_32
                            ; now we can store cluster_lba at the current offset
-0799: 12 0A CA             lcall   dptr_write_32 ; advances to offset 17
+0799: 12 0E 4E             lcall   dptr_write_32 ; advances to offset 17
 079C: 05 A2                inc     auxr1   ; back to the block reading pointer
                    
                            ; move forward to offset 0x2c
@@ -1558,10 +1666,10 @@
 07A0: A3                   inc     dptr
 07A1: A3                   inc     dptr
                            ; now read the cluster number for the root directory
-07A2: 12 0A B9             lcall   dptr_read_32
+07A2: 12 0E 3D             lcall   dptr_read_32
                            ; ... and store into fatfs_info at current offset (1
 07A5: 05 A2                inc     auxr1
-07A7: 12 0A CA             lcall   dptr_write_32
+07A7: 12 0E 4E             lcall   dptr_write_32
                    
                            ; phew! that was a lot of shunting data around. we a
                    
@@ -1592,13 +1700,13 @@
 07D5: E0                   movx    a,@dptr ; read fist signature byte at offset
 07D6: 64 55                xrl     a,#0x55
 07D8: 60 03                jz      fatfs_init__check_signature_ok_1
-07DA: 12 0B FF             lcall   panic ; invalid signature
+07DA: 12 0F 83             lcall   panic ; invalid signature
                    fatfs_init__check_signature_ok_1:
 07DD: A3                   inc     dptr
 07DE: E0                   movx    a,@dptr ; read second signature byte at offs
 07DF: 64 AA                xrl     a,#0xaa
 07E1: 60 03                jz      fatfs_init__check_signature_ok_2
-07E3: 12 0B FF             lcall   panic ; invalid signature
+07E3: 12 0F 83             lcall   panic ; invalid signature
                    fatfs_init__check_signature_ok_2:
 07E6: A3                   inc     dptr ; this moves dptr to offset 512
 07E7: 15 83                dec     dph  ; so we can now wind back to the beginn
@@ -1628,7 +1736,7 @@
 07FC: 85 50 82             mov     dpl,fatfs_info
 07FF: 85 51 83             mov     dph,fatfs_info+1
 0802: 74 04                mov     a,#fatfs_info_cluster_size
-0804: 12 0A 98             lcall   dptr_index
+0804: 12 0E 1C             lcall   dptr_index
 0807: E0                   movx    a,@dptr
 0808: F5 F0                mov     b,a                     ; b = cluster_size
                    
@@ -1648,28 +1756,28 @@
 081A: 80 F2                sjmp    fatfs_cluster_to_lba__count_loop
                    fatfs_cluster_to_lba__bad_size:
                            ; Invalid cluster size (not a power of 2)
-081C: 12 0B FF             lcall   panic
+081C: 12 0F 83             lcall   panic
                    
                    fatfs_cluster_to_lba__shifts_counted:
                            ; Now r4 has the shift count
                            ; Shift r0-r3 left by r4 positions (cluster * cluste
 081F: EC                   mov     a,r4
-0820: 12 0A 4F             lcall   shl_32
+0820: 12 0D B3             lcall   shl_32
                    
                            ; r0-r3 now contains cluster * cluster_size
                            ; Now we need to add cluster_lba from fatfs_info+13
                            ; Move shifted cluster to r4-r7
-0823: 12 0A 8B             lcall   xch_r0123_r4567
+0823: 12 0E 0F             lcall   xch_r0123_r4567
                    
                            ; Load cluster_lba into r0-r3
 0826: 85 50 82             mov     dpl,fatfs_info
 0829: 85 51 83             mov     dph,fatfs_info+1
 082C: 74 0D                mov     a,#fatfs_info_cluster_lba
-082E: 12 0A 98             lcall   dptr_index
-0831: 12 0A B9             lcall   dptr_read_32            ; r0-r3 = cluster_lb
+082E: 12 0E 1C             lcall   dptr_index
+0831: 12 0E 3D             lcall   dptr_read_32            ; r0-r3 = cluster_lb
                    
                            ; Add cluster offset: r0-r3 += r4-r7
-0834: 12 0A 2C             lcall   add_32
+0834: 12 0D 90             lcall   add_32
                    
 0837: D0 07                pop     7
 0839: D0 06                pop     6
@@ -1688,6 +1796,7 @@
                    ; owns the state needed to map a relative block number to an
                    ;
                    ; See chain.equ for the layout (first cluster, current clust
+                   ; current cluster's chain index).
                    ;
                    ; Lifecycle convention (mirrored by dir and file handles, wh
                    ; the chain handle by adding fields after fatfs_chain_size):
@@ -1700,22 +1809,46 @@
                    ; Extension types call only _init / _deinit on the chain pre
                    ; own the outer allocation themselves.
                    
+                   ; Internal scratch — ensure_block needs a stable place for
+                   ; pointer that survives popping target_idx into r4-r7. Two i
+                   ; only valid during a single ensure_block call (not re-entra
+                   
+0848:              .equ    fatfs_chain_scratch_handle,     0x52    ; ..0x53
+                   
                    
                    ; >> void fatfs_chain_init(char *{dptr} handle, uint32{r0-r3
                    
-                   ; Initialize a pre-allocated chain handle at dptr with first
-                   ; current cluster both set to first_cluster. Preserves dptr 
+                   ; Initialize a pre-allocated chain handle at dptr:
+                   ;   first cluster   <- r0-r3
+                   ;   current cluster <- r0-r3 (current starts at first)
+                   ;   current idx     <- 0
+                   ; Preserves dptr and r0-r3.
                    
                    fatfs_chain_init:
 0848: C0 82                push    dpl
 084A: C0 83                push    dph
+084C: C0 00                push    0
+084E: C0 01                push    1
+0850: C0 02                push    2
+0852: C0 03                push    3
                    
-084C: 12 0A CA             lcall   dptr_write_32   ; handle[first] = first_clus
-084F: 12 0A CA             lcall   dptr_write_32   ; handle[current] = first_cl
+0854: 12 0E 4E             lcall   dptr_write_32   ; handle[first] = first_clus
+0857: 12 0E 4E             lcall   dptr_write_32   ; handle[current] = first_cl
                    
-0852: D0 83                pop     dph
-0854: D0 82                pop     dpl
-0856: 22                   ret
+085A: E4                   clr     a
+085B: F8                   mov     r0,a
+085C: F9                   mov     r1,a
+085D: FA                   mov     r2,a
+085E: FB                   mov     r3,a
+085F: 12 0E 4E             lcall   dptr_write_32   ; handle[8..11] = 0 (current
+                   
+0862: D0 03                pop     3
+0864: D0 02                pop     2
+0866: D0 01                pop     1
+0868: D0 00                pop     0
+086A: D0 83                pop     dph
+086C: D0 82                pop     dpl
+086E: 22                   ret
                    
                    
                    ; >> void fatfs_chain_deinit(char *{dptr} handle) <<
@@ -1724,7 +1857,7 @@
                    ; declared so extension types can call it unconditionally.
                    
                    fatfs_chain_deinit:
-0857: 22                   ret
+086F: 22                   ret
                    
                    
                    ; >> char *{dptr} fatfs_chain_open(uint32{r0-r3} first_clust
@@ -1733,19 +1866,19 @@
                    ; first_cluster. Returns a pointer to the handle in dptr.
                    
                    fatfs_chain_open:
-0858: C0 00                push    0
-085A: C0 01                push    1
+0870: C0 00                push    0
+0872: C0 01                push    1
                    
-085C: 78 08                mov     r0,#fatfs_chain_size
-085E: 79 00                mov     r1,#0
-0860: 12 03 FF             lcall   memory_allocate ; dptr = handle, r0-r7 prese
+0874: 78 0C                mov     r0,#fatfs_chain_size
+0876: 79 00                mov     r1,#0
+0878: 12 03 FF             lcall   memory_allocate ; dptr = handle, r0-r7 prese
                    
-0863: D0 01                pop     1
-0865: D0 00                pop     0
+087B: D0 01                pop     1
+087D: D0 00                pop     0
                            ; r0-r3 hold the caller's first_cluster again (memor
                            ; preserved r2-r3 across the call; r0r1 we restored 
-0867: 12 08 48             lcall   fatfs_chain_init
-086A: 22                   ret
+087F: 12 08 48             lcall   fatfs_chain_init
+0882: 22                   ret
                    
                    
                    ; >> void fatfs_chain_close(char *{dptr} handle) <<
@@ -1753,17 +1886,100 @@
                    ; Deinitialize a chain handle and free its allocation.
                    
                    fatfs_chain_close:
-086B: C0 00                push    0
-086D: C0 01                push    1
+0883: C0 00                push    0
+0885: C0 01                push    1
                    
-086F: 12 08 57             lcall   fatfs_chain_deinit
-0872: 78 08                mov     r0,#fatfs_chain_size
-0874: 79 00                mov     r1,#0
-0876: 12 04 E0             lcall   memory_release
+0887: 12 08 6F             lcall   fatfs_chain_deinit
+088A: 78 0C                mov     r0,#fatfs_chain_size
+088C: 79 00                mov     r1,#0
+088E: 12 04 E0             lcall   memory_release
                    
-0879: D0 01                pop     1
-087B: D0 00                pop     0
-087D: 22                   ret
+0891: D0 01                pop     1
+0893: D0 00                pop     0
+0895: 22                   ret
+                   
+                   
+                   ; >> uint32{r0-r3} fatfs_chain_next_cluster(uint32{r0-r3} cl
+                   
+                   ; Look up the next-cluster entry in the FAT for the given cl
+                   ; Each FAT sector holds 128 four-byte entries.
+                   ;   LBA              = fat1_lba + (cluster / 128)
+                   ;   offset_in_sector = (cluster % 128) * 4
+                   ; Returns the next cluster number; values >= 0x0FFFFFF8 mean
+                   ; end-of-chain. The high nibble of the 32-bit entry is reser
+                   ; FAT32 and is masked off.
+                   
+                   fatfs_chain_next_cluster:
+0896: C0 E0                push    acc
+0898: C0 F0                push    b
+089A: C0 82                push    dpl
+089C: C0 83                push    dph
+089E: C0 04                push    4
+08A0: C0 05                push    5
+08A2: C0 06                push    6
+08A4: C0 07                push    7
+                   
+                           ; b = cluster mod 128 (low 7 bits of cluster low byt
+08A6: E8                   mov     a,r0
+08A7: 54 7F                anl     a,#0x7F
+08A9: F5 F0                mov     b,a
+                   
+                           ; r0-r3 = cluster >> 7 (sector offset within the FAT
+08AB: 74 07                mov     a,#7
+08AD: 12 0D D3             lcall   shr_32
+                   
+                           ; shunt offset into r4-r7
+08B0: 12 0E 0F             lcall   xch_r0123_r4567
+                   
+                           ; r0-r3 = fat1_lba
+08B3: 85 50 82             mov     dpl,fatfs_info
+08B6: 85 51 83             mov     dph,fatfs_info+1
+08B9: 74 05                mov     a,#fatfs_info_fat1_lba
+08BB: 12 0E 1C             lcall   dptr_index
+08BE: 12 0E 3D             lcall   dptr_read_32
+                   
+                           ; r0-r3 = fat1_lba + sector_offset
+08C1: 12 0D 90             lcall   add_32
+                   
+                           ; load the FAT sector
+08C4: 12 06 4A             lcall   block_load              ; dptr = cached FAT 
+                   
+                           ; advance dptr by (entry_idx_in_sector * 4). entry_i
+                           ; so *4 is 0..508 — fits in 9 bits.
+08C7: E5 F0                mov     a,b
+08C9: C3                   clr     c
+08CA: 33                   rlc     a               ; * 2
+08CB: C3                   clr     c
+08CC: 33                   rlc     a               ; * 4; c holds the 9th bit
+08CD: FC                   mov     r4,a            ; r4 = low byte
+08CE: E4                   clr     a
+08CF: 33                   rlc     a               ; a = high bit
+08D0: FD                   mov     r5,a            ; r5 = high byte
+                   
+08D1: E5 82                mov     a,dpl
+08D3: 2C                   add     a,r4
+08D4: F5 82                mov     dpl,a
+08D6: E5 83                mov     a,dph
+08D8: 3D                   addc    a,r5
+08D9: F5 83                mov     dph,a
+                   
+                           ; read the four bytes of the FAT entry
+08DB: 12 0E 3D             lcall   dptr_read_32
+                   
+                           ; mask off the high nibble of r3 (FAT32 reserved bit
+08DE: EB                   mov     a,r3
+08DF: 54 0F                anl     a,#0x0F
+08E1: FB                   mov     r3,a
+                   
+08E2: D0 07                pop     7
+08E4: D0 06                pop     6
+08E6: D0 05                pop     5
+08E8: D0 04                pop     4
+08EA: D0 83                pop     dph
+08EC: D0 82                pop     dpl
+08EE: D0 F0                pop     b
+08F0: D0 E0                pop     acc
+08F2: 22                   ret
                    
                    
                    ; >> char *{dptr'} fatfs_chain_ensure_block(char *{dptr} han
@@ -1777,97 +1993,253 @@
                    ; ensure_block call on any chain). Caller must copy out what
                    ; and not retain the pointer.
                    ;
-                   ; Step 2 stub: any block within the first cluster is support
-                   ; (cluster_idx == 0, sector_in_cluster = block). Anything pa
-                   ; first cluster still panics — chain traversal and the mat
-                   ; fatfs_chain_next_cluster routine land when an actual calle
-                   ; to follow a chain that far.
+                   ; Algorithm:
+                   ;   target_idx       = block / cluster_size
+                   ;   sector_in_cluster = block % cluster_size
+                   ;   adjust the handle's (current_cluster, current_idx) until
+                   ;     current_idx == target_idx:
+                   ;       - if current_idx > target_idx: restart from first cl
+                   ;       - if current_idx < target_idx: step forward via next
+                   ;   LBA = cluster_to_lba(current_cluster) + sector_in_cluste
+                   ;   block_load(LBA)
                    
                    fatfs_chain_ensure_block:
-087E: C0 E0                push    acc
-0880: C0 00                push    0                       ; preserve r0-r3 (in
-0882: C0 01                push    1
-0884: C0 02                push    2
-0886: C0 03                push    3
-0888: C0 04                push    4
-088A: C0 05                push    5
-088C: C0 06                push    6
-088E: C0 07                push    7
-0890: C0 82                push    dpl                     ; preserve dptr (han
-0892: C0 83                push    dph
+08F3: C0 E0                push    acc
+08F5: C0 F0                push    b                       ; ensure_block uses 
+08F7: C0 00                push    0                       ; preserve r0-r3 (in
+08F9: C0 01                push    1
+08FB: C0 02                push    2
+08FD: C0 03                push    3
+08FF: C0 04                push    4
+0901: C0 05                push    5
+0903: C0 06                push    6
+0905: C0 07                push    7
                    
-                           ; high three bytes of block must be zero (block fits
-                           ; cluster_size is at most 128).
-0894: E9                   mov     a,r1
-0895: 4A                   orl     a,r2
-0896: 4B                   orl     a,r3
-0897: 70 4A                jnz     fatfs_chain_ensure_block__panic
+                           ; stash handle pointer in iram (r6r7 gets reused for
+                           ; pops later, so we can't keep it there)
+0907: 85 82 52             mov     fatfs_chain_scratch_handle,dpl
+090A: 85 83 53             mov     fatfs_chain_scratch_handle+1,dph
                    
-                           ; stash handle in r4r5 so we can use dptr to load cl
-                           ; and still get back to the handle for dptr_read_32.
-0899: AC 82                mov     r4,dpl
-089B: AD 83                mov     r5,dph
+                           ; load cluster_size into b (dptr is temporarily clob
+                           ; r0 since we want block.low byte later for sector_i
+090D: C0 00                push    0
+090F: 85 50 82             mov     dpl,fatfs_info
+0912: 85 51 83             mov     dph,fatfs_info+1
+0915: 74 04                mov     a,#fatfs_info_cluster_size
+0917: 12 0E 1C             lcall   dptr_index
+091A: E0                   movx    a,@dptr
+091B: F5 F0                mov     b,a             ; b = cluster_size
+091D: D0 00                pop     0
                    
-089D: 85 50 82             mov     dpl,fatfs_info
-08A0: 85 51 83             mov     dph,fatfs_info+1
-08A3: 74 04                mov     a,#fatfs_info_cluster_size
-08A5: 12 0A 98             lcall   dptr_index
-08A8: E0                   movx    a,@dptr                 ; a = cluster_size
+                           ; sector_in_cluster = block.low & (cluster_size - 1)
+091F: E5 F0                mov     a,b
+0921: 14                   dec     a               ; mask = cluster_size - 1
+0922: 58                   anl     a,r0
+0923: C0 E0                push    acc             ; stack: ..., sector_in_clus
                    
-                           ; block < cluster_size? (cluster_idx == 0 iff block 
-08A9: C3                   clr     c
-08AA: 98                   subb    a,r0                    ; a = cluster_size -
-08AB: 40 36                jc      fatfs_chain_ensure_block__panic ; block > cl
-08AD: 60 34                jz      fatfs_chain_ensure_block__panic ; block == c
+                           ; log2(cluster_size) → r4 (count of right shifts u
+0925: E5 F0                mov     a,b
+0927: 7C 00                mov     r4,#0
+                   fatfs_chain_ensure_block__log2_loop:
+0929: B4 01 02             cjne    a,#1,fatfs_chain_ensure_block__log2_not_one
+092C: 80 05                sjmp    fatfs_chain_ensure_block__log2_done
+                   fatfs_chain_ensure_block__log2_not_one:
+092E: C3                   clr     c
+092F: 13                   rrc     a
+0930: 0C                   inc     r4
+0931: 80 F6                sjmp    fatfs_chain_ensure_block__log2_loop
+                   fatfs_chain_ensure_block__log2_done:
                    
-                           ; restore dptr = handle
-08AF: 8C 82                mov     dpl,r4
-08B1: 8D 83                mov     dph,r5
+                           ; target_idx = block >> log2(cluster_size)
+0933: EC                   mov     a,r4
+0934: 12 0D D3             lcall   shr_32          ; r0-r3 = target_idx
                    
-                           ; sector_in_cluster = r0. Park it in a — dptr_read
-                           ; cluster_to_lba both push/pop acc, so it survives.
-08B3: E8                   mov     a,r0
+                           ; stash target_idx on the stack across the walk loop
+0937: C0 00                push    0
+0939: C0 01                push    1
+093B: C0 02                push    2
+093D: C0 03                push    3               ; stack: ..., sector_in_clus
                    
-                           ; read first_cluster from handle[fatfs_chain_first..
-08B4: 12 0A B9             lcall   dptr_read_32
+                   fatfs_chain_ensure_block__walk_loop:
+                           ; load handle.current_cluster_idx into r0-r3
+093F: 85 52 82             mov     dpl,fatfs_chain_scratch_handle
+0942: 85 53 83             mov     dph,fatfs_chain_scratch_handle+1
+0945: 74 08                mov     a,#8
+0947: 12 0E 1C             lcall   dptr_index
+094A: 12 0E 3D             lcall   dptr_read_32    ; r0-r3 = current_idx
                    
-                           ; convert to first sector LBA of that cluster
-08B7: 12 07 EC             lcall   fatfs_cluster_to_lba
+                           ; pop target_idx into r4-r7 for the comparison
+094D: D0 07                pop     7
+094F: D0 06                pop     6
+0951: D0 05                pop     5
+0953: D0 04                pop     4
+                           ; stack: ..., sector_in_cluster
                    
-                           ; LBA += sector_in_cluster (still in a)
-08BA: 28                   add     a,r0
-08BB: F8                   mov     r0,a
-08BC: E4                   clr     a
-08BD: 39                   addc    a,r1
-08BE: F9                   mov     r1,a
-08BF: E4                   clr     a
-08C0: 3A                   addc    a,r2
-08C1: FA                   mov     r2,a
-08C2: E4                   clr     a
-08C3: 3B                   addc    a,r3
-08C4: FB                   mov     r3,a
+                           ; r0-r3 (current) vs r4-r7 (target) — equality che
+0955: E8                   mov     a,r0
+0956: 6C                   xrl     a,r4
+0957: 70 0F                jnz     fatfs_chain_ensure_block__not_equal
+0959: E9                   mov     a,r1
+095A: 6D                   xrl     a,r5
+095B: 70 0B                jnz     fatfs_chain_ensure_block__not_equal
+095D: EA                   mov     a,r2
+095E: 6E                   xrl     a,r6
+095F: 70 07                jnz     fatfs_chain_ensure_block__not_equal
+0961: EB                   mov     a,r3
+0962: 6F                   xrl     a,r7
+0963: 70 03                jnz     fatfs_chain_ensure_block__not_equal
+0965: 02 09 F3             ljmp    fatfs_chain_ensure_block__walk_done
                    
-                           ; load the block into the alternate dptr so the call
-                           ; (= handle) survives.
-08C5: 05 A2                inc     auxr1
-08C7: 12 06 4A             lcall   block_load              ; dptr' (now active)
-08CA: 05 A2                inc     auxr1                   ; back to the caller
+                   fatfs_chain_ensure_block__not_equal:
+                           ; ordering check: high byte down. carry set after su
+                           ; current_byte < target_byte → current < target �
+0968: EB                   mov     a,r3
+0969: C3                   clr     c
+096A: 9F                   subb    a,r7
+096B: 40 33                jc      fatfs_chain_ensure_block__step_forward
+096D: 70 13                jnz     fatfs_chain_ensure_block__restart
+096F: EA                   mov     a,r2
+0970: C3                   clr     c
+0971: 9E                   subb    a,r6
+0972: 40 2C                jc      fatfs_chain_ensure_block__step_forward
+0974: 70 0C                jnz     fatfs_chain_ensure_block__restart
+0976: E9                   mov     a,r1
+0977: C3                   clr     c
+0978: 9D                   subb    a,r5
+0979: 40 25                jc      fatfs_chain_ensure_block__step_forward
+097B: 70 05                jnz     fatfs_chain_ensure_block__restart
+097D: E8                   mov     a,r0
+097E: C3                   clr     c
+097F: 9C                   subb    a,r4
+0980: 40 1E                jc      fatfs_chain_ensure_block__step_forward
+                           ; jnz reachable here only if current > target
+                           ; (equality is handled above)
                    
-08CC: D0 83                pop     dph
-08CE: D0 82                pop     dpl
-08D0: D0 07                pop     7
-08D2: D0 06                pop     6
-08D4: D0 05                pop     5
-08D6: D0 04                pop     4
-08D8: D0 03                pop     3
-08DA: D0 02                pop     2
-08DC: D0 01                pop     1
-08DE: D0 00                pop     0
-08E0: D0 E0                pop     acc
-08E2: 22                   ret
+                   fatfs_chain_ensure_block__restart:
+                           ; current > target → reset current to first cluste
+                           ; push target back for next iteration.
+0982: C0 04                push    4
+0984: C0 05                push    5
+0986: C0 06                push    6
+0988: C0 07                push    7
                    
-                   fatfs_chain_ensure_block__panic:
-08E3: 12 0B FF             lcall   panic   ; chain traversal not implemented ye
+                           ; read first_cluster (handle[0..3]) into r0-r3
+098A: 85 52 82             mov     dpl,fatfs_chain_scratch_handle
+098D: 85 53 83             mov     dph,fatfs_chain_scratch_handle+1
+0990: 12 0E 3D             lcall   dptr_read_32    ; dptr now handle+4
+                   
+                           ; write to current_cluster (handle[4..7])
+0993: 12 0E 4E             lcall   dptr_write_32   ; dptr now handle+8
+                   
+                           ; write 0 to current_idx (handle[8..11])
+0996: E4                   clr     a
+0997: F8                   mov     r0,a
+0998: F9                   mov     r1,a
+0999: FA                   mov     r2,a
+099A: FB                   mov     r3,a
+099B: 12 0E 4E             lcall   dptr_write_32
+                   
+099E: 80 9F                sjmp    fatfs_chain_ensure_block__walk_loop
+                   
+                   fatfs_chain_ensure_block__step_forward:
+                           ; current < target → advance by one cluster.
+09A0: C0 04                push    4
+09A2: C0 05                push    5
+09A4: C0 06                push    6
+09A6: C0 07                push    7
+                   
+                           ; r0-r3 = handle.current_cluster
+09A8: 85 52 82             mov     dpl,fatfs_chain_scratch_handle
+09AB: 85 53 83             mov     dph,fatfs_chain_scratch_handle+1
+09AE: 74 04                mov     a,#4
+09B0: 12 0E 1C             lcall   dptr_index
+09B3: 12 0E 3D             lcall   dptr_read_32
+                   
+                           ; r0-r3 = next_cluster(current_cluster)
+09B6: 12 08 96             lcall   fatfs_chain_next_cluster
+                   
+                           ; store back to handle.current_cluster
+09B9: 85 52 82             mov     dpl,fatfs_chain_scratch_handle
+09BC: 85 53 83             mov     dph,fatfs_chain_scratch_handle+1
+09BF: 74 04                mov     a,#4
+09C1: 12 0E 1C             lcall   dptr_index
+09C4: 12 0E 4E             lcall   dptr_write_32
+                   
+                           ; current_idx++
+09C7: 85 52 82             mov     dpl,fatfs_chain_scratch_handle
+09CA: 85 53 83             mov     dph,fatfs_chain_scratch_handle+1
+09CD: 74 08                mov     a,#8
+09CF: 12 0E 1C             lcall   dptr_index
+09D2: 12 0E 3D             lcall   dptr_read_32    ; r0-r3 = current_idx, dptr 
+                   
+09D5: 08                   inc     r0
+09D6: B8 00 09             cjne    r0,#0,fatfs_chain_ensure_block__inc_done
+09D9: 09                   inc     r1
+09DA: B9 00 05             cjne    r1,#0,fatfs_chain_ensure_block__inc_done
+09DD: 0A                   inc     r2
+09DE: BA 00 01             cjne    r2,#0,fatfs_chain_ensure_block__inc_done
+09E1: 0B                   inc     r3
+                   fatfs_chain_ensure_block__inc_done:
+                   
+09E2: 85 52 82             mov     dpl,fatfs_chain_scratch_handle
+09E5: 85 53 83             mov     dph,fatfs_chain_scratch_handle+1
+09E8: 74 08                mov     a,#8
+09EA: 12 0E 1C             lcall   dptr_index
+09ED: 12 0E 4E             lcall   dptr_write_32
+                   
+09F0: 02 09 3F             ljmp    fatfs_chain_ensure_block__walk_loop
+                   
+                   fatfs_chain_ensure_block__walk_done:
+                           ; stack: ..., sector_in_cluster
+                           ; r0-r3 = current_idx (= target_idx)
+                   
+                           ; load current_cluster (handle[4..7]) into r0-r3
+09F3: 85 52 82             mov     dpl,fatfs_chain_scratch_handle
+09F6: 85 53 83             mov     dph,fatfs_chain_scratch_handle+1
+09F9: 74 04                mov     a,#4
+09FB: 12 0E 1C             lcall   dptr_index
+09FE: 12 0E 3D             lcall   dptr_read_32
+                   
+                           ; r0-r3 = cluster_to_lba(current_cluster)
+0A01: 12 07 EC             lcall   fatfs_cluster_to_lba
+                   
+                           ; LBA += sector_in_cluster
+0A04: D0 E0                pop     acc             ; a = sector_in_cluster
+0A06: 28                   add     a,r0
+                   
+0A07: F8                   mov     r0,a
+0A08: E4                   clr     a
+0A09: 39                   addc    a,r1
+0A0A: F9                   mov     r1,a
+0A0B: E4                   clr     a
+0A0C: 3A                   addc    a,r2
+0A0D: FA                   mov     r2,a
+0A0E: E4                   clr     a
+0A0F: 3B                   addc    a,r3
+0A10: FB                   mov     r3,a
+                   
+                           ; Load the block into the alternate dptr so the call
+                           ; (= handle) survives. ensure_block's new contract: 
+                           ; (preserved), dptr' = cached.
+0A11: 05 A2                inc     auxr1
+0A13: 12 06 4A             lcall   block_load      ; dptr' (now active) = cache
+0A16: 05 A2                inc     auxr1
+                   
+                           ; Restore dptr = handle from iram scratch.
+0A18: 85 52 82             mov     dpl,fatfs_chain_scratch_handle
+0A1B: 85 53 83             mov     dph,fatfs_chain_scratch_handle+1
+                   
+0A1E: D0 07                pop     7
+0A20: D0 06                pop     6
+0A22: D0 05                pop     5
+0A24: D0 04                pop     4
+0A26: D0 03                pop     3
+0A28: D0 02                pop     2
+0A2A: D0 01                pop     1
+0A2C: D0 00                pop     0
+0A2E: D0 F0                pop     b
+0A30: D0 E0                pop     acc
+0A32: 22                   ret
                    
                    
                    ; >> void fatfs_chain_load_block(char *{dptr} handle, uint32
@@ -1880,54 +2252,51 @@
                    ; ensure_block so they can copy only the bytes they actually
                    
                    fatfs_chain_load_block:
-08E6: C0 00                push    0                       ; dptr_copy uses r0 
+                           ; save active slot (handle pointer)
+0A33: C0 82                push    dpl
+0A35: C0 83                push    dph
+0A37: 05 A2                inc     auxr1
+                           ; save alternate slot (dst pointer)
+0A39: C0 82                push    dpl
+0A3B: C0 83                push    dph
+0A3D: 05 A2                inc     auxr1
+                           ; r0 is the only general register we modify here (dp
+                           ; count). r1-r7 are preserved across ensure_block an
+0A3F: C0 00                push    0
                    
-                           ; Save handle (slot 0). ensure_block preserves it, b
-                           ; temporarily overwrite slot 0 with dst to feed dptr
-                           ; the handle back at exit.
-08E8: C0 82                push    dpl
-08EA: C0 83                push    dph
+                           ; ensure_block uses the active dptr as handle, block
+                           ; on return, active dptr = cached block data. ensure
+                           ; preserves r0-r3.
+0A41: 12 08 F3             lcall   fatfs_chain_ensure_block
                    
-                           ; Save dst (slot 1) — ensure_block will overwrite 
-                           ; cached pointer.
-08EC: 05 A2                inc     auxr1
-08EE: C0 82                push    dpl
-08F0: C0 83                push    dph
-08F2: 05 A2                inc     auxr1
-                   
-                           ; ensure_block leaves slot 0 = handle (preserved) an
-                           ; cached (the borrowed pointer). dst is on the stack
-08F4: 12 08 7E             lcall   fatfs_chain_ensure_block
-                   
-                           ; Pop dst into slot 0 (overwriting handle for now). 
-                           ; dst.dph; below: dst.dpl; below: handle.dph, handle
-08F7: D0 83                pop     dph
-08F9: D0 82                pop     dpl
-                           ; slot 0 = dst, slot 1 = cached.
+                           ; swap so that the active dptr is dst (where dptr_co
+                           ; and the alternate dptr is the cached block (where 
+                           ; reads).
+0A44: 05 A2                inc     auxr1
                    
                            ; dptr_copy with r0 = 0 copies 256 bytes (djnz wraps
-08FB: 78 00                mov     r0,#0
-08FD: 12 0A A6             lcall   dptr_copy
-0900: 78 00                mov     r0,#0
-0902: 12 0A A6             lcall   dptr_copy
+0A46: 78 00                mov     r0,#0
+0A48: 12 0E 2A             lcall   dptr_copy
+0A4B: 78 00                mov     r0,#0
+0A4D: 12 0E 2A             lcall   dptr_copy
                            ; slot 0 = dst+512, slot 1 = cached+512.
                    
                            ; Restore dst (slot 0): two `dec dph` subtract 512 (
                            ; around an even number of times during the 512 inc 
-0905: 15 83                dec     dph
-0907: 15 83                dec     dph
+0A50: 15 83                dec     dph
+0A52: 15 83                dec     dph
                    
                            ; Pop the saved handle into slot 1. The slots end up
                            ; swapped relative to entry (slot 0 = dst, slot 1 = 
                            ; the calling convention only cares about `dptr` and
                            ; holding the right values, not which physical slot 
-0909: 05 A2                inc     auxr1
-090B: D0 83                pop     dph
-090D: D0 82                pop     dpl
+0A54: 05 A2                inc     auxr1
+0A56: D0 83                pop     dph
+0A58: D0 82                pop     dpl
                            ; active (slot 1) = handle, inactive (slot 0) = dst.
                    
-090F: D0 00                pop     0
-0911: 22                   ret
+0A5A: D0 00                pop     0
+0A5C: 22                   ret
                    
                    ; *** fatfs/dir_iter.inc ***
                    
@@ -1940,22 +2309,22 @@
                    ; one shot; dir_close releases it the same way. We never all
                    ; free the chain prefix separately.
                    ;
-                   ; Layout (45 bytes; memory_allocate rounds to 48):
-                   ;   bytes 0..7   chain handle (first cluster, current cluste
-                   ;   bytes 8..11  relative block number within the chain (uin
-                   ;   byte  12     entry index within the current block (0..16
+                   ; Layout (49 bytes; memory_allocate rounds to 52):
+                   ;   bytes 0..11  chain handle (first cluster, current cluste
+                   ;   bytes 12..15 relative block number within the chain (uin
+                   ;   byte  16     entry index within the current block (0..16
                    ;                  (16 = "consumed the whole block, advance 
-                   ;   bytes 13..44 embedded 32-byte directory entry buffer
+                   ;   bytes 17..48 embedded 32-byte directory entry buffer
                    ;
                    ; The embedded buffer is what dir_next returns to callers �
                    ; hand back a pointer into the block cache because we don't 
                    ; eviction. The buffer's lifetime is until the next dir_next
                    ; dir_close on the same handle.
                    
-0912:              .equ    fatfs_dir_block,        fatfs_chain_size        ; ..
-0912:              .equ    fatfs_dir_entry,        fatfs_dir_block+4
-0912:              .equ    fatfs_dir_buffer,       fatfs_dir_entry+1       ; ..
-0912:              .equ    fatfs_dir_size,         fatfs_dir_buffer+32
+0A5D:              .equ    fatfs_dir_block,        fatfs_chain_size        ; ..
+0A5D:              .equ    fatfs_dir_entry,        fatfs_dir_block+4
+0A5D:              .equ    fatfs_dir_buffer,       fatfs_dir_entry+1       ; ..
+0A5D:              .equ    fatfs_dir_size,         fatfs_dir_buffer+32
                    
                    
                    ; >> char *{dptr} fatfs_dir_open(uint32{r0-r3} start_cluster
@@ -1965,42 +2334,42 @@
                    ; Returns a pointer to the handle in dptr.
                    
                    fatfs_dir_open:
-0912: C0 E0                push    acc
-0914: C0 00                push    0
-0916: C0 01                push    1
+0A5D: C0 E0                push    acc
+0A5F: C0 00                push    0
+0A61: C0 01                push    1
                    
-0918: 78 2D                mov     r0,#fatfs_dir_size
-091A: 79 00                mov     r1,#0
-091C: 12 03 FF             lcall   memory_allocate ; dptr = handle, r0-r7 prese
+0A63: 78 31                mov     r0,#fatfs_dir_size
+0A65: 79 00                mov     r1,#0
+0A67: 12 03 FF             lcall   memory_allocate ; dptr = handle, r0-r7 prese
                    
-091F: D0 01                pop     1
-0921: D0 00                pop     0
+0A6A: D0 01                pop     1
+0A6C: D0 00                pop     0
                    
                            ; init chain prefix with start_cluster (r0-r3 still 
-0923: 12 08 48             lcall   fatfs_chain_init        ; preserves dptr (st
+0A6E: 12 08 48             lcall   fatfs_chain_init        ; preserves dptr (st
                    
                            ; zero out block_idx (handle[fatfs_dir_block..]) and
                            ; (handle[fatfs_dir_entry]). acc was already pushed 
                            ; of the function; r0 needs its own save because it'
                            ; counter here.
-0926: C0 00                push    0
-0928: C0 82                push    dpl
-092A: C0 83                push    dph
+0A71: C0 00                push    0
+0A73: C0 82                push    dpl
+0A75: C0 83                push    dph
                    
-092C: 74 08                mov     a,#fatfs_dir_block
-092E: 12 0A 98             lcall   dptr_index              ; dptr = handle + fa
-0931: E4                   clr     a
-0932: 78 05                mov     r0,#fatfs_dir_buffer-fatfs_dir_block
+0A77: 74 0C                mov     a,#fatfs_dir_block
+0A79: 12 0E 1C             lcall   dptr_index              ; dptr = handle + fa
+0A7C: E4                   clr     a
+0A7D: 78 05                mov     r0,#fatfs_dir_buffer-fatfs_dir_block
                    fatfs_dir_open__zero_loop:
-0934: F0                   movx    @dptr,a
-0935: A3                   inc     dptr
-0936: D8 FC                djnz    r0,fatfs_dir_open__zero_loop
+0A7F: F0                   movx    @dptr,a
+0A80: A3                   inc     dptr
+0A81: D8 FC                djnz    r0,fatfs_dir_open__zero_loop
                    
-0938: D0 83                pop     dph
-093A: D0 82                pop     dpl
-093C: D0 00                pop     0
-093E: D0 E0                pop     acc
-0940: 22                   ret
+0A83: D0 83                pop     dph
+0A85: D0 82                pop     dpl
+0A87: D0 00                pop     0
+0A89: D0 E0                pop     acc
+0A8B: 22                   ret
                    
                    
                    ; >> void fatfs_dir_close(char *{dptr} handle) <<
@@ -2008,19 +2377,19 @@
                    ; Deinitialize the chain prefix and free the whole dir handl
                    
                    fatfs_dir_close:
-0941: C0 E0                push    acc
-0943: C0 00                push    0
-0945: C0 01                push    1
+0A8C: C0 E0                push    acc
+0A8E: C0 00                push    0
+0A90: C0 01                push    1
                    
-0947: 12 08 57             lcall   fatfs_chain_deinit      ; no-op currently, b
-094A: 78 2D                mov     r0,#fatfs_dir_size
-094C: 79 00                mov     r1,#0
-094E: 12 04 E0             lcall   memory_release
+0A92: 12 08 6F             lcall   fatfs_chain_deinit      ; no-op currently, b
+0A95: 78 31                mov     r0,#fatfs_dir_size
+0A97: 79 00                mov     r1,#0
+0A99: 12 04 E0             lcall   memory_release
                    
-0951: D0 01                pop     1
-0953: D0 00                pop     0
-0955: D0 E0                pop     acc
-0957: 22                   ret
+0A9C: D0 01                pop     1
+0A9E: D0 00                pop     0
+0AA0: D0 E0                pop     acc
+0AA2: 22                   ret
                    
                    
                    ; >> char *{dptr'} fatfs_dir_next(char *{dptr} handle) → s
@@ -2040,169 +2409,557 @@
                    ; dptr (handle) is preserved.
                    
                    fatfs_dir_next:
-0958: C0 F0                push    b
-095A: C0 00                push    0
-095C: C0 01                push    1
-095E: C0 02                push    2
-0960: C0 03                push    3
-0962: C0 04                push    4
-0964: C0 05                push    5
-0966: C0 06                push    6
-0968: C0 07                push    7
-096A: C0 82                push    dpl             ; save handle (restored at e
-096C: C0 83                push    dph
+0AA3: C0 F0                push    b
+0AA5: C0 00                push    0
+0AA7: C0 01                push    1
+0AA9: C0 02                push    2
+0AAB: C0 03                push    3
+0AAD: C0 04                push    4
+0AAF: C0 05                push    5
+0AB1: C0 06                push    6
+0AB3: C0 07                push    7
+0AB5: C0 82                push    dpl             ; save handle (restored at e
+0AB7: C0 83                push    dph
                    
                            ; Keep the handle pointer in r6r7 across the functio
                            ; can reset dptr to it whenever a callee clobbers dp
-096E: AE 82                mov     r6,dpl
-0970: AF 83                mov     r7,dph
+0AB9: AE 82                mov     r6,dpl
+0ABB: AF 83                mov     r7,dph
                    
                            ; load entry_idx into r4
-0972: 74 0C                mov     a,#fatfs_dir_entry
-0974: 12 0A 98             lcall   dptr_index              ; dptr = handle + 12
-0977: E0                   movx    a,@dptr
-0978: FC                   mov     r4,a                    ; r4 = entry_idx (st
+0ABD: 74 10                mov     a,#fatfs_dir_entry
+0ABF: 12 0E 1C             lcall   dptr_index              ; dptr = handle + 12
+0AC2: E0                   movx    a,@dptr
+0AC3: FC                   mov     r4,a                    ; r4 = entry_idx (st
                    
                    fatfs_dir_next__loop:
                            ; if entry_idx == 16: reset to 0, increment block_id
-0979: BC 10 29             cjne    r4,#16,fatfs_dir_next__within_block
-097C: 7C 00                mov     r4,#0
+0AC4: BC 10 29             cjne    r4,#16,fatfs_dir_next__within_block
+0AC7: 7C 00                mov     r4,#0
                    
                            ; load block_idx into r0-r3, increment, store back
-097E: 8E 82                mov     dpl,r6
-0980: 8F 83                mov     dph,r7
-0982: 74 08                mov     a,#fatfs_dir_block
-0984: 12 0A 98             lcall   dptr_index              ; dptr = handle + 8
-0987: 12 0A B9             lcall   dptr_read_32            ; r0-r3 = block_idx,
+0AC9: 8E 82                mov     dpl,r6
+0ACB: 8F 83                mov     dph,r7
+0ACD: 74 0C                mov     a,#fatfs_dir_block
+0ACF: 12 0E 1C             lcall   dptr_index              ; dptr = handle + 8
+0AD2: 12 0E 3D             lcall   dptr_read_32            ; r0-r3 = block_idx,
                    
-098A: 08                   inc     r0
-098B: B8 00 09             cjne    r0,#0,fatfs_dir_next__inc_done
-098E: 09                   inc     r1
-098F: B9 00 05             cjne    r1,#0,fatfs_dir_next__inc_done
-0992: 0A                   inc     r2
-0993: BA 00 01             cjne    r2,#0,fatfs_dir_next__inc_done
-0996: 0B                   inc     r3
+0AD5: 08                   inc     r0
+0AD6: B8 00 09             cjne    r0,#0,fatfs_dir_next__inc_done
+0AD9: 09                   inc     r1
+0ADA: B9 00 05             cjne    r1,#0,fatfs_dir_next__inc_done
+0ADD: 0A                   inc     r2
+0ADE: BA 00 01             cjne    r2,#0,fatfs_dir_next__inc_done
+0AE1: 0B                   inc     r3
                    fatfs_dir_next__inc_done:
                    
-0997: 8E 82                mov     dpl,r6
-0999: 8F 83                mov     dph,r7
-099B: 74 08                mov     a,#fatfs_dir_block
-099D: 12 0A 98             lcall   dptr_index
-09A0: 12 0A CA             lcall   dptr_write_32           ; handle[8..11] = bl
-09A3: 80 0C                sjmp    fatfs_dir_next__after_block
+0AE2: 8E 82                mov     dpl,r6
+0AE4: 8F 83                mov     dph,r7
+0AE6: 74 0C                mov     a,#fatfs_dir_block
+0AE8: 12 0E 1C             lcall   dptr_index
+0AEB: 12 0E 4E             lcall   dptr_write_32           ; handle[8..11] = bl
+0AEE: 80 0C                sjmp    fatfs_dir_next__after_block
                    
                    fatfs_dir_next__within_block:
                            ; reload block_idx into r0-r3 (the within-block bran
                            ; was not just modified, but ensure_block needs it i
-09A5: 8E 82                mov     dpl,r6
-09A7: 8F 83                mov     dph,r7
-09A9: 74 08                mov     a,#fatfs_dir_block
-09AB: 12 0A 98             lcall   dptr_index
-09AE: 12 0A B9             lcall   dptr_read_32
+0AF0: 8E 82                mov     dpl,r6
+0AF2: 8F 83                mov     dph,r7
+0AF4: 74 0C                mov     a,#fatfs_dir_block
+0AF6: 12 0E 1C             lcall   dptr_index
+0AF9: 12 0E 3D             lcall   dptr_read_32
                    fatfs_dir_next__after_block:
                    
                            ; ensure_block(handle, block_idx). dptr (handle) is 
                            ; dptr' returns the cached block start.
-09B1: 8E 82                mov     dpl,r6
-09B3: 8F 83                mov     dph,r7
-09B5: 12 08 7E             lcall   fatfs_chain_ensure_block
+0AFC: 8E 82                mov     dpl,r6
+0AFE: 8F 83                mov     dph,r7
+0B00: 12 08 F3             lcall   fatfs_chain_ensure_block
                    
                            ; Advance dptr' (cached) by entry_idx * 32 to point 
                            ; current entry. entry_idx is 0..15, so entry_idx * 
                            ; bits — shift left 5, fold the carry-out (bit 8) 
                            ; let dptr_index handle the dpl→dph carry of the l
-09B8: 05 A2                inc     auxr1                   ; switch to dptr' = 
-09BA: EC                   mov     a,r4
-09BB: C4                   swap    a               ; * 16
-09BC: C3                   clr     c
-09BD: 33                   rlc     a               ; * 32; c = bit 8, a = low b
-09BE: 50 02                jnc     fatfs_dir_next__no_high_bit
-09C0: 05 83                inc     dph
+0B03: 05 A2                inc     auxr1                   ; switch to dptr' = 
+0B05: EC                   mov     a,r4
+0B06: C4                   swap    a               ; * 16
+0B07: C3                   clr     c
+0B08: 33                   rlc     a               ; * 32; c = bit 8, a = low b
+0B09: 50 02                jnc     fatfs_dir_next__no_high_bit
+0B0B: 05 83                inc     dph
                    fatfs_dir_next__no_high_bit:
-09C2: 12 0A 98             lcall   dptr_index      ; dpl += a, with carry into 
+0B0D: 12 0E 1C             lcall   dptr_index      ; dpl += a, with carry into 
                            ; dptr' now points at the entry inside the block cac
                    
                            ; Copy 32 bytes from cached (= dptr') to the handle'
                            ; buffer. dptr_copy uses dptr = dst, dptr' = src —
                            ; back to dptr (handle), advance to handle + fatfs_d
                            ; and dptr_copy reads from inactive (= cached + entr
-09C5: 05 A2                inc     auxr1                   ; active = dptr = ha
-09C7: 74 0D                mov     a,#fatfs_dir_buffer
-09C9: 12 0A 98             lcall   dptr_index      ; active = handle + 13
+0B10: 05 A2                inc     auxr1                   ; active = dptr = ha
+0B12: 74 11                mov     a,#fatfs_dir_buffer
+0B14: 12 0E 1C             lcall   dptr_index      ; active = handle + 13
                    
-09CC: 78 20                mov     r0,#32
-09CE: 12 0A A6             lcall   dptr_copy       ; copies 32 bytes; both poin
+0B17: 78 20                mov     r0,#32
+0B19: 12 0E 2A             lcall   dptr_copy       ; copies 32 bytes; both poin
                    
                            ; classify the entry — load first byte from the bu
                            ; dptr_copy, active = handle + 13 + 32. Reset to the
                            ; start.
-09D1: 8E 82                mov     dpl,r6
-09D3: 8F 83                mov     dph,r7
-09D5: 74 0D                mov     a,#fatfs_dir_buffer
-09D7: 12 0A 98             lcall   dptr_index      ; dptr = handle + 13
-09DA: E0                   movx    a,@dptr         ; first byte
+0B1C: 8E 82                mov     dpl,r6
+0B1E: 8F 83                mov     dph,r7
+0B20: 74 11                mov     a,#fatfs_dir_buffer
+0B22: 12 0E 1C             lcall   dptr_index      ; dptr = handle + 13
+0B25: E0                   movx    a,@dptr         ; first byte
                    
-09DB: 70 04                jnz     fatfs_dir_next__not_eod
+0B26: 70 04                jnz     fatfs_dir_next__not_eod
                            ; first byte == 0x00 → end of directory. Don't adv
-09DD: 7D 01                mov     r5,#1           ; status = 1
-09DF: 80 1B                sjmp    fatfs_dir_next__persist
+0B28: 7D 01                mov     r5,#1           ; status = 1
+0B2A: 80 1B                sjmp    fatfs_dir_next__persist
                    
                    fatfs_dir_next__not_eod:
-09E1: B4 E5 04             cjne    a,#0xE5,fatfs_dir_next__not_deleted
+0B2C: B4 E5 04             cjne    a,#0xE5,fatfs_dir_next__not_deleted
                            ; deleted entry: advance, loop
-09E4: 0C                   inc     r4
-09E5: 02 09 79             ljmp    fatfs_dir_next__loop
+0B2F: 0C                   inc     r4
+0B30: 02 0A C4             ljmp    fatfs_dir_next__loop
                    
                    fatfs_dir_next__not_deleted:
                            ; check attribute byte at offset 11 of the entry buf
-09E8: 8E 82                mov     dpl,r6
-09EA: 8F 83                mov     dph,r7
-09EC: 74 18                mov     a,#fatfs_dir_buffer+11
-09EE: 12 0A 98             lcall   dptr_index
-09F1: E0                   movx    a,@dptr
-09F2: B4 0F 04             cjne    a,#0x0F,fatfs_dir_next__valid
+0B33: 8E 82                mov     dpl,r6
+0B35: 8F 83                mov     dph,r7
+0B37: 74 1C                mov     a,#fatfs_dir_buffer+11
+0B39: 12 0E 1C             lcall   dptr_index
+0B3C: E0                   movx    a,@dptr
+0B3D: B4 0F 04             cjne    a,#0x0F,fatfs_dir_next__valid
                            ; LFN: advance, loop
-09F5: 0C                   inc     r4
-09F6: 02 09 79             ljmp    fatfs_dir_next__loop
+0B40: 0C                   inc     r4
+0B41: 02 0A C4             ljmp    fatfs_dir_next__loop
                    
                    fatfs_dir_next__valid:
                            ; valid short-name entry: consume it and return stat
-09F9: 0C                   inc     r4
-09FA: 7D 00                mov     r5,#0
+0B44: 0C                   inc     r4
+0B45: 7D 00                mov     r5,#0
                    
                    fatfs_dir_next__persist:
                            ; persist entry_idx (r4) into handle[12]
-09FC: 8E 82                mov     dpl,r6
-09FE: 8F 83                mov     dph,r7
-0A00: 74 0C                mov     a,#fatfs_dir_entry
-0A02: 12 0A 98             lcall   dptr_index
-0A05: EC                   mov     a,r4
-0A06: F0                   movx    @dptr,a
+0B47: 8E 82                mov     dpl,r6
+0B49: 8F 83                mov     dph,r7
+0B4B: 74 10                mov     a,#fatfs_dir_entry
+0B4D: 12 0E 1C             lcall   dptr_index
+0B50: EC                   mov     a,r4
+0B51: F0                   movx    @dptr,a
                    
                            ; set dptr' = handle + 13 (entry buffer) for the cal
-0A07: 05 A2                inc     auxr1
-0A09: 8E 82                mov     dpl,r6
-0A0B: 8F 83                mov     dph,r7
-0A0D: 74 0D                mov     a,#fatfs_dir_buffer
-0A0F: 12 0A 98             lcall   dptr_index
-0A12: 05 A2                inc     auxr1           ; back to main dptr
+0B52: 05 A2                inc     auxr1
+0B54: 8E 82                mov     dpl,r6
+0B56: 8F 83                mov     dph,r7
+0B58: 74 11                mov     a,#fatfs_dir_buffer
+0B5A: 12 0E 1C             lcall   dptr_index
+0B5D: 05 A2                inc     auxr1           ; back to main dptr
                    
                            ; restore handle pointer (caller's dptr) and registe
                            ; status into acc before popping r5 (which restores 
                            ; value).
-0A14: D0 83                pop     dph
-0A16: D0 82                pop     dpl
-0A18: D0 07                pop     7
-0A1A: D0 06                pop     6
-0A1C: ED                   mov     a,r5            ; status into return registe
-0A1D: D0 05                pop     5
-0A1F: D0 04                pop     4
-0A21: D0 03                pop     3
-0A23: D0 02                pop     2
-0A25: D0 01                pop     1
-0A27: D0 00                pop     0
-0A29: D0 F0                pop     b
-0A2B: 22                   ret
+0B5F: D0 83                pop     dph
+0B61: D0 82                pop     dpl
+0B63: D0 07                pop     7
+0B65: D0 06                pop     6
+0B67: ED                   mov     a,r5            ; status into return registe
+0B68: D0 05                pop     5
+0B6A: D0 04                pop     4
+0B6C: D0 03                pop     3
+0B6E: D0 02                pop     2
+0B70: D0 01                pop     1
+0B72: D0 00                pop     0
+0B74: D0 F0                pop     b
+0B76: 22                   ret
+                   
+                   ; *** fatfs/file.inc ***
+                   
+                   ; File handle. Extends the chain handle: chain header at off
+                   ; then size and current byte offset. One allocation.
+                   ;
+                   ; Layout (20 bytes):
+                   ;   bytes 0..11  chain handle (first cluster, current cluste
+                   ;   bytes 12..15 file size in bytes (uint32, from the dir en
+                   ;   bytes 16..19 current byte offset into the file (uint32)
+                   ;
+                   ; The 8.3 name passed to fatfs_file_open lives in xram — i
+                   ; 11 bytes, space-padded. Callers reading a name from the se
+                   ; port place it there directly; the test program writes a li
+                   ; into xram before calling.
+                   ;
+                   ; Internal iram scratch. Distinct from fatfs_chain_scratch_h
+                   ; (0x52..0x53), which ensure_block uses during nested calls.
+                   
+0B77:              .equ    fatfs_file_scratch_name,        0x54    ; ..0x55  na
+0B77:              .equ    fatfs_file_scratch_dir,         0x56    ; ..0x57  di
+0B77:              .equ    fatfs_file_scratch_file,        0x58    ; ..0x59  fi
+0B77:              .equ    fatfs_file_scratch_dst,         0x5A    ; ..0x5B  ds
+                   
+0B77:              .equ    fatfs_file_size_off,            12      ; ..15
+0B77:              .equ    fatfs_file_offset_off,          16      ; ..19
+0B77:              .equ    fatfs_file_size,                20
+                   
+                   
+                   ; >> char *{dptr} fatfs_file_open(char *{dptr} name) → sta
+                   
+                   ; Walk the root directory looking for an entry whose 11-byte
+                   ; matches the 11 bytes pointed to by `name` (in xram). On ma
+                   ; allocate a file handle, return its pointer in dptr with st
+                   ; If no entry matches, status is 1 and dptr is unspecified.
+                   
+                   fatfs_file_open:
+0B77: C0 F0                push    b
+0B79: C0 00                push    0
+0B7B: C0 01                push    1
+0B7D: C0 02                push    2
+0B7F: C0 03                push    3
+0B81: C0 04                push    4
+0B83: C0 05                push    5
+0B85: C0 06                push    6
+0B87: C0 07                push    7
+                   
+0B89: 85 82 54             mov     fatfs_file_scratch_name,dpl
+0B8C: 85 83 55             mov     fatfs_file_scratch_name+1,dph
+                   
+                           ; open a dir iterator on the root cluster
+0B8F: 85 50 82             mov     dpl,fatfs_info
+0B92: 85 51 83             mov     dph,fatfs_info+1
+0B95: 74 11                mov     a,#fatfs_info_root_dir
+0B97: 12 0E 1C             lcall   dptr_index
+0B9A: 12 0E 3D             lcall   dptr_read_32
+0B9D: 12 0A 5D             lcall   fatfs_dir_open          ; dptr = dir handle
+                   
+0BA0: 85 82 56             mov     fatfs_file_scratch_dir,dpl
+0BA3: 85 83 57             mov     fatfs_file_scratch_dir+1,dph
+                   
+                   fatfs_file_open__loop:
+0BA6: 85 56 82             mov     dpl,fatfs_file_scratch_dir
+0BA9: 85 57 83             mov     dph,fatfs_file_scratch_dir+1
+0BAC: 12 0A A3             lcall   fatfs_dir_next          ; status in a, dptr'
+0BAF: 60 03                jz      fatfs_file_open__ok
+0BB1: 02 0C 5E             ljmp    fatfs_file_open__not_found
+                   fatfs_file_open__ok:
+                   
+                           ; compare entry (dptr') with name (in iram). Make dp
+                           ; dptr' is already entry buffer.
+0BB4: 85 54 82             mov     dpl,fatfs_file_scratch_name
+0BB7: 85 55 83             mov     dph,fatfs_file_scratch_name+1
+0BBA: 78 0B                mov     r0,#11
+                   fatfs_file_open__cmp_loop:
+0BBC: E0                   movx    a,@dptr
+0BBD: F5 F0                mov     b,a
+0BBF: A3                   inc     dptr
+0BC0: 05 A2                inc     auxr1
+0BC2: E0                   movx    a,@dptr
+0BC3: A3                   inc     dptr
+0BC4: 05 A2                inc     auxr1
+0BC6: 65 F0                xrl     a,b
+0BC8: 70 DC                jnz     fatfs_file_open__loop   ; mismatch — try n
+0BCA: D8 F0                djnz    r0,fatfs_file_open__cmp_loop
+                   
+                           ; 11-byte match — pull first_cluster (entry[26..27
+                           ; entry[20..21] high) and file size (entry[28..31]).
+0BCC: 85 56 82             mov     dpl,fatfs_file_scratch_dir
+0BCF: 85 57 83             mov     dph,fatfs_file_scratch_dir+1
+0BD2: 74 2B                mov     a,#fatfs_dir_buffer+26
+0BD4: 12 0E 1C             lcall   dptr_index
+0BD7: E0                   movx    a,@dptr
+0BD8: F8                   mov     r0,a
+0BD9: A3                   inc     dptr
+0BDA: E0                   movx    a,@dptr
+0BDB: F9                   mov     r1,a
+                   
+0BDC: 85 56 82             mov     dpl,fatfs_file_scratch_dir
+0BDF: 85 57 83             mov     dph,fatfs_file_scratch_dir+1
+0BE2: 74 25                mov     a,#fatfs_dir_buffer+20
+0BE4: 12 0E 1C             lcall   dptr_index
+0BE7: E0                   movx    a,@dptr
+0BE8: FA                   mov     r2,a
+0BE9: A3                   inc     dptr
+0BEA: E0                   movx    a,@dptr
+0BEB: FB                   mov     r3,a
+                           ; r0-r3 = first_cluster
+                   
+0BEC: C0 00                push    0
+0BEE: C0 01                push    1
+0BF0: C0 02                push    2
+0BF2: C0 03                push    3
+0BF4: 78 14                mov     r0,#fatfs_file_size
+0BF6: 79 00                mov     r1,#0
+0BF8: 12 03 FF             lcall   memory_allocate
+0BFB: 85 82 58             mov     fatfs_file_scratch_file,dpl
+0BFE: 85 83 59             mov     fatfs_file_scratch_file+1,dph
+0C01: D0 03                pop     3
+0C03: D0 02                pop     2
+0C05: D0 01                pop     1
+0C07: D0 00                pop     0
+0C09: 12 08 48             lcall   fatfs_chain_init
+                   
+                           ; copy size from entry[28..31] into handle[12..15]
+0C0C: 85 56 82             mov     dpl,fatfs_file_scratch_dir
+0C0F: 85 57 83             mov     dph,fatfs_file_scratch_dir+1
+0C12: 74 2D                mov     a,#fatfs_dir_buffer+28
+0C14: 12 0E 1C             lcall   dptr_index
+0C17: 12 0E 3D             lcall   dptr_read_32            ; r0-r3 = size
+                   
+0C1A: 85 58 82             mov     dpl,fatfs_file_scratch_file
+0C1D: 85 59 83             mov     dph,fatfs_file_scratch_file+1
+0C20: 74 0C                mov     a,#fatfs_file_size_off
+0C22: 12 0E 1C             lcall   dptr_index
+0C25: 12 0E 4E             lcall   dptr_write_32
+                   
+                           ; zero handle[16..19] (offset)
+0C28: E4                   clr     a
+0C29: F8                   mov     r0,a
+0C2A: F9                   mov     r1,a
+0C2B: FA                   mov     r2,a
+0C2C: FB                   mov     r3,a
+0C2D: 85 58 82             mov     dpl,fatfs_file_scratch_file
+0C30: 85 59 83             mov     dph,fatfs_file_scratch_file+1
+0C33: 74 10                mov     a,#fatfs_file_offset_off
+0C35: 12 0E 1C             lcall   dptr_index
+0C38: 12 0E 4E             lcall   dptr_write_32
+                   
+                           ; close dir iter
+0C3B: 85 56 82             mov     dpl,fatfs_file_scratch_dir
+0C3E: 85 57 83             mov     dph,fatfs_file_scratch_dir+1
+0C41: 12 0A 8C             lcall   fatfs_dir_close
+                   
+0C44: 85 58 82             mov     dpl,fatfs_file_scratch_file
+0C47: 85 59 83             mov     dph,fatfs_file_scratch_file+1
+0C4A: E4                   clr     a
+                   
+0C4B: D0 07                pop     7
+0C4D: D0 06                pop     6
+0C4F: D0 05                pop     5
+0C51: D0 04                pop     4
+0C53: D0 03                pop     3
+0C55: D0 02                pop     2
+0C57: D0 01                pop     1
+0C59: D0 00                pop     0
+0C5B: D0 F0                pop     b
+0C5D: 22                   ret
+                   
+                   fatfs_file_open__not_found:
+0C5E: 85 56 82             mov     dpl,fatfs_file_scratch_dir
+0C61: 85 57 83             mov     dph,fatfs_file_scratch_dir+1
+0C64: 12 0A 8C             lcall   fatfs_dir_close
+0C67: 74 01                mov     a,#1
+0C69: D0 07                pop     7
+0C6B: D0 06                pop     6
+0C6D: D0 05                pop     5
+0C6F: D0 04                pop     4
+0C71: D0 03                pop     3
+0C73: D0 02                pop     2
+0C75: D0 01                pop     1
+0C77: D0 00                pop     0
+0C79: D0 F0                pop     b
+0C7B: 22                   ret
+                   
+                   
+                   ; >> void fatfs_file_close(char *{dptr} handle) <<
+                   
+                   ; Deinitialize the chain prefix and free the file handle.
+                   
+                   fatfs_file_close:
+0C7C: C0 E0                push    acc
+0C7E: C0 00                push    0
+0C80: C0 01                push    1
+                   
+0C82: 12 08 6F             lcall   fatfs_chain_deinit
+0C85: 78 14                mov     r0,#fatfs_file_size
+0C87: 79 00                mov     r1,#0
+0C89: 12 04 E0             lcall   memory_release
+                   
+0C8C: D0 01                pop     1
+0C8E: D0 00                pop     0
+0C90: D0 E0                pop     acc
+0C92: 22                   ret
+                   
+                   
+                   ; >> uint8{a} fatfs_file_read(char *{dptr} handle, uint8{a} 
+                   
+                   ; Read up to `n` bytes from the current file position into `
+                   ; advance the offset by the same amount. Returns the actual 
+                   ; in `a`.
+                   ;
+                   ; Per-call cap: at most `min(n, bytes-left-in-current-block,
+                   ; bytes-left-in-file)` bytes are copied. Callers wanting mor
+                   ; file_read repeatedly. Cluster boundaries inside the chain 
+                   ; handled by ensure_block transparently.
+                   
+                   fatfs_file_read:
+0C93: C0 F0                push    b
+0C95: C0 82                push    dpl             ; preserve handle pointer fo
+0C97: C0 83                push    dph
+0C99: C0 00                push    0
+0C9B: C0 01                push    1
+0C9D: C0 02                push    2
+0C9F: C0 03                push    3
+0CA1: C0 04                push    4
+0CA3: C0 05                push    5
+0CA5: C0 06                push    6
+0CA7: C0 07                push    7
+                   
+0CA9: 85 82 58             mov     fatfs_file_scratch_file,dpl
+0CAC: 85 83 59             mov     fatfs_file_scratch_file+1,dph
+                   
+                           ; Save dst (in dptr') to iram — ensure_block's new
+                           ; overwrites dptr' with the cached pointer, so we ne
+                           ; dst back in dptr_copy's active slot manually.
+0CAF: 05 A2                inc     auxr1
+0CB1: 85 82 5A             mov     fatfs_file_scratch_dst,dpl
+0CB4: 85 83 5B             mov     fatfs_file_scratch_dst+1,dph
+0CB7: 05 A2                inc     auxr1
+                   
+0CB9: F5 F0                mov     b,a             ; b = n (uint8)
+                   
+                           ; load offset into r4-r7 (via r0-r3 + xch)
+0CBB: 85 58 82             mov     dpl,fatfs_file_scratch_file
+0CBE: 85 59 83             mov     dph,fatfs_file_scratch_file+1
+0CC1: 74 10                mov     a,#fatfs_file_offset_off
+0CC3: 12 0E 1C             lcall   dptr_index
+0CC6: 12 0E 3D             lcall   dptr_read_32
+0CC9: 12 0E 0F             lcall   xch_r0123_r4567         ; r4-r7 = offset
+                   
+                           ; load size into r0-r3
+0CCC: 85 58 82             mov     dpl,fatfs_file_scratch_file
+0CCF: 85 59 83             mov     dph,fatfs_file_scratch_file+1
+0CD2: 74 0C                mov     a,#fatfs_file_size_off
+0CD4: 12 0E 1C             lcall   dptr_index
+0CD7: 12 0E 3D             lcall   dptr_read_32            ; r0-r3 = size
+                   
+                           ; remaining = size - offset
+0CDA: 12 0D A1             lcall   sub_32
+                   
+                           ; if remaining == 0, return 0
+0CDD: E8                   mov     a,r0
+0CDE: 49                   orl     a,r1
+0CDF: 4A                   orl     a,r2
+0CE0: 4B                   orl     a,r3
+0CE1: 70 04                jnz     fatfs_file_read__has_rem
+0CE3: E4                   clr     a
+0CE4: 02 0D 75             ljmp    fatfs_file_read__return
+                   
+                   fatfs_file_read__has_rem:
+                           ; cap remaining at n: if any high byte nonzero, rema
+                           ; > n (n is uint8), so the cap is n. Otherwise compa
+0CE7: E9                   mov     a,r1
+0CE8: 4A                   orl     a,r2
+0CE9: 4B                   orl     a,r3
+0CEA: 60 04                jz      fatfs_file_read__rem_low
+                           ; remaining > 255 → cap = n
+0CEC: E5 F0                mov     a,b
+0CEE: 80 0B                sjmp    fatfs_file_read__cap_done
+                   fatfs_file_read__rem_low:
+0CF0: E8                   mov     a,r0
+0CF1: C3                   clr     c
+0CF2: 95 F0                subb    a,b
+0CF4: 40 04                jc      fatfs_file_read__cap_r0
+0CF6: E5 F0                mov     a,b
+0CF8: 80 01                sjmp    fatfs_file_read__cap_done
+                   fatfs_file_read__cap_r0:
+0CFA: E8                   mov     a,r0
+                   fatfs_file_read__cap_done:
+0CFB: F5 F0                mov     b,a                     ; b = bytes_to_copy 
+0CFD: 70 04                jnz     fatfs_file_read__nonzero
+0CFF: E4                   clr     a
+0D00: 02 0D 75             ljmp    fatfs_file_read__return
+                   
+                   fatfs_file_read__nonzero:
+                           ; reload offset into r0-r3 (lost in sub_32)
+0D03: 85 58 82             mov     dpl,fatfs_file_scratch_file
+0D06: 85 59 83             mov     dph,fatfs_file_scratch_file+1
+0D09: 74 10                mov     a,#fatfs_file_offset_off
+0D0B: 12 0E 1C             lcall   dptr_index
+0D0E: 12 0E 3D             lcall   dptr_read_32            ; r0-r3 = offset
+                   
+                           ; cache offset_in_block (low 9 bits = r0 + (r1 & 1) 
+                           ; later dptr adjustment.
+0D11: C0 00                push    0                       ; offset_in_block lo
+0D13: E9                   mov     a,r1
+0D14: 54 01                anl     a,#0x01
+0D16: C0 E0                push    acc                     ; offset_in_block hi
+                   
+                           ; block_in_chain = offset >> 9
+0D18: 74 09                mov     a,#9
+0D1A: 12 0D D3             lcall   shr_32                  ; r0-r3 = block_in_c
+                   
+                           ; ensure the block is loaded. New contract: dptr (ha
+                           ; preserved; dptr' returns the borrowed cached point
+0D1D: 85 58 82             mov     dpl,fatfs_file_scratch_file
+0D20: 85 59 83             mov     dph,fatfs_file_scratch_file+1
+0D23: 12 08 F3             lcall   fatfs_chain_ensure_block
+                   
+                           ; Advance dptr' (cached) by offset_in_block.
+0D26: 05 A2                inc     auxr1                   ; switch to dptr' = 
+0D28: D0 E0                pop     acc                     ; high bit
+0D2A: FC                   mov     r4,a
+0D2B: D0 E0                pop     acc                     ; low byte
+0D2D: 25 82                add     a,dpl
+0D2F: F5 82                mov     dpl,a
+0D31: EC                   mov     a,r4
+0D32: 35 83                addc    a,dph
+0D34: F5 83                mov     dph,a
+                           ; dptr' (active) = cached + offset_in_block
+                   
+                           ; For dptr_copy we need active = dst, inactive = src
+                           ; back to the handle slot and load dst from scratch 
+                           ; clobbered when ensure_block wrote cached into the 
+0D36: 05 A2                inc     auxr1
+0D38: 85 5A 82             mov     dpl,fatfs_file_scratch_dst
+0D3B: 85 5B 83             mov     dph,fatfs_file_scratch_dst+1
+                   
+0D3E: E5 F0                mov     a,b
+0D40: F8                   mov     r0,a
+0D41: 12 0E 2A             lcall   dptr_copy
+                           ; slot 0 (active) = dst + b, slot 1 = cached + offse
+                   
+                           ; Restore dptr' (slot 1) to the caller's original ds
+                           ; to preserve dptr' per the calling convention.
+0D44: 05 A2                inc     auxr1
+0D46: 85 5A 82             mov     dpl,fatfs_file_scratch_dst
+0D49: 85 5B 83             mov     dph,fatfs_file_scratch_dst+1
+0D4C: 05 A2                inc     auxr1
+                   
+                           ; offset += b (32-bit add of (b, 0, 0, 0))
+0D4E: 85 58 82             mov     dpl,fatfs_file_scratch_file
+0D51: 85 59 83             mov     dph,fatfs_file_scratch_file+1
+0D54: 74 10                mov     a,#fatfs_file_offset_off
+0D56: 12 0E 1C             lcall   dptr_index
+0D59: C0 82                push    dpl
+0D5B: C0 83                push    dph
+0D5D: 12 0E 3D             lcall   dptr_read_32            ; r0-r3 = old offset
+0D60: E5 F0                mov     a,b
+0D62: FC                   mov     r4,a
+0D63: 7D 00                mov     r5,#0
+0D65: 7E 00                mov     r6,#0
+0D67: 7F 00                mov     r7,#0
+0D69: 12 0D 90             lcall   add_32
+0D6C: D0 83                pop     dph
+0D6E: D0 82                pop     dpl
+0D70: 12 0E 4E             lcall   dptr_write_32
+                   
+                           ; return value = b
+0D73: E5 F0                mov     a,b
+                   
+                   fatfs_file_read__return:
+                           ; a = return value; preserve through the pops
+0D75: F5 F0                mov     b,a             ; stash in b (caller's b is 
+0D77: D0 07                pop     7
+0D79: D0 06                pop     6
+0D7B: D0 05                pop     5
+0D7D: D0 04                pop     4
+0D7F: D0 03                pop     3
+0D81: D0 02                pop     2
+0D83: D0 01                pop     1
+0D85: D0 00                pop     0
+0D87: D0 83                pop     dph
+0D89: D0 82                pop     dpl
+0D8B: E5 F0                mov     a,b
+0D8D: D0 F0                pop     b
+0D8F: 22                   ret
                    
                    
                    ; *** math/arith32.inc ***
@@ -2212,26 +2969,26 @@
                    ; 32 bit addition, x := x + y
                    
                    add_32:
-0A2C: C0 E0                push    acc
+0D90: C0 E0                push    acc
                    
-0A2E: E8                   mov     a,r0
-0A2F: 2C                   add     a,r4
-0A30: F8                   mov     r0,a
+0D92: E8                   mov     a,r0
+0D93: 2C                   add     a,r4
+0D94: F8                   mov     r0,a
                    
-0A31: E9                   mov     a,r1
-0A32: 3D                   addc    a,r5
-0A33: F9                   mov     r1,a
+0D95: E9                   mov     a,r1
+0D96: 3D                   addc    a,r5
+0D97: F9                   mov     r1,a
                    
-0A34: EA                   mov     a,r2
-0A35: 3E                   addc    a,r6
-0A36: FA                   mov     r2,a
+0D98: EA                   mov     a,r2
+0D99: 3E                   addc    a,r6
+0D9A: FA                   mov     r2,a
                    
-0A37: EB                   mov     a,r3
-0A38: 3F                   addc    a,r7
-0A39: FB                   mov     r3,a
+0D9B: EB                   mov     a,r3
+0D9C: 3F                   addc    a,r7
+0D9D: FB                   mov     r3,a
                    
-0A3A: D0 E0                pop     acc
-0A3C: 22                   ret
+0D9E: D0 E0                pop     acc
+0DA0: 22                   ret
                    
                    
                    ; >> uint32{r0-r3} sub_32(uint32{r0-r3} x, uint32{r4-r7} y) 
@@ -2239,28 +2996,28 @@
                    ; 32 bit subtraction, x := x - y
                    
                    sub_32:
-0A3D: C0 E0                push    acc
+0DA1: C0 E0                push    acc
                    
-0A3F: C3                   clr     c
+0DA3: C3                   clr     c
                    
-0A40: E8                   mov     a,r0
-0A41: 9C                   subb    a,r4
-0A42: F8                   mov     r0,a
+0DA4: E8                   mov     a,r0
+0DA5: 9C                   subb    a,r4
+0DA6: F8                   mov     r0,a
                    
-0A43: E9                   mov     a,r1
-0A44: 9D                   subb    a,r5
-0A45: F9                   mov     r1,a
+0DA7: E9                   mov     a,r1
+0DA8: 9D                   subb    a,r5
+0DA9: F9                   mov     r1,a
                    
-0A46: EA                   mov     a,r2
-0A47: 9E                   subb    a,r6
-0A48: FA                   mov     r2,a
+0DAA: EA                   mov     a,r2
+0DAB: 9E                   subb    a,r6
+0DAC: FA                   mov     r2,a
                    
-0A49: EB                   mov     a,r3
-0A4A: 9F                   subb    a,r7
-0A4B: FB                   mov     r3,a
+0DAD: EB                   mov     a,r3
+0DAE: 9F                   subb    a,r7
+0DAF: FB                   mov     r3,a
                    
-0A4C: D0 E0                pop     acc
-0A4E: 22                   ret
+0DB0: D0 E0                pop     acc
+0DB2: 22                   ret
                    
                    
                    ; >> uint32{r0-r3} shl_32(uint32{r0-r3} value, uint8{a} coun
@@ -2269,35 +3026,72 @@
                    ; Equivalent to: value <<= count
                    
                    shl_32:
-0A4F: C0 E0                push    acc
-0A51: C0 F0                push    b
+0DB3: C0 E0                push    acc
+0DB5: C0 F0                push    b
                    
-0A53: F5 F0                mov     b,a                     ; shift count to b f
+0DB7: F5 F0                mov     b,a                     ; shift count to b f
                    shl_32__loop:
-0A55: E5 F0                mov     a,b
-0A57: 60 11                jz      shl_32__done            ; when b==0, done
-0A59: 15 F0                dec     b                       ; decrement shift co
+0DB9: E5 F0                mov     a,b
+0DBB: 60 11                jz      shl_32__done            ; when b==0, done
+0DBD: 15 F0                dec     b                       ; decrement shift co
                            
                            ; Shift r0-r3 left by 1 position
-0A5B: C3                   clr     c
-0A5C: E8                   mov     a,r0
-0A5D: 33                   rlc     a
-0A5E: F8                   mov     r0,a
-0A5F: E9                   mov     a,r1
-0A60: 33                   rlc     a
-0A61: F9                   mov     r1,a
-0A62: EA                   mov     a,r2
-0A63: 33                   rlc     a
-0A64: FA                   mov     r2,a
-0A65: EB                   mov     a,r3
-0A66: 33                   rlc     a
-0A67: FB                   mov     r3,a
-0A68: 80 EB                sjmp    shl_32__loop
+0DBF: C3                   clr     c
+0DC0: E8                   mov     a,r0
+0DC1: 33                   rlc     a
+0DC2: F8                   mov     r0,a
+0DC3: E9                   mov     a,r1
+0DC4: 33                   rlc     a
+0DC5: F9                   mov     r1,a
+0DC6: EA                   mov     a,r2
+0DC7: 33                   rlc     a
+0DC8: FA                   mov     r2,a
+0DC9: EB                   mov     a,r3
+0DCA: 33                   rlc     a
+0DCB: FB                   mov     r3,a
+0DCC: 80 EB                sjmp    shl_32__loop
                    
                    shl_32__done:
-0A6A: D0 F0                pop     b
-0A6C: D0 E0                pop     acc
-0A6E: 22                   ret
+0DCE: D0 F0                pop     b
+0DD0: D0 E0                pop     acc
+0DD2: 22                   ret
+                   
+                   
+                   ; >> uint32{r0-r3} shr_32(uint32{r0-r3} value, uint8{a} coun
+                   
+                   ; Shift 32-bit value right by count bits (count in a).
+                   ; Equivalent to: value >>= count (unsigned)
+                   
+                   shr_32:
+0DD3: C0 E0                push    acc
+0DD5: C0 F0                push    b
+                   
+0DD7: F5 F0                mov     b,a                     ; shift count to b f
+                   shr_32__loop:
+0DD9: E5 F0                mov     a,b
+0DDB: 60 11                jz      shr_32__done            ; when b==0, done
+0DDD: 15 F0                dec     b                       ; decrement shift co
+                   
+                           ; Shift r0-r3 right by 1 position (high bytes first)
+0DDF: C3                   clr     c
+0DE0: EB                   mov     a,r3
+0DE1: 13                   rrc     a
+0DE2: FB                   mov     r3,a
+0DE3: EA                   mov     a,r2
+0DE4: 13                   rrc     a
+0DE5: FA                   mov     r2,a
+0DE6: E9                   mov     a,r1
+0DE7: 13                   rrc     a
+0DE8: F9                   mov     r1,a
+0DE9: E8                   mov     a,r0
+0DEA: 13                   rrc     a
+0DEB: F8                   mov     r0,a
+0DEC: 80 EB                sjmp    shr_32__loop
+                   
+                   shr_32__done:
+0DEE: D0 F0                pop     b
+0DF0: D0 E0                pop     acc
+0DF2: 22                   ret
                    
                    
                    ; *** util/delay.inc ***
@@ -2309,8 +3103,8 @@
                    ; Actual delay is slightly longer.
                    delay_ms_8:
                    
-0A6F: C0 E0                push    acc
-0A71: C0 F0                push    b
+0DF3: C0 E0                push    acc
+0DF5: C0 F0                push    b
                    
                            ; This loop is repeated a times (256 if a is zero).
                            ; The goal is to stretch each repeat to one millisec
@@ -2318,20 +3112,20 @@
                            ; Each millisecond is 20k clock periods.
                            ; In X2 mode, a machine cycle is 6 clock periods.
                            ; Therefore, a millisecond is approx. 3334 machine c
-0A73: 75 F0 B9             mov     b,#185  ; n = 185       cycles:   2
+0DF7: 75 F0 B9             mov     b,#185  ; n = 185       cycles:   2
                    delay_ms_8__loop2:
-0A76: C0 E0                push    acc                     ; n*2 = 370
-0A78: C0 F0                push    b                       ; n*2 = 370
-0A7A: A4                   mul     ab                      ; n*4 = 740
-0A7B: A4                   mul     ab                      ; n*4 = 740
-0A7C: D0 F0                pop     b                       ; n*2 = 370
-0A7E: D0 E0                pop     acc                     ; n*2 = 370
-0A80: D5 F0 F3             djnz    b,delay_ms_8__loop2     ; n*2 = 370
-0A83: D5 E0 ED             djnz    acc,delay_ms_8__loop1   ;         2
+0DFA: C0 E0                push    acc                     ; n*2 = 370
+0DFC: C0 F0                push    b                       ; n*2 = 370
+0DFE: A4                   mul     ab                      ; n*4 = 740
+0DFF: A4                   mul     ab                      ; n*4 = 740
+0E00: D0 F0                pop     b                       ; n*2 = 370
+0E02: D0 E0                pop     acc                     ; n*2 = 370
+0E04: D5 F0 F3             djnz    b,delay_ms_8__loop2     ; n*2 = 370
+0E07: D5 E0 ED             djnz    acc,delay_ms_8__loop1   ;         2
                                                            ; Sum: 3334
-0A86: D0 F0                pop     b
-0A88: D0 E0                pop     acc
-0A8A: 22                   ret
+0E0A: D0 F0                pop     b
+0E0C: D0 E0                pop     acc
+0E0E: 22                   ret
                    
                    ; *** util/xch.inc ***
                    
@@ -2341,23 +3135,23 @@
                    
                    xch_r0123_r4567:
                            ; r0 <-> r4
-0A8B: C8                   xch     a,      r0
-0A8C: CC                   xch     a,      r4
-0A8D: C8                   xch     a,      r0
+0E0F: C8                   xch     a,      r0
+0E10: CC                   xch     a,      r4
+0E11: C8                   xch     a,      r0
                            ; r1 <-> r5
-0A8E: C9                   xch     a,      r1
-0A8F: CD                   xch     a,      r5
-0A90: C9                   xch     a,      r1
+0E12: C9                   xch     a,      r1
+0E13: CD                   xch     a,      r5
+0E14: C9                   xch     a,      r1
                            ; r2 <-> r6
-0A91: CA                   xch     a,      r2
-0A92: CE                   xch     a,      r6
-0A93: CA                   xch     a,      r2
+0E15: CA                   xch     a,      r2
+0E16: CE                   xch     a,      r6
+0E17: CA                   xch     a,      r2
                            ; r3 <-> r7
-0A94: CB                   xch     a,      r3
-0A95: CF                   xch     a,      r7
-0A96: CB                   xch     a,      r3
+0E18: CB                   xch     a,      r3
+0E19: CF                   xch     a,      r7
+0E1A: CB                   xch     a,      r3
                            ; a remains unchanged
-0A97: 22                   ret
+0E1B: 22                   ret
                    
                    ; *** util/dptr.inc ***
                    
@@ -2367,14 +3161,14 @@
                    ; Useful for accessing structure fields at known offsets.
                    
                    dptr_index:
-0A98: C0 E0                push    acc
-0A9A: 25 82                add     a,dpl
-0A9C: F5 82                mov     dpl,a
-0A9E: E4                   clr     a
-0A9F: 35 83                addc    a,dph
-0AA1: F5 83                mov     dph,a
-0AA3: D0 E0                pop     acc
-0AA5: 22                   ret
+0E1C: C0 E0                push    acc
+0E1E: 25 82                add     a,dpl
+0E20: F5 82                mov     dpl,a
+0E22: E4                   clr     a
+0E23: 35 83                addc    a,dph
+0E25: F5 83                mov     dph,a
+0E27: D0 E0                pop     acc
+0E29: 22                   ret
                    
                    
                    ; >> void dptr_copy(uint8{r0} n, char *{dptr} &dst, char *{d
@@ -2384,21 +3178,21 @@
                    ; first dst/src bytes after the copied blocks.
                    
                    dptr_copy:
-0AA6: C0 E0                push    acc
-0AA8: C0 00                push    0
+0E2A: C0 E0                push    acc
+0E2C: C0 00                push    0
                    
                    dptr_copy__loop:
-0AAA: 05 A2                inc     auxr1
-0AAC: E0                   movx    a,@dptr
-0AAD: A3                   inc     dptr
-0AAE: 05 A2                inc     auxr1
-0AB0: F0                   movx    @dptr,a
-0AB1: A3                   inc     dptr
-0AB2: D8 F6                djnz    r0,dptr_copy__loop
+0E2E: 05 A2                inc     auxr1
+0E30: E0                   movx    a,@dptr
+0E31: A3                   inc     dptr
+0E32: 05 A2                inc     auxr1
+0E34: F0                   movx    @dptr,a
+0E35: A3                   inc     dptr
+0E36: D8 F6                djnz    r0,dptr_copy__loop
                    
-0AB4: D0 00                pop     0
-0AB6: D0 E0                pop     acc
-0AB8: 22                   ret
+0E38: D0 00                pop     0
+0E3A: D0 E0                pop     acc
+0E3C: 22                   ret
                    
                    
                    ; >> uint32{r0-r3} dptr_read_32(uint32 *{dptr}&addr) <<
@@ -2407,26 +3201,26 @@
                    ; Data pointer is returned in advanced position (first byte 
                    
                    dptr_read_32:
-0AB9: C0 E0                push    acc
+0E3D: C0 E0                push    acc
                    
-0ABB: E0                   movx    a,@dptr
-0ABC: F8                   mov     r0,a
-0ABD: A3                   inc     dptr
+0E3F: E0                   movx    a,@dptr
+0E40: F8                   mov     r0,a
+0E41: A3                   inc     dptr
                    
-0ABE: E0                   movx    a,@dptr
-0ABF: F9                   mov     r1,a
-0AC0: A3                   inc     dptr
+0E42: E0                   movx    a,@dptr
+0E43: F9                   mov     r1,a
+0E44: A3                   inc     dptr
                    
-0AC1: E0                   movx    a,@dptr
-0AC2: FA                   mov     r2,a
-0AC3: A3                   inc     dptr
+0E45: E0                   movx    a,@dptr
+0E46: FA                   mov     r2,a
+0E47: A3                   inc     dptr
                    
-0AC4: E0                   movx    a,@dptr
-0AC5: FB                   mov     r3,a
-0AC6: A3                   inc     dptr
+0E48: E0                   movx    a,@dptr
+0E49: FB                   mov     r3,a
+0E4A: A3                   inc     dptr
                    
-0AC7: D0 E0                pop     acc
-0AC9: 22                   ret
+0E4B: D0 E0                pop     acc
+0E4D: 22                   ret
                    
                    
                    ; >> void dptr_write_32(uint32 *{dptr}&addr, uint32{r0-r3} v
@@ -2435,26 +3229,26 @@
                    ; Data pointer is returned in advanced position (first byte 
                    
                    dptr_write_32:
-0ACA: C0 E0                push    acc
+0E4E: C0 E0                push    acc
                    
-0ACC: E8                   mov     a,r0
-0ACD: F0                   movx    @dptr,a
-0ACE: A3                   inc     dptr
+0E50: E8                   mov     a,r0
+0E51: F0                   movx    @dptr,a
+0E52: A3                   inc     dptr
                    
-0ACF: E9                   mov     a,r1
-0AD0: F0                   movx    @dptr,a
-0AD1: A3                   inc     dptr
+0E53: E9                   mov     a,r1
+0E54: F0                   movx    @dptr,a
+0E55: A3                   inc     dptr
                    
-0AD2: EA                   mov     a,r2
-0AD3: F0                   movx    @dptr,a
-0AD4: A3                   inc     dptr
+0E56: EA                   mov     a,r2
+0E57: F0                   movx    @dptr,a
+0E58: A3                   inc     dptr
                    
-0AD5: EB                   mov     a,r3
-0AD6: F0                   movx    @dptr,a
-0AD7: A3                   inc     dptr
+0E59: EB                   mov     a,r3
+0E5A: F0                   movx    @dptr,a
+0E5B: A3                   inc     dptr
                    
-0AD8: D0 E0                pop     acc
-0ADA: 22                   ret
+0E5C: D0 E0                pop     acc
+0E5E: 22                   ret
                    
                    
                    ; *** print/char.inc ***
@@ -2465,9 +3259,9 @@
                    ; Indirect call to function behind OUT pointer.
                    
                    print_char:
-0ADB: C0 32                push    OUT
-0ADD: C0 33                push    OUT+1
-0ADF: 22                   ret
+0E5F: C0 32                push    OUT
+0E61: C0 33                push    OUT+1
+0E63: 22                   ret
                    
                    ; *** print/hex.inc ***
                    
@@ -2476,50 +3270,50 @@
                    ; Print hexadecimal number from accumulator.
                    
                    print_hex_8:
-0AE0: C4                   swap    a       ; high nibble first
-0AE1: 51 E4                acall   print_hex_8__nibble
-0AE3: C4                   swap    a
+0E64: C4                   swap    a       ; high nibble first
+0E65: D1 68                acall   print_hex_8__nibble
+0E67: C4                   swap    a
                    print_hex_8__nibble:
-0AE4: C0 E0                push    ACC
-0AE6: 54 0F                anl     a,      #0x0f
-0AE8: 24 90                add     a,      #0x90
-0AEA: D4                   da      a
-0AEB: 34 40                addc    a,      #0x40
-0AED: D4                   da      a
-0AEE: 44 20                orl     a,      #0x20   ; lower case
-0AF0: 51 DB                acall   print_char
-0AF2: D0 E0                pop     ACC
-0AF4: 22                   ret
+0E68: C0 E0                push    ACC
+0E6A: 54 0F                anl     a,      #0x0f
+0E6C: 24 90                add     a,      #0x90
+0E6E: D4                   da      a
+0E6F: 34 40                addc    a,      #0x40
+0E71: D4                   da      a
+0E72: 44 20                orl     a,      #0x20   ; lower case
+0E74: D1 5F                acall   print_char
+0E76: D0 E0                pop     ACC
+0E78: 22                   ret
                    
                    ; >> void print_hex_16(int r0r1) <<
                    
                    ; Print hexadecimal number from r0-r1.
                    
                    print_hex_16:
-0AF5: C0 E0                push    ACC
-0AF7: E9                   mov     a,      r1      ; MSB first
-0AF8: 51 E0                acall   print_hex_8
-0AFA: E8                   mov     a,      r0      ; LSB second
-0AFB: 51 E0                acall   print_hex_8
-0AFD: D0 E0                pop     ACC
-0AFF: 22                   ret
+0E79: C0 E0                push    ACC
+0E7B: E9                   mov     a,      r1      ; MSB first
+0E7C: D1 64                acall   print_hex_8
+0E7E: E8                   mov     a,      r0      ; LSB second
+0E7F: D1 64                acall   print_hex_8
+0E81: D0 E0                pop     ACC
+0E83: 22                   ret
                    
                    ; >> void print_hex_32(long r0r1r2r3) <<
                    
                    ; Print hexadecimal number from r0-r3.
                    
                    print_hex_32:
-0B00: C0 E0                push    ACC
-0B02: EB                   mov     a,      r3      ; MSB first
-0B03: 51 E0                acall   print_hex_8
-0B05: EA                   mov     a,      r2
-0B06: 51 E0                acall   print_hex_8
-0B08: E9                   mov     a,      r1
-0B09: 51 E0                acall   print_hex_8
-0B0B: E8                   mov     a,      r0      ; LSB last
-0B0C: 51 E0                acall   print_hex_8
-0B0E: D0 E0                pop     ACC
-0B10: 22                   ret
+0E84: C0 E0                push    ACC
+0E86: EB                   mov     a,      r3      ; MSB first
+0E87: D1 64                acall   print_hex_8
+0E89: EA                   mov     a,      r2
+0E8A: D1 64                acall   print_hex_8
+0E8C: E9                   mov     a,      r1
+0E8D: D1 64                acall   print_hex_8
+0E8F: E8                   mov     a,      r0      ; LSB last
+0E90: D1 64                acall   print_hex_8
+0E92: D0 E0                pop     ACC
+0E94: 22                   ret
                    
                    ; *** print/text.inc ***
                    
@@ -2529,23 +3323,23 @@
                    ; Aborts if no null terminator is found after 256 bytes.
                    
                    print_text:
-0B11: C0 E0                push    ACC
-0B13: C0 00                push    0
+0E95: C0 E0                push    ACC
+0E97: C0 00                push    0
                    
-0B15: E4                   clr     a
-0B16: F8                   mov     r0,     a
+0E99: E4                   clr     a
+0E9A: F8                   mov     r0,     a
                    print_text__loop:
-0B17: 93                   movc    a,      @dptr+a
-0B18: 60 06                jz      print_text__end
-0B1A: 51 DB                acall   print_char
-0B1C: 08                   inc     r0
-0B1D: E8                   mov     a,      r0
-0B1E: 70 F7                jnz     print_text__loop
+0E9B: 93                   movc    a,      @dptr+a
+0E9C: 60 06                jz      print_text__end
+0E9E: D1 5F                acall   print_char
+0EA0: 08                   inc     r0
+0EA1: E8                   mov     a,      r0
+0EA2: 70 F7                jnz     print_text__loop
                    
                    print_text__end:
-0B20: D0 00                pop     0
-0B22: D0 E0                pop     ACC
-0B24: 22                   ret
+0EA4: D0 00                pop     0
+0EA6: D0 E0                pop     ACC
+0EA8: 22                   ret
                    
                    
                    ; *** stream/xram_read.inc ***
@@ -2556,25 +3350,25 @@
                    ; 16 bit value of the stream pointer is used and incremented
                    
                    stream_xram_read:
-0B25: C0 8E                push    auxr
-0B27: C0 82                push    dpl
-0B29: C0 83                push    dph
+0EA9: C0 8E                push    auxr
+0EAB: C0 82                push    dpl
+0EAD: C0 83                push    dph
                    
-0B2B: 53 8E E1             anl     auxr,#0xe1      ; clear extram, xrs0-2
-0B2E: 43 8E 10             orl     auxr,#0x10      ; set xrs2 (size 1792 bytes)
+0EAF: 53 8E E1             anl     auxr,#0xe1      ; clear extram, xrs0-2
+0EB2: 43 8E 10             orl     auxr,#0x10      ; set xrs2 (size 1792 bytes)
                    
-0B31: 85 34 82             mov     dpl,stream_in
-0B34: 85 35 83             mov     dph,stream_in+1
+0EB5: 85 34 82             mov     dpl,stream_in
+0EB8: 85 35 83             mov     dph,stream_in+1
                    
-0B37: E0                   movx    a,@dptr
-0B38: A3                   inc     dptr
-0B39: 85 82 34             mov     stream_in,dpl
-0B3C: 85 83 35             mov     stream_in+1,dph
+0EBB: E0                   movx    a,@dptr
+0EBC: A3                   inc     dptr
+0EBD: 85 82 34             mov     stream_in,dpl
+0EC0: 85 83 35             mov     stream_in+1,dph
                    
-0B3F: D0 83                pop     dph
-0B41: D0 82                pop     dpl
-0B43: D0 8E                pop     auxr
-0B45: 22                   ret
+0EC3: D0 83                pop     dph
+0EC5: D0 82                pop     dpl
+0EC7: D0 8E                pop     auxr
+0EC9: 22                   ret
                    
                    ; *** read/char.inc ***
                    
@@ -2584,9 +3378,9 @@
                    ; Indirect call to function behind IN pointer.
                    
                    read_char:
-0B46: C0 30                push    IN
-0B48: C0 31                push    IN+1
-0B4A: 22                   ret
+0ECA: C0 30                push    IN
+0ECC: C0 31                push    IN+1
+0ECE: 22                   ret
                    
                    ; *** util/dump.inc ***
                    
@@ -2598,13 +3392,13 @@
                    ; r0-r3 contains next address upon exit.
                    
                    dump:
-0B4B: C0 F0                push    b
-0B4D: C0 E0                push    acc
-0B4F: F5 F0                mov     b,      a
-0B51: C0 04                push    4
-0B53: C0 05                push    5
-0B55: C0 06                push    6
-0B57: C0 07                push    7
+0ECF: C0 F0                push    b
+0ED1: C0 E0                push    acc
+0ED3: F5 F0                mov     b,      a
+0ED5: C0 04                push    4
+0ED7: C0 05                push    5
+0ED9: C0 06                push    6
+0EDB: C0 07                push    7
                    
                            ; b: total bytes remaining
                            ; r0: buffer pointer
@@ -2612,146 +3406,146 @@
                            ; r2: print loop counter
                    
                            ; r4-7: address label
-0B59: 51 8B                acall   xch_r0123_r4567
+0EDD: D1 0F                acall   xch_r0123_r4567
                    
                            ; allocate 16 byte array on stack
-0B5B: E5 81                mov     a,      sp
-0B5D: F8                   mov     r0,     a
-0B5E: 24 10                add     a,      #16
-0B60: F5 81                mov     sp,     a
+0EDF: E5 81                mov     a,      sp
+0EE1: F8                   mov     r0,     a
+0EE2: 24 10                add     a,      #16
+0EE4: F5 81                mov     sp,     a
                    
                    dump__line_loop:
                            ; read into buffer
-0B62: 79 10                mov     r1,     #16
+0EE6: 79 10                mov     r1,     #16
                    dump__read_loop:
-0B64: 71 46                acall   read_char
-0B66: 08                   inc     r0
-0B67: F6                   mov     @r0,    a
-0B68: D5 F0 03             djnz    b,      dump__read_continue
-0B6B: 19                   dec     r1
-0B6C: 80 02                sjmp    dump__read_end
+0EE8: D1 CA                acall   read_char
+0EEA: 08                   inc     r0
+0EEB: F6                   mov     @r0,    a
+0EEC: D5 F0 03             djnz    b,      dump__read_continue
+0EEF: 19                   dec     r1
+0EF0: 80 02                sjmp    dump__read_end
                    dump__read_continue:
-0B6E: D9 F4                djnz    r1,     dump__read_loop
+0EF2: D9 F4                djnz    r1,     dump__read_loop
                    dump__read_end:
                    
                            ; print address column
-0B70: 51 8B                acall   xch_r0123_r4567
-0B72: 71 00                acall   print_hex_32
-0B74: 51 8B                acall   xch_r0123_r4567
-0B76: 74 3A                mov     a,      #':'
-0B78: 51 DB                acall   print_char
+0EF4: D1 0F                acall   xch_r0123_r4567
+0EF6: D1 84                acall   print_hex_32
+0EF8: D1 0F                acall   xch_r0123_r4567
+0EFA: 74 3A                mov     a,      #':'
+0EFC: D1 5F                acall   print_char
                    
                            ; if r1 is nonzero here, we have a shorter line
                            ; the value in r1 is the number of padding bytes
                    
                            ; wind back pointer
-0B7A: E8                   mov     a,      r0
-0B7B: 24 F0                add     a,      #-16
-0B7D: 29                   add     a,      r1
-0B7E: F8                   mov     r0,     a
+0EFE: E8                   mov     a,      r0
+0EFF: 24 F0                add     a,      #-16
+0F01: 29                   add     a,      r1
+0F02: F8                   mov     r0,     a
                    
                            ; print hex
-0B7F: 7A 10                mov     r2,     #16
+0F03: 7A 10                mov     r2,     #16
                    dump__print_hex_loop:
-0B81: 08                   inc     r0
-0B82: EA                   mov     a,      r2
-0B83: 54 03                anl     a,      #3      ; mod 4
-0B85: 70 04                jnz     dump__print_hex_no_gap
-0B87: 74 20                mov     a,      #' ' ; gap after every 4 bytes
-0B89: 51 DB                acall   print_char
+0F05: 08                   inc     r0
+0F06: EA                   mov     a,      r2
+0F07: 54 03                anl     a,      #3      ; mod 4
+0F09: 70 04                jnz     dump__print_hex_no_gap
+0F0B: 74 20                mov     a,      #' ' ; gap after every 4 bytes
+0F0D: D1 5F                acall   print_char
                    dump__print_hex_no_gap:
-0B8B: EA                   mov     a,      r2
-0B8C: D3                   setb    c
-0B8D: 99                   subb    a,      r1
-0B8E: 50 08                jnc     dump__print_hex_no_padding
-0B90: 74 20                mov     a,      #' ' ; padding for shorter line
-0B92: 51 DB                acall   print_char
-0B94: 51 DB                acall   print_char
-0B96: 80 03                sjmp    dump__print_hex_next
+0F0F: EA                   mov     a,      r2
+0F10: D3                   setb    c
+0F11: 99                   subb    a,      r1
+0F12: 50 08                jnc     dump__print_hex_no_padding
+0F14: 74 20                mov     a,      #' ' ; padding for shorter line
+0F16: D1 5F                acall   print_char
+0F18: D1 5F                acall   print_char
+0F1A: 80 03                sjmp    dump__print_hex_next
                    dump__print_hex_no_padding:
-0B98: E6                   mov     a,      @r0
-0B99: 51 E0                acall   print_hex_8
+0F1C: E6                   mov     a,      @r0
+0F1D: D1 64                acall   print_hex_8
                    dump__print_hex_next:
-0B9B: 74 20                mov     a,      #' ' ; space between bytes
-0B9D: 51 DB                acall   print_char
-0B9F: DA E0                djnz    r2,     dump__print_hex_loop
+0F1F: 74 20                mov     a,      #' ' ; space between bytes
+0F21: D1 5F                acall   print_char
+0F23: DA E0                djnz    r2,     dump__print_hex_loop
                    
                            ; wind back again
-0BA1: E8                   mov     a,      r0
-0BA2: 24 F0                add     a,      #-16
-0BA4: F8                   mov     r0,     a
+0F25: E8                   mov     a,      r0
+0F26: 24 F0                add     a,      #-16
+0F28: F8                   mov     r0,     a
                    
                            ; print ascii
-0BA5: 74 20                mov     a,      #' '
-0BA7: 51 DB                acall   print_char
-0BA9: 74 7C                mov     a,      #'|'
-0BAB: 51 DB                acall   print_char
-0BAD: 74 10                mov     a,      #16
-0BAF: C3                   clr     c
-0BB0: 99                   subb    a,      r1
-0BB1: F9                   mov     r1,     a ; number of bytes to print
-0BB2: FA                   mov     r2,     a
+0F29: 74 20                mov     a,      #' '
+0F2B: D1 5F                acall   print_char
+0F2D: 74 7C                mov     a,      #'|'
+0F2F: D1 5F                acall   print_char
+0F31: 74 10                mov     a,      #16
+0F33: C3                   clr     c
+0F34: 99                   subb    a,      r1
+0F35: F9                   mov     r1,     a ; number of bytes to print
+0F36: FA                   mov     r2,     a
                    dump__print_ascii_loop:
-0BB3: 08                   inc     r0
-0BB4: E6                   mov     a,      @r0
-0BB5: B4 20 00             cjne    a,      #0x20,  dump__print_ascii_check1
+0F37: 08                   inc     r0
+0F38: E6                   mov     a,      @r0
+0F39: B4 20 00             cjne    a,      #0x20,  dump__print_ascii_check1
                    dump__print_ascii_check1:
-0BB8: 40 05                jc      dump__print_ascii_replace
-0BBA: B4 7F 00             cjne    a,      #0x7f,  dump__print_ascii_check2
+0F3C: 40 05                jc      dump__print_ascii_replace
+0F3E: B4 7F 00             cjne    a,      #0x7f,  dump__print_ascii_check2
                    dump__print_ascii_check2:
-0BBD: 40 02                jc      dump__print_ascii_continue
+0F41: 40 02                jc      dump__print_ascii_continue
                    dump__print_ascii_replace:
-0BBF: 74 2E                mov     a,      #'.'
+0F43: 74 2E                mov     a,      #'.'
                    dump__print_ascii_continue:
-0BC1: 51 DB                acall   print_char
-0BC3: DA EE                djnz    r2,     dump__print_ascii_loop
-0BC5: 74 7C                mov     a,      #'|'
-0BC7: 51 DB                acall   print_char
-0BC9: 74 0D                mov     a,      #13
-0BCB: 51 DB                acall   print_char
-0BCD: 74 0A                mov     a,      #10
-0BCF: 51 DB                acall   print_char
+0F45: D1 5F                acall   print_char
+0F47: DA EE                djnz    r2,     dump__print_ascii_loop
+0F49: 74 7C                mov     a,      #'|'
+0F4B: D1 5F                acall   print_char
+0F4D: 74 0D                mov     a,      #13
+0F4F: D1 5F                acall   print_char
+0F51: 74 0A                mov     a,      #10
+0F53: D1 5F                acall   print_char
                    
                            ; wind back again
-0BD1: E8                   mov     a,      r0
-0BD2: 24 F0                add     a,      #-16
-0BD4: F8                   mov     r0,     a
+0F55: E8                   mov     a,      r0
+0F56: 24 F0                add     a,      #-16
+0F58: F8                   mov     r0,     a
                    
                            ; next address
-0BD5: EC                   mov     a,      r4
-0BD6: 29                   add     a,      r1
-0BD7: FC                   mov     r4,     a
-0BD8: ED                   mov     a,      r5
-0BD9: 34 00                addc    a,      #0
-0BDB: FD                   mov     r5,     a
-0BDC: EE                   mov     a,      r6
-0BDD: 34 00                addc    a,      #0
-0BDF: FE                   mov     r6,     a
-0BE0: EF                   mov     a,      r7
-0BE1: 34 00                addc    a,      #0
-0BE3: FF                   mov     r7,     a
+0F59: EC                   mov     a,      r4
+0F5A: 29                   add     a,      r1
+0F5B: FC                   mov     r4,     a
+0F5C: ED                   mov     a,      r5
+0F5D: 34 00                addc    a,      #0
+0F5F: FD                   mov     r5,     a
+0F60: EE                   mov     a,      r6
+0F61: 34 00                addc    a,      #0
+0F63: FE                   mov     r6,     a
+0F64: EF                   mov     a,      r7
+0F65: 34 00                addc    a,      #0
+0F67: FF                   mov     r7,     a
                    
-0BE4: E5 F0                mov     a,      b
-0BE6: 60 02                jz      dump__end
-0BE8: 61 62                ajmp    dump__line_loop
+0F68: E5 F0                mov     a,      b
+0F6A: 60 02                jz      dump__end
+0F6C: C1 E6                ajmp    dump__line_loop
                    
                    dump__end:
                            ; deallocate array from stack
-0BEA: E5 81                mov     a,      sp
-0BEC: 24 F0                add     a,      #-16
-0BEE: F5 81                mov     sp,     a
+0F6E: E5 81                mov     a,      sp
+0F70: 24 F0                add     a,      #-16
+0F72: F5 81                mov     sp,     a
                    
-0BF0: 51 8B                acall   xch_r0123_r4567
+0F74: D1 0F                acall   xch_r0123_r4567
                    
-0BF2: D0 07                pop     7
-0BF4: D0 06                pop     6
-0BF6: D0 05                pop     5
-0BF8: D0 04                pop     4
-0BFA: D0 E0                pop     acc
-0BFC: D0 F0                pop     b
-0BFE: 22                   ret
+0F76: D0 07                pop     7
+0F78: D0 06                pop     6
+0F7A: D0 05                pop     5
+0F7C: D0 04                pop     4
+0F7E: D0 E0                pop     acc
+0F80: D0 F0                pop     b
+0F82: 22                   ret
                    
-0BFF:              .equ panic_out, serial_tx
+0F83:              .equ panic_out, serial_tx
                    
                    ; *** panic/panic.inc ***
                    
@@ -2761,45 +3555,45 @@
                    ; Print caller address and halt.
                    
                    panic:
-0BFF: C2 AF                clr     ea      ; disable interrupts
-0C01: F8                   mov     r0,a    ; save a
+0F83: C2 AF                clr     ea      ; disable interrupts
+0F85: F8                   mov     r0,a    ; save a
                            ; display panic text
-0C02: 90 02 1C             mov     dptr,#panic_out
-0C05: 85 82 32             mov     out,dpl
-0C08: 85 83 33             mov     out+1,dph
-0C0B: 90 0C 32             mov     dptr,#panic_text
-0C0E: 71 11                acall   print_text
+0F86: 90 02 1C             mov     dptr,#panic_out
+0F89: 85 82 32             mov     out,dpl
+0F8C: 85 83 33             mov     out+1,dph
+0F8F: 90 0F B6             mov     dptr,#panic_text
+0F92: D1 95                acall   print_text
                            ; get return address from stack
-0C10: D0 E0                pop     acc
-0C12: FA                   mov     r2,a
-0C13: D0 E0                pop     acc
+0F94: D0 E0                pop     acc
+0F96: FA                   mov     r2,a
+0F97: D0 E0                pop     acc
                            ; subtract two to get call instruction address
-0C15: C3                   clr     c
-0C16: 94 02                subb    a,#2
-0C18: F9                   mov     r1,a
-0C19: EA                   mov     a,r2
-0C1A: 94 00                subb    a,#0
+0F99: C3                   clr     c
+0F9A: 94 02                subb    a,#2
+0F9C: F9                   mov     r1,a
+0F9D: EA                   mov     a,r2
+0F9E: 94 00                subb    a,#0
                            ; print caller address (to look up cause in .lst fil
-0C1C: 51 E0                acall   print_hex_8
-0C1E: E9                   mov     a,r1
-0C1F: 51 E0                acall   print_hex_8
+0FA0: D1 64                acall   print_hex_8
+0FA2: E9                   mov     a,r1
+0FA3: D1 64                acall   print_hex_8
                            ; print original value of a (error code / debug info
-0C21: 74 20                mov     a,#' '
-0C23: 51 DB                acall   print_char
-0C25: E8                   mov     a,r0
-0C26: 51 E0                acall   print_hex_8
+0FA5: 74 20                mov     a,#' '
+0FA7: D1 5F                acall   print_char
+0FA9: E8                   mov     a,r0
+0FAA: D1 64                acall   print_hex_8
                            ; newline
-0C28: 74 0D                mov     a,#13
-0C2A: 51 DB                acall   print_char
-0C2C: 74 0A                mov     a,#10
-0C2E: 51 DB                acall   print_char
+0FAC: 74 0D                mov     a,#13
+0FAE: D1 5F                acall   print_char
+0FB0: 74 0A                mov     a,#10
+0FB2: D1 5F                acall   print_char
                            ; hang
-0C30: 80 FE                sjmp    *
+0FB4: 80 FE                sjmp    *
                    
                    panic_text:
-0C32: 0D 0A                .db     13, 10
-0C34: 20 21 21 21 
+0FB6: 0D 0A                .db     13, 10
+0FB8: 20 21 21 21 
       20 70 61 6E 
       69 63 20 40 
                            .db     " !!! panic @"
-0C40: 00                   .db     0
+0FC4: 00                   .db     0

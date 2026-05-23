@@ -92,3 +92,40 @@ shl_32__done:
 	pop	b
 	pop	acc
 	ret
+
+
+; >> uint32{r0-r3} shr_32(uint32{r0-r3} value, uint8{a} count) <<
+
+; Shift 32-bit value right by count bits (count in a).
+; Equivalent to: value >>= count (unsigned)
+
+shr_32:
+	push	acc
+	push	b
+
+	mov	b,a			; shift count to b for loop counter
+shr_32__loop:
+	mov	a,b
+	jz	shr_32__done		; when b==0, done
+	dec	b			; decrement shift counter
+
+	; Shift r0-r3 right by 1 position (high bytes first)
+	clr	c
+	mov	a,r3
+	rrc	a
+	mov	r3,a
+	mov	a,r2
+	rrc	a
+	mov	r2,a
+	mov	a,r1
+	rrc	a
+	mov	r1,a
+	mov	a,r0
+	rrc	a
+	mov	r0,a
+	sjmp	shr_32__loop
+
+shr_32__done:
+	pop	b
+	pop	acc
+	ret
