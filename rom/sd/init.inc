@@ -11,15 +11,15 @@ sd_init:
 	push	dph
 
 	mov	spcon,#sd_spi_config
-	acall	sd_warmup
-	acall	sd_select
+	lcall	sd_warmup
+	lcall	sd_select
 
 	mov	r5,#5	; 5: no idle response to cmd0
-	acall	sd_cmd0
+	lcall	sd_cmd0
 	cjne	a,#1,sd_init__end
 
 	dec	r5	; 4: no idle response to cmd8
-	acall	sd_cmd8
+	lcall	sd_cmd8
 	cjne	a,#1,sd_init__end
 	dec	r5	; 3: invalid cmd8 response
 	cjne	r3,#0x00,sd_init__end
@@ -29,17 +29,17 @@ sd_init:
 
 	mov	r5,#100	; retry counter
 sd_init__loop:
-	acall	sd_acmd41
+	lcall	sd_acmd41
 	jz	sd_init__continue
 	mov	a,#10
-	acall	delay_ms_8
+	lcall	delay_ms_8
 	djnz	r5,sd_init__loop
 	mov	r5,#2	; 2: acmd41 ready response timeout
 	sjmp	sd_init__end
 
 sd_init__continue:
 	mov	r5,#1	; 1: no ready response to cmd58
-	acall	sd_cmd58
+	lcall	sd_cmd58
 
 	dec	r5	; 0: success
 

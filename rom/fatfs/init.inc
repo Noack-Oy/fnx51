@@ -29,7 +29,7 @@ fatfs_init:
 
 	mov	r0,fatfs_info_size
 	mov	r1,#0
-	acall	memory_allocate
+	lcall	memory_allocate
 	mov	fatfs_info,dpl
 	mov	fatfs_info+1,dph
 
@@ -39,9 +39,9 @@ fatfs_init:
 	mov	r1,a
 	mov	r2,a
 	mov	r3,a
-	acall	block_load
+	lcall	block_load
 
-	acall	fatfs_init__check_signature
+	lcall	fatfs_init__check_signature
 
 	; partition table begins at offset:	446 = 0x1be
 	; the type code is at that +4:		450 = 0x1c2
@@ -57,7 +57,7 @@ fatfs_init:
 	jz	fatfs_init__type_code_ok
 	dec	a ; also accept 0x0c
 	jz	fatfs_init__type_code_ok
-	acall	panic ; invalid type code
+	lcall	panic ; invalid type code
 fatfs_init__type_code_ok:
 
 	; read partition start LBA at another +4 offset from type code
@@ -70,15 +70,15 @@ fatfs_init__type_code_ok:
 	mov	dpl,fatfs_info
 	mov	dph,fatfs_info+1
 	mov	r0,#4
-	acall	dptr_copy
+	lcall	dptr_copy
 
 	; read FAT32 volume ID (first sector in partition)
 	mov	dpl,fatfs_info
 	mov	dph,fatfs_info+1
-	acall	dptr_read_32
-	acall	block_load
+	lcall	dptr_read_32
+	lcall	block_load
 
-	acall	fatfs_init__check_signature
+	lcall	fatfs_init__check_signature
 
 	; validate bytes per sector (offset 0x0b), must be 512
 	mov	a,dpl
@@ -89,26 +89,26 @@ fatfs_init__type_code_ok:
 	mov	dph,a
 	movx	a,@dptr ; low byte: must be 0x00
 	jz	fatfs_init__bps_ok_1
-	acall	panic	; invalid bytes per sector
+	lcall	panic	; invalid bytes per sector
 fatfs_init__bps_ok_1:
 	inc	dptr
 	movx	a,@dptr ; high byte: must be 0x02
 	xrl	a,#0x02
 	jz	fatfs_init__bps_ok_2
-	acall	panic	; invalid bytes per sector
+	lcall	panic	; invalid bytes per sector
 fatfs_init__bps_ok_2:
 	inc	dptr
 
 	; read sectors per cluster (offset 0x0d) and validate
 	movx	a,@dptr
 	jnz	fatfs_init__spc_ok_1
-	acall	panic	; zero sectors per cluster not allowed
+	lcall	panic	; zero sectors per cluster not allowed
 fatfs_init__spc_ok_1:
 	mov	b,a
 	dec	a
 	anl	a,b	; power of two check: (x & (x-1)) == 0
 	jz	fatfs_init__spc_ok_2
-	acall	panic	; sectors per cluster must be power of 2
+	lcall	panic	; sectors per cluster must be power of 2
 fatfs_init__spc_ok_2:
 	mov	a,b	; value in b is also used later below!
 	; ... and store into fatfs_info data structure at offset 4
@@ -137,18 +137,18 @@ fatfs_init__spc_ok_2:
 	inc	auxr1
 	mov	dpl,fatfs_info
 	mov	dph,fatfs_info+1
-	acall	dptr_read_32 ; also moves dptr forward to offset 4
-	acall	add_32
+	lcall	dptr_read_32 ; also moves dptr forward to offset 4
+	lcall	add_32
 	; and store into fatfs_info data structure at offset 5
 	inc	dptr
-	acall	dptr_write_32 ; advances to offset 9
+	lcall	dptr_write_32 ; advances to offset 9
 	inc	auxr1 ; swich back to block read pointer
 
 	; validate number of FATs at offset 0x10, must always be 2
 	movx	a,@dptr
 	xrl	a,#0x02
 	jz	fatfs_init__nof_ok
-	acall	panic	; invalid number of FATs
+	lcall	panic	; invalid number of FATs
 fatfs_init__nof_ok:
 
 	; skip forward to offset 0x24 (+0x14)
@@ -160,18 +160,18 @@ fatfs_init__nof_ok:
 	mov	dph,a
 
 	; r0-r3 still has fat1_lba here from above, shunt into r4-r7
-	acall	xch_r0123_r4567
+	lcall	xch_r0123_r4567
 
 	; read sectors per fat at offset 0x24
-	acall	dptr_read_32	; advances to offset 0x28
+	lcall	dptr_read_32	; advances to offset 0x28
 	; now calculate fat2_lba by adding sectors per FAT to fat1_lba
-	acall	xch_r0123_r4567
-	acall	add_32
+	lcall	xch_r0123_r4567
+	lcall	add_32
 	; and store into fatfs_info data structure at offset 9
 	inc	auxr1 ; swich to fatfs_info write pointer
-	acall	dptr_write_32	; advances to offset 13
+	lcall	dptr_write_32	; advances to offset 13
 	; now if we add sectors per FAT again, get cluster_lba
-	acall	add_32
+	lcall	add_32
 	; however, that is the address of cluster 2,
 	; we wind back to the (nonexistent) cluster 0,
 	; this makes math easier later
@@ -180,10 +180,10 @@ fatfs_init__nof_ok:
 	mov	r5,a
 	mov	r6,a
 	mov	r7,a
-	acall	sub_32
-	acall	sub_32
+	lcall	sub_32
+	lcall	sub_32
 	; now we can store cluster_lba at the current offset (13)
-	acall	dptr_write_32 ; advances to offset 17
+	lcall	dptr_write_32 ; advances to offset 17
 	inc	auxr1	; back to the block reading pointer
 
 	; move forward to offset 0x2c
@@ -192,10 +192,10 @@ fatfs_init__nof_ok:
 	inc	dptr
 	inc	dptr
 	; now read the cluster number for the root directory
-	acall	dptr_read_32
+	lcall	dptr_read_32
 	; ... and store into fatfs_info at current offset (17)
 	inc	auxr1
-	acall	dptr_write_32
+	lcall	dptr_write_32
 
 	; phew! that was a lot of shunting data around. we are done now.
 
@@ -226,13 +226,13 @@ fatfs_init__check_signature:
 	movx	a,@dptr ; read fist signature byte at offset 510
 	xrl	a,#0x55
 	jz	fatfs_init__check_signature_ok_1
-	acall	panic ; invalid signature
+	lcall	panic ; invalid signature
 fatfs_init__check_signature_ok_1:
 	inc	dptr
 	movx	a,@dptr ; read second signature byte at offset 511
 	xrl	a,#0xaa
 	jz	fatfs_init__check_signature_ok_2
-	acall	panic ; invalid signature
+	lcall	panic ; invalid signature
 fatfs_init__check_signature_ok_2:
 	inc	dptr ; this moves dptr to offset 512
 	dec	dph  ; so we can now wind back to the beginning

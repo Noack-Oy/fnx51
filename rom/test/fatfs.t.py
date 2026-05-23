@@ -18,5 +18,14 @@ def run_test(pe):
     pe.expect_exact("00004080")
     pe.expect_exact("\r\n")
 
+    # Chain handle exercise: dump the first 32 bytes of the root directory.
+    # On the reference card the first entry is the volume label "FNX51"
+    # (attribute byte 0x08) followed by zeroed reserved/creation fields and
+    # the write-time/date bytes captured when the volume was formatted.
+    pe.expect_exact("00000000: 46 4e 58 35  31 20 20 20  20 20 20 08  00 00 00 00")
+    pe.expect_exact("\r\n")
+    pe.expect_exact("00000010: 00 00 00 00  00 00 53 aa  5d 59 00 00  00 00 00 00")
+    pe.expect_exact("\r\n")
+
 if __name__ == '__main__':
     test_main(run_test, "fatfs.hex")

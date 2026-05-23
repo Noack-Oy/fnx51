@@ -123,13 +123,31 @@ def enter_bootloader():
 
 def write_hex_file(filename):
     print(f'WRITE: {filename}')
-    # write code
-    with open(filename, 'r') as hexfile:
-        for line in hexfile:
-            pe.send(line.strip())
-            ser.flush()
-            time.sleep(0.1)
-            pe.expect(line.strip()+'.\r\n')
+    # The per-line send/expect echo is noisy and uninteresting once
+    # the transfer is working — silence the pexpect log here so it
+    # doesn't end up in test .out files. Progress dots go to stderr
+    # so they show up on the terminal but not in the captured log.
+    log_send = pe.logfile_send
+    log_read = pe.logfile_read
+    pe.logfile_send = None
+    pe.logfile_read = None
+    try:
+        n = 0
+        with open(filename, 'r') as hexfile:
+            for line in hexfile:
+                pe.send(line.strip())
+                ser.flush()
+                time.sleep(0.1)
+                pe.expect(line.strip()+'.\r\n')
+                n += 1
+                if n % 50 == 0:
+                    sys.stderr.write('.')
+                    sys.stderr.flush()
+        sys.stderr.write(f' {n} lines\n')
+        sys.stderr.flush()
+    finally:
+        pe.logfile_send = log_send
+        pe.logfile_read = log_read
 
 
 def reset():

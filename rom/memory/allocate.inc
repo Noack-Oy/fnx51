@@ -30,7 +30,7 @@ memory_allocate:
 	mov	a,r0
 	orl	a,r1
 	jnz	memory_allocate__0
-	acall	panic	; invalid size (0)
+	lcall	panic	; invalid size (0)
 
 memory_allocate__0:
 	; rounding to next multiple of 4
@@ -57,7 +57,7 @@ memory_allocate__loop:
 	mov	a,r4
 	orl	a,r5
 	jnz	memory_allocate__0a
-	acall	panic	; no large enough free block found
+	lcall	panic	; no large enough free block found
 memory_allocate__0a:
 	; compare curr->size with required size
 	mov	dpl,r4

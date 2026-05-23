@@ -36,7 +36,7 @@ memory_release:
 	mov	a,r0
 	orl	a,r1
 	jnz	memory_release__1
-	acall	panic	; invalid size (0)
+	lcall	panic	; invalid size (0)
 memory_release__1:
 	mov	a,r3
 	cjne	a,memory_start+1,memory_release__2
@@ -44,7 +44,7 @@ memory_release__1:
 	cjne	a,memory_start,memory_release__2
 memory_release__2:
 	jnc	memory_release__3
-	acall	panic	; invalid address (< memory_start)
+	lcall	panic	; invalid address (< memory_start)
 memory_release__3:
 	mov	a,r3
 	cjne	a,memory_end+1,memory_release__4
@@ -52,7 +52,7 @@ memory_release__3:
 	cjne	a,memory_end,memory_release__4
 memory_release__4:
 	jc	memory_release__5
-	acall	panic	; invalid address (>= memory_end)
+	lcall	panic	; invalid address (>= memory_end)
 memory_release__5:
 
 	; rounding
@@ -87,7 +87,7 @@ memory_release__loop:
 	mov	a,r4
 	subb	a,r2
 	jnz	memory_release__6
-	acall	panic	; double free	(next == block)
+	lcall	panic	; double free	(next == block)
 memory_release__6:
 	jnc	memory_release__7	; next > block
 	mov	a,r4	; -.
@@ -153,7 +153,7 @@ memory_release__8:
 	; ... else:
 memory_release__9:
 	jnc	memory_release__link_new ; ... link as new block in the middle
-	acall	panic	; error: block < top (overlap)
+	lcall	panic	; error: block < top (overlap)
 
 memory_release__link_new:
 	; link into list as new node
@@ -236,7 +236,7 @@ memory_release__10:
 
 memory_release__11:
 	jnc	memory_release__end
-	acall	panic	; error: next < block+block->size
+	lcall	panic	; error: next < block+block->size
 
 memory_release__end:
 	mov	dpl,memory_list
