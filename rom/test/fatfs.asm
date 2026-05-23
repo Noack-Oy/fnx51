@@ -15,6 +15,7 @@
 .inc ../spi/sfr.equ
 .inc ../sd/config.equ
 .inc ../fatfs/info.equ
+.inc ../fatfs/chain.equ
 
 ; *************
 ; * Main Code *
@@ -89,9 +90,17 @@ __1:
 	; open chain; dptr = handle on return
 	lcall	fatfs_chain_open
 
-	; save the handle pointer before ensure_block clobbers dptr
-	push	dpl
-	push	dph
+	; Stash the handle in dptr' (the alternate dptr) so we don't
+	; have to save it on the stack across ensure_block / dump /
+	; print_text. ensure_block returns the cache pointer in dptr
+	; and is contractually required to preserve dptr'.
+	mov	r4,dpl
+	mov	r5,dph
+	inc	auxr1
+	mov	dpl,r4
+	mov	dph,r5
+	inc	auxr1
+	; both dptr and dptr' now point at the handle
 
 	; ensure block 0 of the chain is loaded; dptr = cached block
 	clr	a
@@ -120,9 +129,8 @@ __1:
 	mov	dptr,#newline
 	lcall	print_text
 
-	; restore the handle pointer and close the chain
-	pop	dph
-	pop	dpl
+	; close the chain — handle is sitting in dptr', swap to dptr
+	inc	auxr1
 	lcall	fatfs_chain_close
 
 halt:

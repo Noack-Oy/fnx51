@@ -5,13 +5,10 @@
 ; files both look like a linear sequence of 512-byte blocks; the handle
 ; owns the state needed to map a relative block number to an LBA.
 ;
-; Handle layout (8 bytes):
-;   bytes 0..3: first cluster number (uint32) — never changes after init.
-;   bytes 4..7: current cluster number (uint32) — last cluster resolved
-;               to. Updated as the chain is walked.
+; See chain.equ for the layout (first cluster, current cluster).
 ;
 ; Lifecycle convention (mirrored by dir and file handles, which extend
-; the chain handle by adding fields after byte 7):
+; the chain handle by adding fields after fatfs_chain_size):
 ;
 ;   *_init   — initialize a pre-allocated struct. No allocation.
 ;   *_deinit — release sub-resources. No deallocation. Pairs with _init.
@@ -24,20 +21,18 @@
 
 ; >> void fatfs_chain_init(char *{dptr} handle, uint32{r0-r3} first_cluster) <<
 
-; Initialize a pre-allocated 8-byte chain handle at dptr with first and
+; Initialize a pre-allocated chain handle at dptr with first and
 ; current cluster both set to first_cluster. Preserves dptr and r0-r3.
 
 fatfs_chain_init:
-	push	acc
 	push	dpl
 	push	dph
 
-	lcall	dptr_write_32	; handle[0..3] = first_cluster
-	lcall	dptr_write_32	; handle[4..7] = first_cluster (current = first)
+	lcall	dptr_write_32	; handle[first] = first_cluster
+	lcall	dptr_write_32	; handle[current] = first_cluster
 
 	pop	dph
 	pop	dpl
-	pop	acc
 	ret
 
 
@@ -56,11 +51,10 @@ fatfs_chain_deinit:
 ; first_cluster. Returns a pointer to the handle in dptr.
 
 fatfs_chain_open:
-	push	acc
 	push	0
 	push	1
 
-	mov	r0,#8
+	mov	r0,#fatfs_chain_size
 	mov	r1,#0
 	lcall	memory_allocate	; dptr = handle, r0-r7 preserved
 
@@ -69,8 +63,6 @@ fatfs_chain_open:
 	; r0-r3 hold the caller's first_cluster again (memory_allocate
 	; preserved r2-r3 across the call; r0r1 we restored above).
 	lcall	fatfs_chain_init
-
-	pop	acc
 	ret
 
 
@@ -79,18 +71,16 @@ fatfs_chain_open:
 ; Deinitialize a chain handle and free its allocation.
 
 fatfs_chain_close:
-	push	acc
 	push	0
 	push	1
 
 	lcall	fatfs_chain_deinit
-	mov	r0,#8
+	mov	r0,#fatfs_chain_size
 	mov	r1,#0
 	lcall	memory_release
 
 	pop	1
 	pop	0
-	pop	acc
 	ret
 
 
@@ -109,10 +99,10 @@ fatfs_chain_close:
 
 fatfs_chain_ensure_block:
 	push	acc
-	push	4
-	push	5
-	push	6
-	push	7
+	push	0			; preserve r0-r3 (input, not output)
+	push	1
+	push	2
+	push	3
 
 	; verify block == 0 (stub limitation)
 	mov	a,r0
@@ -123,8 +113,8 @@ fatfs_chain_ensure_block:
 	lcall	panic	; chain traversal not implemented yet
 fatfs_chain_ensure_block__zero:
 
-	; read first cluster number from handle[0..3] into r0-r3.
-	; dptr now points to handle[4]; we don't need it after this.
+	; read first cluster number from handle[first] into r0-r3.
+	; dptr now points past the field; we don't need it after this.
 	lcall	dptr_read_32
 
 	; convert cluster number to first sector LBA
@@ -133,10 +123,10 @@ fatfs_chain_ensure_block__zero:
 	; load that block; dptr returns pointing at cached data
 	lcall	block_load
 
-	pop	7
-	pop	6
-	pop	5
-	pop	4
+	pop	3
+	pop	2
+	pop	1
+	pop	0
 	pop	acc
 	ret
 
@@ -151,7 +141,6 @@ fatfs_chain_ensure_block__zero:
 ; ensure_block so they can copy only the bytes they actually need.
 
 fatfs_chain_load_block:
-	push	acc
 	; save active slot (handle pointer)
 	push	dpl
 	push	dph
@@ -160,18 +149,13 @@ fatfs_chain_load_block:
 	push	dpl
 	push	dph
 	inc	auxr1
-	; preserve all general-purpose registers (void function)
+	; r0 is the only general register we modify here (dptr_copy's
+	; count). r1-r7 are preserved across ensure_block and dptr_copy.
 	push	0
-	push	1
-	push	2
-	push	3
-	push	4
-	push	5
-	push	6
-	push	7
 
 	; ensure_block uses the active dptr as handle, block in r0-r3;
-	; on return, active dptr = cached block data.
+	; on return, active dptr = cached block data. ensure_block now
+	; preserves r0-r3.
 	lcall	fatfs_chain_ensure_block
 
 	; swap so that the active dptr is dst (where dptr_copy writes),
@@ -185,13 +169,6 @@ fatfs_chain_load_block:
 	mov	r0,#0
 	lcall	dptr_copy
 
-	pop	7
-	pop	6
-	pop	5
-	pop	4
-	pop	3
-	pop	2
-	pop	1
 	pop	0
 	; active slot currently holds dst+512; restore it.
 	pop	dph
@@ -201,5 +178,4 @@ fatfs_chain_load_block:
 	; (back to the original handle pointer).
 	pop	dph
 	pop	dpl
-	pop	acc
 	ret
