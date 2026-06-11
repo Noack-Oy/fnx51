@@ -1,427 +1,473 @@
-                   
-                   ; ************************
-                   ; * Hexdump Test Program *
-                   ; ************************
-                   
-                   ; This program reads 37 bytes and
-                   ; echoes them in hexdump format
-                   
-                   
-                   ; **********************
-                   ; * Header Definitions *
-                   ; **********************
-                   
-                   ; *** global/variables.equ ***
-                   
-                   ; variables in internal RAM
-                   
-                   ; 0x00-0x1f: register banks 0-3
-                   ; 0x20-0x2f: bit addressable variables
-                   
-0000:              .equ    in,             0x30    ; pointer to input handling 
-0000:              .equ    out,            0x32    ; pointer to ouput handling 
-                   
-0000:              .equ    stream_in,      0x34    ; input stream position
-0000:              .equ    stream_out,     0x36    ; output stream position
-                   
-0000:              .equ    memory_list,    0x38    ; pointer to heap list head
-0000:              .equ    memory_start,   0x40    ; first allocatable address
-0000:              .equ    memory_end,     0x42    ; last allocatable address
-                   
-0000:              .equ    block_read,     0x44    ; pointers to block device d
-0000:              .equ    block_write,    0x46    ; code (read and write funct
-0000:              .equ    block_cache,    0x48    ; pointer to block cache dat
-                   
-0000:              .equ    fatfs_info,     0x50    ; pointer to FAT file system
-                   
-0000:              .equ    stack,          0x60    ; beginning of stack (grows 
-                   
-                   ; *** serial/sfr.equ ***
-                   
-                   ; Special function registers for serial interface.
-                   ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
-                   
-                   ; Internal Baud Rate Generator (BRG), see datasheet page 52.
-0000:                      .equ    BRL,    0x9A    ; baud rate reload value
-0000:                      .equ    BDRCON, 0x9B    ; BRG control register
-                   
-                   
-                   ; *************
-                   ; * Main Code *
-                   ; *************
-                   
-0000:              .org 0
-                   
-                   ; *** global/init.inc ***
-                   
-                   ; Initialize stack pointer and global variables.
-                   ; This must be included early in the main program.
-                   
-                   global_init:
-0000: 75 81 60             mov     SP,#STACK
-                   
-                   ; Select register bank zero, clear processor flags
-0003: 75 D0 00             mov     PSW,#0
-                   
-                   ; Fill internal RAM with markers for uninitialized data
-0006: 78 00                mov     r0,#0 ; write pointer
-                   
-0008: 74 3F                mov     a,#0x3f ; '?' for uninitialized registers
-                   global_init__1:
-000A: 08                   inc     r0 ; first iteration skips address 0, r0 liv
-000B: F6                   mov     @r0,a
-000C: B8 1F FB             cjne    r0,#0x1f,global_init__1
-                   
-000F: 74 2A                mov     a,#0x2a ; '*' for uninitialized variables
-                   global_init__2:
-0011: 08                   inc     r0
-0012: F6                   mov     @r0,a
-0013: B8 5F FB             cjne    r0,#STACK-1,global_init__2
-                   
-0016: 74 7E                mov     a,#0x7e ; '~' for stack and above
-                   global_init__3:
-0018: 08                   inc     r0
-0019: F6                   mov     @r0,a
-001A: B8 FF FB             cjne    r0,#0xff,global_init__3
-                   
-                   ; *** test/dump.asm ***
-                   
-001D: 11 34                acall   serial_init
-                   
-001F: E4                   clr     a
-0020: F8                   mov     r0,     a
-0021: F9                   mov     r1,     a
-0022: FA                   mov     r2,     a
-0023: FB                   mov     r3,     a
-0024: 74 25                mov     a,      #37
-                   
-0026: 11 9B                acall   dump
-0028: 11 85                acall   print_hex_32
-002A: 74 0D                mov     a,      #13
-002C: 11 60                acall   print_char
-002E: 74 0A                mov     a,      #10
-0030: 11 60                acall   print_char
-                   
-0032: 80 FE                sjmp    *
-                   
-                   
-                   ; *********************
-                   ; * Library Functions *
-                   ; *********************
-                   
-                   ; *** serial/init.inc ***
-                   
-                   ; >> void serial_init() <<
-                   
-                   ; Initialize serial interface.
-                   ; - assumes 20MHz clock and X2 mode
-                   ; - uses internal baud rate generator
-                   ; - speed: 9600 bits per second
-                   ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
-                   ; ---
-                   ; See datasheet page 52 for details,
-                   ; also note oscillator diagram on page 16!
-                   
-                   serial_init:
-0034: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
-0037: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
-003A: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
-                   
-003D: 90 00 50             mov     dptr,   #serial_rx
-0040: 85 82 30             mov     IN,     DPL
-0043: 85 83 31             mov     IN+1,   DPH
-                   
-0046: 90 00 58             mov     dptr,   #serial_tx
-0049: 85 82 32             mov     OUT,    DPL
-004C: 85 83 33             mov     OUT+1,  DPH
-                   
-004F: 22                   ret
-                   
-                   ; *** serial/rx.inc ***
-                   
-                   ; >> char serial_rx <<
-                   
-                   ; Receive byte into accumulator.
-                   
-                   serial_rx:
-0050: 30 98 FD             jnb     RI,     serial_rx
-0053: C2 98                clr     RI
-0055: E5 99                mov     a,      SBUF
-0057: 22                   ret
-                   
-                   ; *** serial/tx.inc ***
-                   
-                   ; >> void serial_tx(char a) <<
-                   
-                   ; Transmit byte from accumulator.
-                   
-                   serial_tx:
-0058: 30 99 FD             jnb     TI,     serial_tx
-005B: C2 99                clr     TI
-005D: F5 99                mov     SBUF,   a
-005F: 22                   ret
-                   
-                   ; *** print/char.inc ***
-                   
-                   ; >> void print_char(char a) <<
-                   
-                   ; Print char from accumulator.
-                   ; Indirect call to function behind OUT pointer.
-                   
-                   print_char:
-0060: C0 32                push    OUT
-0062: C0 33                push    OUT+1
-0064: 22                   ret
-                   
-                   ; *** print/hex.inc ***
-                   
-                   ; >> void print_hex_8(char a) <<
-                   
-                   ; Print hexadecimal number from accumulator.
-                   
-                   print_hex_8:
-0065: C4                   swap    a       ; high nibble first
-0066: 11 69                acall   print_hex_8__nibble
-0068: C4                   swap    a
-                   print_hex_8__nibble:
-0069: C0 E0                push    ACC
-006B: 54 0F                anl     a,      #0x0f
-006D: 24 90                add     a,      #0x90
-006F: D4                   da      a
-0070: 34 40                addc    a,      #0x40
-0072: D4                   da      a
-0073: 44 20                orl     a,      #0x20   ; lower case
-0075: 11 60                acall   print_char
-0077: D0 E0                pop     ACC
-0079: 22                   ret
-                   
-                   ; >> void print_hex_16(int r0r1) <<
-                   
-                   ; Print hexadecimal number from r0-r1.
-                   
-                   print_hex_16:
-007A: C0 E0                push    ACC
-007C: E9                   mov     a,      r1      ; MSB first
-007D: 11 65                acall   print_hex_8
-007F: E8                   mov     a,      r0      ; LSB second
-0080: 11 65                acall   print_hex_8
-0082: D0 E0                pop     ACC
-0084: 22                   ret
-                   
-                   ; >> void print_hex_32(long r0r1r2r3) <<
-                   
-                   ; Print hexadecimal number from r0-r3.
-                   
-                   print_hex_32:
-0085: C0 E0                push    ACC
-0087: EB                   mov     a,      r3      ; MSB first
-0088: 11 65                acall   print_hex_8
-008A: EA                   mov     a,      r2
-008B: 11 65                acall   print_hex_8
-008D: E9                   mov     a,      r1
-008E: 11 65                acall   print_hex_8
-0090: E8                   mov     a,      r0      ; LSB last
-0091: 11 65                acall   print_hex_8
-0093: D0 E0                pop     ACC
-0095: 22                   ret
-                   
-                   ; *** read/char.inc ***
-                   
-                   ; >> char read_char() <<
-                   
-                   ; Read char into accumulator.
-                   ; Indirect call to function behind IN pointer.
-                   
-                   read_char:
-0096: C0 30                push    IN
-0098: C0 31                push    IN+1
-009A: 22                   ret
-                   
-                   ; *** util/dump.inc ***
-                   
-                   ; >> uint32{r0-r3} dump(uint32{r0-r3} addr, uint8{a} count) 
-                   
-                   ; Print hexdump from standard input to standard output.
-                   ; Starting value for address column in r0-r3.
-                   ; Number of bytes to print in a (0 means 256).
-                   ; r0-r3 contains next address upon exit.
-                   
-                   dump:
-009B: C0 F0                push    b
-009D: C0 E0                push    acc
-009F: F5 F0                mov     b,      a
-00A1: C0 04                push    4
-00A3: C0 05                push    5
-00A5: C0 06                push    6
-00A7: C0 07                push    7
-                   
-                           ; b: total bytes remaining
-                           ; r0: buffer pointer
-                           ; r1: read loop counter / padding size
-                           ; r2: print loop counter
-                   
-                           ; r4-7: address label
-00A9: 31 4F                acall   xch_r0123_r4567
-                   
-                           ; allocate 16 byte array on stack
-00AB: E5 81                mov     a,      sp
-00AD: F8                   mov     r0,     a
-00AE: 24 10                add     a,      #16
-00B0: F5 81                mov     sp,     a
-                   
-                   dump__line_loop:
-                           ; read into buffer
-00B2: 79 10                mov     r1,     #16
-                   dump__read_loop:
-00B4: 11 96                acall   read_char
-00B6: 08                   inc     r0
-00B7: F6                   mov     @r0,    a
-00B8: D5 F0 03             djnz    b,      dump__read_continue
-00BB: 19                   dec     r1
-00BC: 80 02                sjmp    dump__read_end
-                   dump__read_continue:
-00BE: D9 F4                djnz    r1,     dump__read_loop
-                   dump__read_end:
-                   
-                           ; print address column
-00C0: 31 4F                acall   xch_r0123_r4567
-00C2: 11 85                acall   print_hex_32
-00C4: 31 4F                acall   xch_r0123_r4567
-00C6: 74 3A                mov     a,      #':'
-00C8: 11 60                acall   print_char
-                   
-                           ; if r1 is nonzero here, we have a shorter line
-                           ; the value in r1 is the number of padding bytes
-                   
-                           ; wind back pointer
-00CA: E8                   mov     a,      r0
-00CB: 24 F0                add     a,      #-16
-00CD: 29                   add     a,      r1
-00CE: F8                   mov     r0,     a
-                   
-                           ; print hex
-00CF: 7A 10                mov     r2,     #16
-                   dump__print_hex_loop:
-00D1: 08                   inc     r0
-00D2: EA                   mov     a,      r2
-00D3: 54 03                anl     a,      #3      ; mod 4
-00D5: 70 04                jnz     dump__print_hex_no_gap
-00D7: 74 20                mov     a,      #' ' ; gap after every 4 bytes
-00D9: 11 60                acall   print_char
-                   dump__print_hex_no_gap:
-00DB: EA                   mov     a,      r2
-00DC: D3                   setb    c
-00DD: 99                   subb    a,      r1
-00DE: 50 08                jnc     dump__print_hex_no_padding
-00E0: 74 20                mov     a,      #' ' ; padding for shorter line
-00E2: 11 60                acall   print_char
-00E4: 11 60                acall   print_char
-00E6: 80 03                sjmp    dump__print_hex_next
-                   dump__print_hex_no_padding:
-00E8: E6                   mov     a,      @r0
-00E9: 11 65                acall   print_hex_8
-                   dump__print_hex_next:
-00EB: 74 20                mov     a,      #' ' ; space between bytes
-00ED: 11 60                acall   print_char
-00EF: DA E0                djnz    r2,     dump__print_hex_loop
-                   
-                           ; wind back again
-00F1: E8                   mov     a,      r0
-00F2: 24 F0                add     a,      #-16
-00F4: F8                   mov     r0,     a
-                   
-                           ; print ascii
-00F5: 74 20                mov     a,      #' '
-00F7: 11 60                acall   print_char
-00F9: 74 7C                mov     a,      #'|'
-00FB: 11 60                acall   print_char
-00FD: 74 10                mov     a,      #16
-00FF: C3                   clr     c
-0100: 99                   subb    a,      r1
-0101: F9                   mov     r1,     a ; number of bytes to print
-0102: FA                   mov     r2,     a
-                   dump__print_ascii_loop:
-0103: 08                   inc     r0
-0104: E6                   mov     a,      @r0
-0105: B4 20 00             cjne    a,      #0x20,  dump__print_ascii_check1
-                   dump__print_ascii_check1:
-0108: 40 05                jc      dump__print_ascii_replace
-010A: B4 7F 00             cjne    a,      #0x7f,  dump__print_ascii_check2
-                   dump__print_ascii_check2:
-010D: 40 02                jc      dump__print_ascii_continue
-                   dump__print_ascii_replace:
-010F: 74 2E                mov     a,      #'.'
-                   dump__print_ascii_continue:
-0111: 11 60                acall   print_char
-0113: DA EE                djnz    r2,     dump__print_ascii_loop
-0115: 74 7C                mov     a,      #'|'
-0117: 11 60                acall   print_char
-0119: 74 0D                mov     a,      #13
-011B: 11 60                acall   print_char
-011D: 74 0A                mov     a,      #10
-011F: 11 60                acall   print_char
-                   
-                           ; wind back again
-0121: E8                   mov     a,      r0
-0122: 24 F0                add     a,      #-16
-0124: F8                   mov     r0,     a
-                   
-                           ; next address
-0125: EC                   mov     a,      r4
-0126: 29                   add     a,      r1
-0127: FC                   mov     r4,     a
-0128: ED                   mov     a,      r5
-0129: 34 00                addc    a,      #0
-012B: FD                   mov     r5,     a
-012C: EE                   mov     a,      r6
-012D: 34 00                addc    a,      #0
-012F: FE                   mov     r6,     a
-0130: EF                   mov     a,      r7
-0131: 34 00                addc    a,      #0
-0133: FF                   mov     r7,     a
-                   
-0134: E5 F0                mov     a,      b
-0136: 60 02                jz      dump__end
-0138: 01 B2                ajmp    dump__line_loop
-                   
-                   dump__end:
-                           ; deallocate array from stack
-013A: E5 81                mov     a,      sp
-013C: 24 F0                add     a,      #-16
-013E: F5 81                mov     sp,     a
-                   
-0140: 31 4F                acall   xch_r0123_r4567
-                   
-0142: D0 07                pop     7
-0144: D0 06                pop     6
-0146: D0 05                pop     5
-0148: D0 04                pop     4
-014A: D0 E0                pop     acc
-014C: D0 F0                pop     b
-014E: 22                   ret
-                   
-                   ; *** util/xch.inc ***
-                   
-                   ; >> void xch_r0123_r4567(uint32 &r0r1r2r3, uint32 &r4r5r6r7
-                   
-                   ; Exchange registers r0-r3 with r4-r7.
-                   
-                   xch_r0123_r4567:
-                           ; r0 <-> r4
-014F: C8                   xch     a,      r0
-0150: CC                   xch     a,      r4
-0151: C8                   xch     a,      r0
-                           ; r1 <-> r5
-0152: C9                   xch     a,      r1
-0153: CD                   xch     a,      r5
-0154: C9                   xch     a,      r1
-                           ; r2 <-> r6
-0155: CA                   xch     a,      r2
-0156: CE                   xch     a,      r6
-0157: CA                   xch     a,      r2
-                           ; r3 <-> r7
-0158: CB                   xch     a,      r3
-0159: CF                   xch     a,      r7
-015A: CB                   xch     a,      r3
-                           ; a remains unchanged
-015B: 22                   ret
+ADDR  CODE               LINE  SOURCE
+0000                        1  
+0000                        2  ; ************************
+0000                        3  ; * Hexdump Test Program *
+0000                        4  ; ************************
+0000                        5  
+0000                        6  ; This program reads 37 bytes and
+0000                        7  ; echoes them in hexdump format
+0000                        8  
+0000                        9  
+0000                       10  ; **********************
+0000                       11  ; * Header Definitions *
+0000                       12  ; **********************
+0000                       13  .include ../global/variables.equ
+                         ; ==== ../global/variables.equ ====
+0000                        1  
+0000                        2  ; *** global/variables.equ ***
+0000                        3  
+0000                        4  ; variables in internal RAM
+0000                        5  
+0000                        6  ; 0x00-0x1f: register banks 0-3
+0000                        7  ; 0x20-0x2f: bit addressable variables
+0000                        8  
+0030                        9  .equ	in,		0x30	; pointer to input handling routine
+0032                       10  .equ	out,		0x32	; pointer to ouput handling routine
+0000                       11  
+0034                       12  .equ	stream_in,	0x34	; input stream position
+0036                       13  .equ	stream_out,	0x36	; output stream position
+0000                       14  
+0038                       15  .equ	memory_list,	0x38	; pointer to heap list head
+0040                       16  .equ	memory_start,	0x40	; first allocatable address
+0042                       17  .equ	memory_end,	0x42	; last allocatable address
+0000                       18  
+0044                       19  .equ	block_read,	0x44	; pointers to block device driver
+0046                       20  .equ	block_write,	0x46	; code (read and write functions)
+0048                       21  .equ	block_cache,	0x48	; pointer to block cache data in xram
+0000                       22  
+0050                       23  .equ	fatfs_info,	0x50	; pointer to FAT file system metadata
+0000                       24  
+0060                       25  .equ	stack,		0x60	; beginning of stack (grows upwards)
+0000                       26  
+                         ; ==== dump.asm ====
+0000                       14  .include ../serial/sfr.equ
+                         ; ==== ../serial/sfr.equ ====
+0000                        1  
+0000                        2  ; *** serial/sfr.equ ***
+0000                        3  
+0000                        4  ; Special function registers for serial interface.
+0000                        5  ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
+0000                        6  
+0000                        7  ; Internal Baud Rate Generator (BRG), see datasheet page 52.
+009A                        8  	.equ	BRL,	0x9A	; baud rate reload value
+009B                        9  	.equ	BDRCON, 0x9B	; BRG control register
+0000                       10  
+                         ; ==== dump.asm ====
+0000                       15  
+0000                       16  
+0000                       17  ; *************
+0000                       18  ; * Main Code *
+0000                       19  ; *************
+0000                       20  
+0000                       21  .org 0
+0000                       22  .include ../global/init.inc
+                         ; ==== ../global/init.inc ====
+0000                        1  
+0000                        2  ; *** global/init.inc ***
+0000                        3  
+0000                        4  ; Initialize stack pointer and global variables.
+0000                        5  ; This must be included early in the main program.
+0000                        6  
+0000                        7  global_init:
+0000  75 81 60              8  	mov	SP,#STACK
+0003                        9  
+0003                       10  ; Select register bank zero, clear processor flags
+0003  75 D0 00             11  	mov	PSW,#0
+0006                       12  
+0006                       13  ; Fill internal RAM with markers for uninitialized data
+0006  78 00                14  	mov	r0,#0 ; write pointer
+0008                       15  
+0008  74 3F                16  	mov	a,#0x3f ; '?' for uninitialized registers
+000A                       17  global_init__1:
+000A  08                   18  	inc	r0 ; first iteration skips address 0, r0 lives there
+000B  F6                   19  	mov	@r0,a
+000C  B8 1F FB             20  	cjne	r0,#0x1f,global_init__1
+000F                       21  
+000F  74 2A                22  	mov	a,#0x2a ; '*' for uninitialized variables
+0011                       23  global_init__2:
+0011  08                   24  	inc	r0
+0012  F6                   25  	mov	@r0,a
+0013  B8 5F FB             26  	cjne	r0,#STACK-1,global_init__2
+0016                       27  
+0016  74 7E                28  	mov	a,#0x7e ; '~' for stack and above
+0018                       29  global_init__3:
+0018  08                   30  	inc	r0
+0019  F6                   31  	mov	@r0,a
+001A  B8 FF FB             32  	cjne	r0,#0xff,global_init__3
+001D                       33  
+                         ; ==== dump.asm ====
+001D                       23  
+001D                       24  ; *** test/dump.asm ***
+001D                       25  
+001D  11 34                26  	acall	serial_init
+001F                       27  
+001F  E4                   28  	clr	a
+0020  F8                   29  	mov	r0,	a
+0021  F9                   30  	mov	r1,	a
+0022  FA                   31  	mov	r2,	a
+0023  FB                   32  	mov	r3,	a
+0024  74 25                33  	mov	a,	#37
+0026                       34  
+0026  11 9B                35  	acall	dump
+0028  11 85                36  	acall	print_hex_32
+002A  74 0D                37  	mov	a,	#13
+002C  11 60                38  	acall	print_char
+002E  74 0A                39  	mov	a,	#10
+0030  11 60                40  	acall	print_char
+0032                       41  
+0032  80 FE                42  	sjmp	*
+0034                       43  
+0034                       44  
+0034                       45  ; *********************
+0034                       46  ; * Library Functions *
+0034                       47  ; *********************
+0034                       48  .include ../serial/init.inc
+                         ; ==== ../serial/init.inc ====
+0034                        1  
+0034                        2  ; *** serial/init.inc ***
+0034                        3  
+0034                        4  ; >> void serial_init() <<
+0034                        5  
+0034                        6  ; Initialize serial interface.
+0034                        7  ; - assumes 20MHz clock and X2 mode
+0034                        8  ; - uses internal baud rate generator
+0034                        9  ; - speed: 9600 bits per second
+0034                       10  ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
+0034                       11  ; ---
+0034                       12  ; See datasheet page 52 for details,
+0034                       13  ; also note oscillator diagram on page 16!
+0034                       14  
+0034                       15  serial_init:
+0034  75 98 52             16  	mov	SCON,	#0x52	; SM1, REN, TI
+0037  75 9A BF             17  	mov	BRL,	#191	; 9600 @20MHz CLK
+003A  75 9B 1E             18  	mov	BDRCON, #0x1e	; BRR, RBCK, TBCK, SPD
+003D                       19  
+003D  90 00 50             20  	mov	dptr,	#serial_rx
+0040  85 82 30             21  	mov	IN,	DPL
+0043  85 83 31             22  	mov	IN+1,	DPH
+0046                       23  
+0046  90 00 58             24  	mov	dptr,	#serial_tx
+0049  85 82 32             25  	mov	OUT,	DPL
+004C  85 83 33             26  	mov	OUT+1,	DPH
+004F                       27  
+004F  22                   28  	ret
+0050                       29  
+                         ; ==== dump.asm ====
+0050                       49  .include ../serial/rx.inc
+                         ; ==== ../serial/rx.inc ====
+0050                        1  
+0050                        2  ; *** serial/rx.inc ***
+0050                        3  
+0050                        4  ; >> char serial_rx <<
+0050                        5  
+0050                        6  ; Receive byte into accumulator.
+0050                        7  
+0050                        8  serial_rx:
+0050  30 98 FD              9  	jnb	RI,	serial_rx
+0053  C2 98                10  	clr	RI
+0055  E5 99                11  	mov	a,	SBUF
+0057  22                   12  	ret
+0058                       13  
+                         ; ==== dump.asm ====
+0058                       50  .include ../serial/tx.inc
+                         ; ==== ../serial/tx.inc ====
+0058                        1  
+0058                        2  ; *** serial/tx.inc ***
+0058                        3  
+0058                        4  ; >> void serial_tx(char a) <<
+0058                        5  
+0058                        6  ; Transmit byte from accumulator.
+0058                        7  
+0058                        8  serial_tx:
+0058  30 99 FD              9  	jnb	TI,	serial_tx
+005B  C2 99                10  	clr	TI
+005D  F5 99                11  	mov	SBUF,	a
+005F  22                   12  	ret
+0060                       13  
+                         ; ==== dump.asm ====
+0060                       51  .include ../print/char.inc
+                         ; ==== ../print/char.inc ====
+0060                        1  
+0060                        2  ; *** print/char.inc ***
+0060                        3  
+0060                        4  ; >> void print_char(char a) <<
+0060                        5  
+0060                        6  ; Print char from accumulator.
+0060                        7  ; Indirect call to function behind OUT pointer.
+0060                        8  
+0060                        9  print_char:
+0060  C0 32                10  	push	OUT
+0062  C0 33                11  	push	OUT+1
+0064  22                   12  	ret
+0065                       13  
+                         ; ==== dump.asm ====
+0065                       52  .include ../print/hex.inc
+                         ; ==== ../print/hex.inc ====
+0065                        1  
+0065                        2  ; *** print/hex.inc ***
+0065                        3  
+0065                        4  ; >> void print_hex_8(char a) <<
+0065                        5  
+0065                        6  ; Print hexadecimal number from accumulator.
+0065                        7  
+0065                        8  print_hex_8:
+0065  C4                    9  	swap	a	; high nibble first
+0066  11 69                10  	acall	print_hex_8__nibble
+0068  C4                   11  	swap	a
+0069                       12  print_hex_8__nibble:
+0069  C0 E0                13  	push	ACC
+006B  54 0F                14  	anl	a,	#0x0f
+006D  24 90                15  	add	a,	#0x90
+006F  D4                   16  	da	a
+0070  34 40                17  	addc	a,	#0x40
+0072  D4                   18  	da	a
+0073  44 20                19  	orl	a,	#0x20	; lower case
+0075  11 60                20  	acall	print_char
+0077  D0 E0                21  	pop	ACC
+0079  22                   22  	ret
+007A                       23  
+007A                       24  ; >> void print_hex_16(int r0r1) <<
+007A                       25  
+007A                       26  ; Print hexadecimal number from r0-r1.
+007A                       27  
+007A                       28  print_hex_16:
+007A  C0 E0                29  	push	ACC
+007C  E9                   30  	mov	a,	r1	; MSB first
+007D  11 65                31  	acall	print_hex_8
+007F  E8                   32  	mov	a,	r0	; LSB second
+0080  11 65                33  	acall	print_hex_8
+0082  D0 E0                34  	pop	ACC
+0084  22                   35  	ret
+0085                       36  
+0085                       37  ; >> void print_hex_32(long r0r1r2r3) <<
+0085                       38  
+0085                       39  ; Print hexadecimal number from r0-r3.
+0085                       40  
+0085                       41  print_hex_32:
+0085  C0 E0                42  	push	ACC
+0087  EB                   43  	mov	a,	r3	; MSB first
+0088  11 65                44  	acall	print_hex_8
+008A  EA                   45  	mov	a,	r2
+008B  11 65                46  	acall	print_hex_8
+008D  E9                   47  	mov	a,	r1
+008E  11 65                48  	acall	print_hex_8
+0090  E8                   49  	mov	a,	r0	; LSB last
+0091  11 65                50  	acall	print_hex_8
+0093  D0 E0                51  	pop	ACC
+0095  22                   52  	ret
+0096                       53  
+                         ; ==== dump.asm ====
+0096                       53  .include ../read/char.inc
+                         ; ==== ../read/char.inc ====
+0096                        1  
+0096                        2  ; *** read/char.inc ***
+0096                        3  
+0096                        4  ; >> char read_char() <<
+0096                        5  
+0096                        6  ; Read char into accumulator.
+0096                        7  ; Indirect call to function behind IN pointer.
+0096                        8  
+0096                        9  read_char:
+0096  C0 30                10  	push	IN
+0098  C0 31                11  	push	IN+1
+009A  22                   12  	ret
+009B                       13  
+                         ; ==== dump.asm ====
+009B                       54  .include ../util/dump.inc
+                         ; ==== ../util/dump.inc ====
+009B                        1  
+009B                        2  ; *** util/dump.inc ***
+009B                        3  
+009B                        4  ; >> uint32{r0-r3} dump(uint32{r0-r3} addr, uint8{a} count) <<
+009B                        5  
+009B                        6  ; Print hexdump from standard input to standard output.
+009B                        7  ; Starting value for address column in r0-r3.
+009B                        8  ; Number of bytes to print in a (0 means 256).
+009B                        9  ; r0-r3 contains next address upon exit.
+009B                       10  
+009B                       11  dump:
+009B  C0 F0                12  	push	b
+009D  C0 E0                13  	push	acc
+009F  F5 F0                14  	mov	b,	a
+00A1  C0 04                15  	push	4
+00A3  C0 05                16  	push	5
+00A5  C0 06                17  	push	6
+00A7  C0 07                18  	push	7
+00A9                       19  
+00A9                       20  	; b: total bytes remaining
+00A9                       21  	; r0: buffer pointer
+00A9                       22  	; r1: read loop counter / padding size
+00A9                       23  	; r2: print loop counter
+00A9                       24  
+00A9                       25  	; r4-7: address label
+00A9  31 4F                26  	acall	xch_r0123_r4567
+00AB                       27  
+00AB                       28  	; allocate 16 byte array on stack
+00AB  E5 81                29  	mov	a,	sp
+00AD  F8                   30  	mov	r0,	a
+00AE  24 10                31  	add	a,	#16
+00B0  F5 81                32  	mov	sp,	a
+00B2                       33  
+00B2                       34  dump__line_loop:
+00B2                       35  	; read into buffer
+00B2  79 10                36  	mov	r1,	#16
+00B4                       37  dump__read_loop:
+00B4  11 96                38  	acall	read_char
+00B6  08                   39  	inc	r0
+00B7  F6                   40  	mov	@r0,	a
+00B8  D5 F0 03             41  	djnz	b,	dump__read_continue
+00BB  19                   42  	dec	r1
+00BC  80 02                43  	sjmp	dump__read_end
+00BE                       44  dump__read_continue:
+00BE  D9 F4                45  	djnz	r1,	dump__read_loop
+00C0                       46  dump__read_end:
+00C0                       47  
+00C0                       48  	; print address column
+00C0  31 4F                49  	acall	xch_r0123_r4567
+00C2  11 85                50  	acall	print_hex_32
+00C4  31 4F                51  	acall	xch_r0123_r4567
+00C6  74 3A                52  	mov	a,	#':'
+00C8  11 60                53  	acall	print_char
+00CA                       54  
+00CA                       55  	; if r1 is nonzero here, we have a shorter line
+00CA                       56  	; the value in r1 is the number of padding bytes
+00CA                       57  
+00CA                       58  	; wind back pointer
+00CA  E8                   59  	mov	a,	r0
+00CB  24 F0                60  	add	a,	#-16
+00CD  29                   61  	add	a,	r1
+00CE  F8                   62  	mov	r0,	a
+00CF                       63  
+00CF                       64  	; print hex
+00CF  7A 10                65  	mov	r2,	#16
+00D1                       66  dump__print_hex_loop:
+00D1  08                   67  	inc	r0
+00D2  EA                   68  	mov	a,	r2
+00D3  54 03                69  	anl	a,	#3	; mod 4
+00D5  70 04                70  	jnz	dump__print_hex_no_gap
+00D7  74 20                71  	mov	a,	#' ' ; gap after every 4 bytes
+00D9  11 60                72  	acall	print_char
+00DB                       73  dump__print_hex_no_gap:
+00DB  EA                   74  	mov	a,	r2
+00DC  D3                   75  	setb	c
+00DD  99                   76  	subb	a,	r1
+00DE  50 08                77  	jnc	dump__print_hex_no_padding
+00E0  74 20                78  	mov	a,	#' ' ; padding for shorter line
+00E2  11 60                79  	acall	print_char
+00E4  11 60                80  	acall	print_char
+00E6  80 03                81  	sjmp	dump__print_hex_next
+00E8                       82  dump__print_hex_no_padding:
+00E8  E6                   83  	mov	a,	@r0
+00E9  11 65                84  	acall	print_hex_8
+00EB                       85  dump__print_hex_next:
+00EB  74 20                86  	mov	a,	#' ' ; space between bytes
+00ED  11 60                87  	acall	print_char
+00EF  DA E0                88  	djnz	r2,	dump__print_hex_loop
+00F1                       89  
+00F1                       90  	; wind back again
+00F1  E8                   91  	mov	a,	r0
+00F2  24 F0                92  	add	a,	#-16
+00F4  F8                   93  	mov	r0,	a
+00F5                       94  
+00F5                       95  	; print ascii
+00F5  74 20                96  	mov	a,	#' '
+00F7  11 60                97  	acall	print_char
+00F9  74 7C                98  	mov	a,	#'|'
+00FB  11 60                99  	acall	print_char
+00FD  74 10               100  	mov	a,	#16
+00FF  C3                  101  	clr	c
+0100  99                  102  	subb	a,	r1
+0101  F9                  103  	mov	r1,	a ; number of bytes to print
+0102  FA                  104  	mov	r2,	a
+0103                      105  dump__print_ascii_loop:
+0103  08                  106  	inc	r0
+0104  E6                  107  	mov	a,	@r0
+0105  B4 20 00            108  	cjne	a,	#0x20,	dump__print_ascii_check1
+0108                      109  dump__print_ascii_check1:
+0108  40 05               110  	jc	dump__print_ascii_replace
+010A  B4 7F 00            111  	cjne	a,	#0x7f,	dump__print_ascii_check2
+010D                      112  dump__print_ascii_check2:
+010D  40 02               113  	jc	dump__print_ascii_continue
+010F                      114  dump__print_ascii_replace:
+010F  74 2E               115  	mov	a,	#'.'
+0111                      116  dump__print_ascii_continue:
+0111  11 60               117  	acall	print_char
+0113  DA EE               118  	djnz	r2,	dump__print_ascii_loop
+0115  74 7C               119  	mov	a,	#'|'
+0117  11 60               120  	acall	print_char
+0119  74 0D               121  	mov	a,	#13
+011B  11 60               122  	acall	print_char
+011D  74 0A               123  	mov	a,	#10
+011F  11 60               124  	acall	print_char
+0121                      125  
+0121                      126  	; wind back again
+0121  E8                  127  	mov	a,	r0
+0122  24 F0               128  	add	a,	#-16
+0124  F8                  129  	mov	r0,	a
+0125                      130  
+0125                      131  	; next address
+0125  EC                  132  	mov	a,	r4
+0126  29                  133  	add	a,	r1
+0127  FC                  134  	mov	r4,	a
+0128  ED                  135  	mov	a,	r5
+0129  34 00               136  	addc	a,	#0
+012B  FD                  137  	mov	r5,	a
+012C  EE                  138  	mov	a,	r6
+012D  34 00               139  	addc	a,	#0
+012F  FE                  140  	mov	r6,	a
+0130  EF                  141  	mov	a,	r7
+0131  34 00               142  	addc	a,	#0
+0133  FF                  143  	mov	r7,	a
+0134                      144  
+0134  E5 F0               145  	mov	a,	b
+0136  60 02               146  	jz	dump__end
+0138  01 B2               147  	ajmp	dump__line_loop
+013A                      148  
+013A                      149  dump__end:
+013A                      150  	; deallocate array from stack
+013A  E5 81               151  	mov	a,	sp
+013C  24 F0               152  	add	a,	#-16
+013E  F5 81               153  	mov	sp,	a
+0140                      154  
+0140  31 4F               155  	acall	xch_r0123_r4567
+0142                      156  
+0142  D0 07               157  	pop	7
+0144  D0 06               158  	pop	6
+0146  D0 05               159  	pop	5
+0148  D0 04               160  	pop	4
+014A  D0 E0               161  	pop	acc
+014C  D0 F0               162  	pop	b
+014E  22                  163  	ret
+014F                      164  
+                         ; ==== dump.asm ====
+014F                       55  .include ../util/xch.inc
+                         ; ==== ../util/xch.inc ====
+014F                        1  
+014F                        2  ; *** util/xch.inc ***
+014F                        3  
+014F                        4  ; >> void xch_r0123_r4567(uint32 &r0r1r2r3, uint32 &r4r5r6r7) <<
+014F                        5  
+014F                        6  ; Exchange registers r0-r3 with r4-r7.
+014F                        7  
+014F                        8  xch_r0123_r4567:
+014F                        9  	; r0 <-> r4
+014F  C8                   10  	xch	a,	r0
+0150  CC                   11  	xch	a,	r4
+0151  C8                   12  	xch	a,	r0
+0152                       13  	; r1 <-> r5
+0152  C9                   14  	xch	a,	r1
+0153  CD                   15  	xch	a,	r5
+0154  C9                   16  	xch	a,	r1
+0155                       17  	; r2 <-> r6
+0155  CA                   18  	xch	a,	r2
+0156  CE                   19  	xch	a,	r6
+0157  CA                   20  	xch	a,	r2
+0158                       21  	; r3 <-> r7
+0158  CB                   22  	xch	a,	r3
+0159  CF                   23  	xch	a,	r7
+015A  CB                   24  	xch	a,	r3
+015B                       25  	; a remains unchanged
+015B  22                   26  	ret
+015C                       27  
+                         ; ==== dump.asm ====
+015C                       56  

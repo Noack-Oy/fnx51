@@ -10,11 +10,11 @@
 ; **********************
 ; * Header Definitions *
 ; **********************
-.inc ../global/variables.equ
-.inc ../global/sfr.equ
-.inc ../serial/sfr.equ
-.inc ../spi/sfr.equ
-.inc ../sd/config.equ
+.include ../global/variables.equ
+.include ../global/sfr.equ
+.include ../serial/sfr.equ
+.include ../spi/sfr.equ
+.include ../sd/config.equ
 
 ; *************
 ; * Main Code *
@@ -23,7 +23,7 @@
 ; *** test/sd.asm ***
 
 .org	0
-.inc	../global/init.inc
+.include	../global/init.inc
 
 	acall	serial_init
 	acall	sd_init
@@ -79,31 +79,31 @@ halt:
 ; *********************
 ; * Library Functions *
 ; *********************
-.inc ../serial/init.inc
-.inc ../serial/tx.inc
-.inc ../serial/rx.inc
+.include ../serial/init.inc
+.include ../serial/tx.inc
+.include ../serial/rx.inc
 
-.inc ../spi/transfer.inc
-.inc ../sd/init.inc
-.inc ../sd/warmup.inc
-.inc ../sd/select.inc
-.inc ../sd/cmd0.inc
-.inc ../sd/cmd8.inc
-.inc ../sd/acmd41.inc
-.inc ../sd/cmd55.inc
-.inc ../sd/cmd58.inc
-.inc ../sd/command.inc
-.inc ../sd/response.inc
-.inc ../sd/block_read.inc
+.include ../spi/transfer.inc
+.include ../sd/init.inc
+.include ../sd/warmup.inc
+.include ../sd/select.inc
+.include ../sd/cmd0.inc
+.include ../sd/cmd8.inc
+.include ../sd/acmd41.inc
+.include ../sd/cmd55.inc
+.include ../sd/cmd58.inc
+.include ../sd/command.inc
+.include ../sd/response.inc
+.include ../sd/block_read.inc
 
-.inc ../util/delay.inc
-.inc ../print/char.inc
-.inc ../print/hex.inc
-.inc ../print/text.inc
-.inc ../stream/xram_read.inc
-.inc ../read/char.inc
-.inc ../util/xch.inc
-.inc ../util/dump.inc
+.include ../util/delay.inc
+.include ../print/char.inc
+.include ../print/hex.inc
+.include ../print/text.inc
+.include ../stream/xram_read.inc
+.include ../read/char.inc
+.include ../util/xch.inc
+.include ../util/dump.inc
 
 .equ panic_out, serial_tx
-.inc ../util/panic.inc
+.include ../util/panic.inc

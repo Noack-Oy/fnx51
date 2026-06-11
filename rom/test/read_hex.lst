@@ -1,312 +1,354 @@
-                   
-                   ; ************************************
-                   ; * Hex Integer Parsing Test Program *
-                   ; ************************************
-                   
-                   ; Parses and prints back hex numbers in a loop.
-                   
-                   
-                   ; **********************
-                   ; * Header Definitions *
-                   ; **********************
-                   
-                   ; *** global/variables.equ ***
-                   
-                   ; variables in internal RAM
-                   
-                   ; 0x00-0x1f: register banks 0-3
-                   ; 0x20-0x2f: bit addressable variables
-                   
-0000:              .equ    in,             0x30    ; pointer to input handling 
-0000:              .equ    out,            0x32    ; pointer to ouput handling 
-                   
-0000:              .equ    stream_in,      0x34    ; input stream position
-0000:              .equ    stream_out,     0x36    ; output stream position
-                   
-0000:              .equ    memory_list,    0x38    ; pointer to heap list head
-0000:              .equ    memory_start,   0x40    ; first allocatable address
-0000:              .equ    memory_end,     0x42    ; last allocatable address
-                   
-0000:              .equ    block_read,     0x44    ; pointers to block device d
-0000:              .equ    block_write,    0x46    ; code (read and write funct
-0000:              .equ    block_cache,    0x48    ; pointer to block cache dat
-                   
-0000:              .equ    fatfs_info,     0x50    ; pointer to FAT file system
-                   
-0000:              .equ    stack,          0x60    ; beginning of stack (grows 
-                   
-                   ; *** serial/sfr.equ ***
-                   
-                   ; Special function registers for serial interface.
-                   ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
-                   
-                   ; Internal Baud Rate Generator (BRG), see datasheet page 52.
-0000:                      .equ    BRL,    0x9A    ; baud rate reload value
-0000:                      .equ    BDRCON, 0x9B    ; BRG control register
-                   
-                   
-                   ; *************
-                   ; * Main Code *
-                   ; *************
-                   
-0000:              .org 0
-                   
-                   ; *** global/init.inc ***
-                   
-                   ; Initialize stack pointer and global variables.
-                   ; This must be included early in the main program.
-                   
-                   global_init:
-0000: 75 81 60             mov     SP,#STACK
-                   
-                   ; Select register bank zero, clear processor flags
-0003: 75 D0 00             mov     PSW,#0
-                   
-                   ; Fill internal RAM with markers for uninitialized data
-0006: 78 00                mov     r0,#0 ; write pointer
-                   
-0008: 74 3F                mov     a,#0x3f ; '?' for uninitialized registers
-                   global_init__1:
-000A: 08                   inc     r0 ; first iteration skips address 0, r0 liv
-000B: F6                   mov     @r0,a
-000C: B8 1F FB             cjne    r0,#0x1f,global_init__1
-                   
-000F: 74 2A                mov     a,#0x2a ; '*' for uninitialized variables
-                   global_init__2:
-0011: 08                   inc     r0
-0012: F6                   mov     @r0,a
-0013: B8 5F FB             cjne    r0,#STACK-1,global_init__2
-                   
-0016: 74 7E                mov     a,#0x7e ; '~' for stack and above
-                   global_init__3:
-0018: 08                   inc     r0
-0019: F6                   mov     @r0,a
-001A: B8 FF FB             cjne    r0,#0xff,global_init__3
-                   
-                   ; *** test/read_int_hex.asm ***
-                   
-001D: 11 25                acall   serial_init
-                   
-                   loop:
-001F: 11 56                acall   read_hex_32
-0021: 11 D6                acall   print_hex_32
-0023: 80 FA                sjmp    loop
-                   
-                   
-                   ; *********************
-                   ; * Library Functions *
-                   ; *********************
-                   
-                   ; *** serial/init.inc ***
-                   
-                   ; >> void serial_init() <<
-                   
-                   ; Initialize serial interface.
-                   ; - assumes 20MHz clock and X2 mode
-                   ; - uses internal baud rate generator
-                   ; - speed: 9600 bits per second
-                   ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
-                   ; ---
-                   ; See datasheet page 52 for details,
-                   ; also note oscillator diagram on page 16!
-                   
-                   serial_init:
-0025: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
-0028: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
-002B: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
-                   
-002E: 90 00 49             mov     dptr,   #serial_rx
-0031: 85 82 30             mov     IN,     DPL
-0034: 85 83 31             mov     IN+1,   DPH
-                   
-0037: 90 00 41             mov     dptr,   #serial_tx
-003A: 85 82 32             mov     OUT,    DPL
-003D: 85 83 33             mov     OUT+1,  DPH
-                   
-0040: 22                   ret
-                   
-                   ; *** serial/tx.inc ***
-                   
-                   ; >> void serial_tx(char a) <<
-                   
-                   ; Transmit byte from accumulator.
-                   
-                   serial_tx:
-0041: 30 99 FD             jnb     TI,     serial_tx
-0044: C2 99                clr     TI
-0046: F5 99                mov     SBUF,   a
-0048: 22                   ret
-                   
-                   ; *** serial/rx.inc ***
-                   
-                   ; >> char serial_rx <<
-                   
-                   ; Receive byte into accumulator.
-                   
-                   serial_rx:
-0049: 30 98 FD             jnb     RI,     serial_rx
-004C: C2 98                clr     RI
-004E: E5 99                mov     a,      SBUF
-0050: 22                   ret
-                   
-                   ; *** read/char.inc ***
-                   
-                   ; >> char read_char() <<
-                   
-                   ; Read char into accumulator.
-                   ; Indirect call to function behind IN pointer.
-                   
-                   read_char:
-0051: C0 30                push    IN
-0053: C0 31                push    IN+1
-0055: 22                   ret
-                   
-                   ; *** read/char.inc ***
-                   
-                   ; >> uint32 read_hex_32() <<
-                   
-                   ; Read 32 bit hex integer from input into r0-r3.
-                   ; Stops at the first non-hex character or integer overflow.
-                   
-                   read_hex_32:
-0056: C0 E0                push    acc
-0058: C0 04                push    4
-005A: C0 05                push    5
-                   
-005C: E4                   clr     a
-005D: F8                   mov     r0,     a
-005E: F9                   mov     r1,     a
-005F: FA                   mov     r2,     a
-0060: FB                   mov     r3,     a
-                   
-                   read_hex_32__loop:
-0061: 11 51                acall   read_char
-                   
-0063: C3                   clr     c
-0064: 94 30                subb    a,      #0x30   ; ascii '0'
-0066: 40 42                jc      read_hex_32__end
-0068: B4 0A 00             cjne    a,      #10,    read_hex_32__1
-                   read_hex_32__1:
-006B: 40 0D                jc      read_hex_32__3
-006D: 94 11                subb    a,      #17     ; chars between '0' and 'A'
-006F: 40 39                jc      read_hex_32__end
-0071: 24 0A                add     a,      #10
-0073: 54 DF                anl     a,      #0xdf   ; allow lowercase
-0075: B4 10 00             cjne    a,      #0x10,  read_hex_32__2
-                   read_hex_32__2:
-0078: 50 30                jnc     read_hex_32__end
-                   
-                   read_hex_32__3:
-007A: FC                   mov     r4,     a
-007B: E8                   mov     a,      r0
-007C: C4                   swap    a
-007D: FD                   mov     r5,     a
-007E: 54 F0                anl     a,      #0xf0
-0080: 4C                   orl     a,      r4
-0081: F8                   mov     r0,     a
-0082: ED                   mov     a,      r5
-0083: 54 0F                anl     a,      #0x0f
-                   
-0085: FC                   mov     r4,     a
-0086: E9                   mov     a,      r1
-0087: C4                   swap    a
-0088: FD                   mov     r5,     a
-0089: 54 F0                anl     a,      #0xf0
-008B: 4C                   orl     a,      r4
-008C: F9                   mov     r1,     a
-008D: ED                   mov     a,      r5
-008E: 54 0F                anl     a,      #0x0f
-                   
-0090: FC                   mov     r4,     a
-0091: EA                   mov     a,      r2
-0092: C4                   swap    a
-0093: FD                   mov     r5,     a
-0094: 54 F0                anl     a,      #0xf0
-0096: 4C                   orl     a,      r4
-0097: FA                   mov     r2,     a
-0098: ED                   mov     a,      r5
-0099: 54 0F                anl     a,      #0x0f
-                   
-009B: FC                   mov     r4,     a
-009C: EB                   mov     a,      r3
-009D: C4                   swap    a
-009E: FD                   mov     r5,     a
-009F: 54 F0                anl     a,      #0xf0
-00A1: 4C                   orl     a,      r4
-00A2: FB                   mov     r3,     a
-00A3: ED                   mov     a,      r5
-00A4: 54 0F                anl     a,      #0x0f
-                   
-00A6: 70 02                jnz     read_hex_32__end        ; overflow
-00A8: 80 B7                sjmp    read_hex_32__loop
-                   
-                   
-                   read_hex_32__end:
-00AA: D0 05                pop     5
-00AC: D0 04                pop     4
-00AE: D0 E0                pop     acc
-00B0: 22                   ret
-                   
-                   ; *** print/char.inc ***
-                   
-                   ; >> void print_char(char a) <<
-                   
-                   ; Print char from accumulator.
-                   ; Indirect call to function behind OUT pointer.
-                   
-                   print_char:
-00B1: C0 32                push    OUT
-00B3: C0 33                push    OUT+1
-00B5: 22                   ret
-                   
-                   ; *** print/hex.inc ***
-                   
-                   ; >> void print_hex_8(char a) <<
-                   
-                   ; Print hexadecimal number from accumulator.
-                   
-                   print_hex_8:
-00B6: C4                   swap    a       ; high nibble first
-00B7: 11 BA                acall   print_hex_8__nibble
-00B9: C4                   swap    a
-                   print_hex_8__nibble:
-00BA: C0 E0                push    ACC
-00BC: 54 0F                anl     a,      #0x0f
-00BE: 24 90                add     a,      #0x90
-00C0: D4                   da      a
-00C1: 34 40                addc    a,      #0x40
-00C3: D4                   da      a
-00C4: 44 20                orl     a,      #0x20   ; lower case
-00C6: 11 B1                acall   print_char
-00C8: D0 E0                pop     ACC
-00CA: 22                   ret
-                   
-                   ; >> void print_hex_16(int r0r1) <<
-                   
-                   ; Print hexadecimal number from r0-r1.
-                   
-                   print_hex_16:
-00CB: C0 E0                push    ACC
-00CD: E9                   mov     a,      r1      ; MSB first
-00CE: 11 B6                acall   print_hex_8
-00D0: E8                   mov     a,      r0      ; LSB second
-00D1: 11 B6                acall   print_hex_8
-00D3: D0 E0                pop     ACC
-00D5: 22                   ret
-                   
-                   ; >> void print_hex_32(long r0r1r2r3) <<
-                   
-                   ; Print hexadecimal number from r0-r3.
-                   
-                   print_hex_32:
-00D6: C0 E0                push    ACC
-00D8: EB                   mov     a,      r3      ; MSB first
-00D9: 11 B6                acall   print_hex_8
-00DB: EA                   mov     a,      r2
-00DC: 11 B6                acall   print_hex_8
-00DE: E9                   mov     a,      r1
-00DF: 11 B6                acall   print_hex_8
-00E1: E8                   mov     a,      r0      ; LSB last
-00E2: 11 B6                acall   print_hex_8
-00E4: D0 E0                pop     ACC
-00E6: 22                   ret
+ADDR  CODE               LINE  SOURCE
+0000                        1  
+0000                        2  ; ************************************
+0000                        3  ; * Hex Integer Parsing Test Program *
+0000                        4  ; ************************************
+0000                        5  
+0000                        6  ; Parses and prints back hex numbers in a loop.
+0000                        7  
+0000                        8  
+0000                        9  ; **********************
+0000                       10  ; * Header Definitions *
+0000                       11  ; **********************
+0000                       12  .include ../global/variables.equ
+                         ; ==== ../global/variables.equ ====
+0000                        1  
+0000                        2  ; *** global/variables.equ ***
+0000                        3  
+0000                        4  ; variables in internal RAM
+0000                        5  
+0000                        6  ; 0x00-0x1f: register banks 0-3
+0000                        7  ; 0x20-0x2f: bit addressable variables
+0000                        8  
+0030                        9  .equ	in,		0x30	; pointer to input handling routine
+0032                       10  .equ	out,		0x32	; pointer to ouput handling routine
+0000                       11  
+0034                       12  .equ	stream_in,	0x34	; input stream position
+0036                       13  .equ	stream_out,	0x36	; output stream position
+0000                       14  
+0038                       15  .equ	memory_list,	0x38	; pointer to heap list head
+0040                       16  .equ	memory_start,	0x40	; first allocatable address
+0042                       17  .equ	memory_end,	0x42	; last allocatable address
+0000                       18  
+0044                       19  .equ	block_read,	0x44	; pointers to block device driver
+0046                       20  .equ	block_write,	0x46	; code (read and write functions)
+0048                       21  .equ	block_cache,	0x48	; pointer to block cache data in xram
+0000                       22  
+0050                       23  .equ	fatfs_info,	0x50	; pointer to FAT file system metadata
+0000                       24  
+0060                       25  .equ	stack,		0x60	; beginning of stack (grows upwards)
+0000                       26  
+                         ; ==== read_hex.asm ====
+0000                       13  .include ../serial/sfr.equ
+                         ; ==== ../serial/sfr.equ ====
+0000                        1  
+0000                        2  ; *** serial/sfr.equ ***
+0000                        3  
+0000                        4  ; Special function registers for serial interface.
+0000                        5  ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
+0000                        6  
+0000                        7  ; Internal Baud Rate Generator (BRG), see datasheet page 52.
+009A                        8  	.equ	BRL,	0x9A	; baud rate reload value
+009B                        9  	.equ	BDRCON, 0x9B	; BRG control register
+0000                       10  
+                         ; ==== read_hex.asm ====
+0000                       14  
+0000                       15  
+0000                       16  ; *************
+0000                       17  ; * Main Code *
+0000                       18  ; *************
+0000                       19  
+0000                       20  .org 0
+0000                       21  .include ../global/init.inc
+                         ; ==== ../global/init.inc ====
+0000                        1  
+0000                        2  ; *** global/init.inc ***
+0000                        3  
+0000                        4  ; Initialize stack pointer and global variables.
+0000                        5  ; This must be included early in the main program.
+0000                        6  
+0000                        7  global_init:
+0000  75 81 60              8  	mov	SP,#STACK
+0003                        9  
+0003                       10  ; Select register bank zero, clear processor flags
+0003  75 D0 00             11  	mov	PSW,#0
+0006                       12  
+0006                       13  ; Fill internal RAM with markers for uninitialized data
+0006  78 00                14  	mov	r0,#0 ; write pointer
+0008                       15  
+0008  74 3F                16  	mov	a,#0x3f ; '?' for uninitialized registers
+000A                       17  global_init__1:
+000A  08                   18  	inc	r0 ; first iteration skips address 0, r0 lives there
+000B  F6                   19  	mov	@r0,a
+000C  B8 1F FB             20  	cjne	r0,#0x1f,global_init__1
+000F                       21  
+000F  74 2A                22  	mov	a,#0x2a ; '*' for uninitialized variables
+0011                       23  global_init__2:
+0011  08                   24  	inc	r0
+0012  F6                   25  	mov	@r0,a
+0013  B8 5F FB             26  	cjne	r0,#STACK-1,global_init__2
+0016                       27  
+0016  74 7E                28  	mov	a,#0x7e ; '~' for stack and above
+0018                       29  global_init__3:
+0018  08                   30  	inc	r0
+0019  F6                   31  	mov	@r0,a
+001A  B8 FF FB             32  	cjne	r0,#0xff,global_init__3
+001D                       33  
+                         ; ==== read_hex.asm ====
+001D                       22  
+001D                       23  ; *** test/read_int_hex.asm ***
+001D                       24  
+001D  11 25                25  	acall	serial_init
+001F                       26  
+001F                       27  loop:
+001F  11 56                28  	acall	read_hex_32
+0021  11 D6                29  	acall	print_hex_32
+0023  80 FA                30  	sjmp	loop
+0025                       31  
+0025                       32  
+0025                       33  ; *********************
+0025                       34  ; * Library Functions *
+0025                       35  ; *********************
+0025                       36  .include ../serial/init.inc
+                         ; ==== ../serial/init.inc ====
+0025                        1  
+0025                        2  ; *** serial/init.inc ***
+0025                        3  
+0025                        4  ; >> void serial_init() <<
+0025                        5  
+0025                        6  ; Initialize serial interface.
+0025                        7  ; - assumes 20MHz clock and X2 mode
+0025                        8  ; - uses internal baud rate generator
+0025                        9  ; - speed: 9600 bits per second
+0025                       10  ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
+0025                       11  ; ---
+0025                       12  ; See datasheet page 52 for details,
+0025                       13  ; also note oscillator diagram on page 16!
+0025                       14  
+0025                       15  serial_init:
+0025  75 98 52             16  	mov	SCON,	#0x52	; SM1, REN, TI
+0028  75 9A BF             17  	mov	BRL,	#191	; 9600 @20MHz CLK
+002B  75 9B 1E             18  	mov	BDRCON, #0x1e	; BRR, RBCK, TBCK, SPD
+002E                       19  
+002E  90 00 49             20  	mov	dptr,	#serial_rx
+0031  85 82 30             21  	mov	IN,	DPL
+0034  85 83 31             22  	mov	IN+1,	DPH
+0037                       23  
+0037  90 00 41             24  	mov	dptr,	#serial_tx
+003A  85 82 32             25  	mov	OUT,	DPL
+003D  85 83 33             26  	mov	OUT+1,	DPH
+0040                       27  
+0040  22                   28  	ret
+0041                       29  
+                         ; ==== read_hex.asm ====
+0041                       37  .include ../serial/tx.inc
+                         ; ==== ../serial/tx.inc ====
+0041                        1  
+0041                        2  ; *** serial/tx.inc ***
+0041                        3  
+0041                        4  ; >> void serial_tx(char a) <<
+0041                        5  
+0041                        6  ; Transmit byte from accumulator.
+0041                        7  
+0041                        8  serial_tx:
+0041  30 99 FD              9  	jnb	TI,	serial_tx
+0044  C2 99                10  	clr	TI
+0046  F5 99                11  	mov	SBUF,	a
+0048  22                   12  	ret
+0049                       13  
+                         ; ==== read_hex.asm ====
+0049                       38  .include ../serial/rx.inc
+                         ; ==== ../serial/rx.inc ====
+0049                        1  
+0049                        2  ; *** serial/rx.inc ***
+0049                        3  
+0049                        4  ; >> char serial_rx <<
+0049                        5  
+0049                        6  ; Receive byte into accumulator.
+0049                        7  
+0049                        8  serial_rx:
+0049  30 98 FD              9  	jnb	RI,	serial_rx
+004C  C2 98                10  	clr	RI
+004E  E5 99                11  	mov	a,	SBUF
+0050  22                   12  	ret
+0051                       13  
+                         ; ==== read_hex.asm ====
+0051                       39  .include ../read/char.inc
+                         ; ==== ../read/char.inc ====
+0051                        1  
+0051                        2  ; *** read/char.inc ***
+0051                        3  
+0051                        4  ; >> char read_char() <<
+0051                        5  
+0051                        6  ; Read char into accumulator.
+0051                        7  ; Indirect call to function behind IN pointer.
+0051                        8  
+0051                        9  read_char:
+0051  C0 30                10  	push	IN
+0053  C0 31                11  	push	IN+1
+0055  22                   12  	ret
+0056                       13  
+                         ; ==== read_hex.asm ====
+0056                       40  .include ../read/hex.inc
+                         ; ==== ../read/hex.inc ====
+0056                        1  
+0056                        2  ; *** read/char.inc ***
+0056                        3  
+0056                        4  ; >> uint32 read_hex_32() <<
+0056                        5  
+0056                        6  ; Read 32 bit hex integer from input into r0-r3.
+0056                        7  ; Stops at the first non-hex character or integer overflow.
+0056                        8  
+0056                        9  read_hex_32:
+0056  C0 E0                10  	push	acc
+0058  C0 04                11  	push	4
+005A  C0 05                12  	push	5
+005C                       13  
+005C  E4                   14  	clr	a
+005D  F8                   15  	mov	r0,	a
+005E  F9                   16  	mov	r1,	a
+005F  FA                   17  	mov	r2,	a
+0060  FB                   18  	mov	r3,	a
+0061                       19  
+0061                       20  read_hex_32__loop:
+0061  11 51                21  	acall	read_char
+0063                       22  
+0063  C3                   23  	clr	c
+0064  94 30                24  	subb	a,	#0x30	; ascii '0'
+0066  40 42                25  	jc	read_hex_32__end
+0068  B4 0A 00             26  	cjne	a,	#10,	read_hex_32__1
+006B                       27  read_hex_32__1:
+006B  40 0D                28  	jc	read_hex_32__3
+006D  94 11                29  	subb	a,	#17	; chars between '0' and 'A'
+006F  40 39                30  	jc	read_hex_32__end
+0071  24 0A                31  	add	a,	#10
+0073  54 DF                32  	anl	a,	#0xdf	; allow lowercase
+0075  B4 10 00             33  	cjne	a,	#0x10,	read_hex_32__2
+0078                       34  read_hex_32__2:
+0078  50 30                35  	jnc	read_hex_32__end
+007A                       36  
+007A                       37  read_hex_32__3:
+007A  FC                   38  	mov	r4,	a
+007B  E8                   39  	mov	a,	r0
+007C  C4                   40  	swap	a
+007D  FD                   41  	mov	r5,	a
+007E  54 F0                42  	anl	a,	#0xf0
+0080  4C                   43  	orl	a,	r4
+0081  F8                   44  	mov	r0,	a
+0082  ED                   45  	mov	a,	r5
+0083  54 0F                46  	anl	a,	#0x0f
+0085                       47  
+0085  FC                   48  	mov	r4,	a
+0086  E9                   49  	mov	a,	r1
+0087  C4                   50  	swap	a
+0088  FD                   51  	mov	r5,	a
+0089  54 F0                52  	anl	a,	#0xf0
+008B  4C                   53  	orl	a,	r4
+008C  F9                   54  	mov	r1,	a
+008D  ED                   55  	mov	a,	r5
+008E  54 0F                56  	anl	a,	#0x0f
+0090                       57  
+0090  FC                   58  	mov	r4,	a
+0091  EA                   59  	mov	a,	r2
+0092  C4                   60  	swap	a
+0093  FD                   61  	mov	r5,	a
+0094  54 F0                62  	anl	a,	#0xf0
+0096  4C                   63  	orl	a,	r4
+0097  FA                   64  	mov	r2,	a
+0098  ED                   65  	mov	a,	r5
+0099  54 0F                66  	anl	a,	#0x0f
+009B                       67  
+009B  FC                   68  	mov	r4,	a
+009C  EB                   69  	mov	a,	r3
+009D  C4                   70  	swap	a
+009E  FD                   71  	mov	r5,	a
+009F  54 F0                72  	anl	a,	#0xf0
+00A1  4C                   73  	orl	a,	r4
+00A2  FB                   74  	mov	r3,	a
+00A3  ED                   75  	mov	a,	r5
+00A4  54 0F                76  	anl	a,	#0x0f
+00A6                       77  
+00A6  70 02                78  	jnz	read_hex_32__end	; overflow
+00A8  80 B7                79  	sjmp	read_hex_32__loop
+00AA                       80  
+00AA                       81  
+00AA                       82  read_hex_32__end:
+00AA  D0 05                83  	pop	5
+00AC  D0 04                84  	pop	4
+00AE  D0 E0                85  	pop	acc
+00B0  22                   86  	ret
+00B1                       87  
+                         ; ==== read_hex.asm ====
+00B1                       41  .include ../print/char.inc
+                         ; ==== ../print/char.inc ====
+00B1                        1  
+00B1                        2  ; *** print/char.inc ***
+00B1                        3  
+00B1                        4  ; >> void print_char(char a) <<
+00B1                        5  
+00B1                        6  ; Print char from accumulator.
+00B1                        7  ; Indirect call to function behind OUT pointer.
+00B1                        8  
+00B1                        9  print_char:
+00B1  C0 32                10  	push	OUT
+00B3  C0 33                11  	push	OUT+1
+00B5  22                   12  	ret
+00B6                       13  
+                         ; ==== read_hex.asm ====
+00B6                       42  .include ../print/hex.inc
+                         ; ==== ../print/hex.inc ====
+00B6                        1  
+00B6                        2  ; *** print/hex.inc ***
+00B6                        3  
+00B6                        4  ; >> void print_hex_8(char a) <<
+00B6                        5  
+00B6                        6  ; Print hexadecimal number from accumulator.
+00B6                        7  
+00B6                        8  print_hex_8:
+00B6  C4                    9  	swap	a	; high nibble first
+00B7  11 BA                10  	acall	print_hex_8__nibble
+00B9  C4                   11  	swap	a
+00BA                       12  print_hex_8__nibble:
+00BA  C0 E0                13  	push	ACC
+00BC  54 0F                14  	anl	a,	#0x0f
+00BE  24 90                15  	add	a,	#0x90
+00C0  D4                   16  	da	a
+00C1  34 40                17  	addc	a,	#0x40
+00C3  D4                   18  	da	a
+00C4  44 20                19  	orl	a,	#0x20	; lower case
+00C6  11 B1                20  	acall	print_char
+00C8  D0 E0                21  	pop	ACC
+00CA  22                   22  	ret
+00CB                       23  
+00CB                       24  ; >> void print_hex_16(int r0r1) <<
+00CB                       25  
+00CB                       26  ; Print hexadecimal number from r0-r1.
+00CB                       27  
+00CB                       28  print_hex_16:
+00CB  C0 E0                29  	push	ACC
+00CD  E9                   30  	mov	a,	r1	; MSB first
+00CE  11 B6                31  	acall	print_hex_8
+00D0  E8                   32  	mov	a,	r0	; LSB second
+00D1  11 B6                33  	acall	print_hex_8
+00D3  D0 E0                34  	pop	ACC
+00D5  22                   35  	ret
+00D6                       36  
+00D6                       37  ; >> void print_hex_32(long r0r1r2r3) <<
+00D6                       38  
+00D6                       39  ; Print hexadecimal number from r0-r3.
+00D6                       40  
+00D6                       41  print_hex_32:
+00D6  C0 E0                42  	push	ACC
+00D8  EB                   43  	mov	a,	r3	; MSB first
+00D9  11 B6                44  	acall	print_hex_8
+00DB  EA                   45  	mov	a,	r2
+00DC  11 B6                46  	acall	print_hex_8
+00DE  E9                   47  	mov	a,	r1
+00DF  11 B6                48  	acall	print_hex_8
+00E1  E8                   49  	mov	a,	r0	; LSB last
+00E2  11 B6                50  	acall	print_hex_8
+00E4  D0 E0                51  	pop	ACC
+00E6  22                   52  	ret
+00E7                       53  
+                         ; ==== read_hex.asm ====
+00E7                       43  

@@ -9,13 +9,13 @@
 ; **********************
 ; * Header Definitions *
 ; **********************
-.inc ../global/variables.equ
-.inc ../global/sfr.equ
-.inc ../serial/sfr.equ
-.inc ../spi/sfr.equ
-.inc ../sd/config.equ
-.inc ../fatfs/info.equ
-.inc ../fatfs/chain.equ
+.include ../global/variables.equ
+.include ../global/sfr.equ
+.include ../serial/sfr.equ
+.include ../spi/sfr.equ
+.include ../sd/config.equ
+.include ../fatfs/info.equ
+.include ../fatfs/chain.equ
 
 ; *************
 ; * Main Code *
@@ -24,7 +24,7 @@
 ; *** test/fatfs.asm ***
 
 .org	0
-.inc	../global/init.inc
+.include	../global/init.inc
 
 	lcall	serial_init
 	lcall	memory_init
@@ -141,47 +141,47 @@ newline:
 ; *********************
 ; * Library Functions *
 ; *********************
-.inc ../serial/init.inc
-.inc ../serial/tx.inc
-.inc ../serial/rx.inc
+.include ../serial/init.inc
+.include ../serial/tx.inc
+.include ../serial/rx.inc
 
-.inc ../spi/transfer.inc
-.inc ../sd/init.inc
-.inc ../sd/warmup.inc
-.inc ../sd/select.inc
-.inc ../sd/cmd0.inc
-.inc ../sd/cmd8.inc
-.inc ../sd/acmd41.inc
-.inc ../sd/cmd55.inc
-.inc ../sd/cmd58.inc
-.inc ../sd/command.inc
-.inc ../sd/response.inc
-.inc ../sd/block_read.inc
+.include ../spi/transfer.inc
+.include ../sd/init.inc
+.include ../sd/warmup.inc
+.include ../sd/select.inc
+.include ../sd/cmd0.inc
+.include ../sd/cmd8.inc
+.include ../sd/acmd41.inc
+.include ../sd/cmd55.inc
+.include ../sd/cmd58.inc
+.include ../sd/command.inc
+.include ../sd/response.inc
+.include ../sd/block_read.inc
 
-.inc ../memory/init.inc
-.inc ../memory/allocate.inc
-.inc ../memory/release.inc
-.inc ../block/init.inc
-.inc ../block/load.inc
-.inc ../block/flush.inc
+.include ../memory/init.inc
+.include ../memory/allocate.inc
+.include ../memory/release.inc
+.include ../block/init.inc
+.include ../block/load.inc
+.include ../block/flush.inc
 
-.inc ../fatfs/init.inc
-.inc ../fatfs/cluster.inc
-.inc ../fatfs/chain.inc
+.include ../fatfs/init.inc
+.include ../fatfs/cluster.inc
+.include ../fatfs/chain.inc
 
-.inc ../math/arith32.inc
+.include ../math/arith32.inc
 
-.inc ../util/delay.inc
-.inc ../util/xch.inc
-.inc ../util/dptr.inc
+.include ../util/delay.inc
+.include ../util/xch.inc
+.include ../util/dptr.inc
 
-.inc ../print/char.inc
-.inc ../print/hex.inc
-.inc ../print/text.inc
+.include ../print/char.inc
+.include ../print/hex.inc
+.include ../print/text.inc
 
-.inc ../stream/xram_read.inc
-.inc ../read/char.inc
-.inc ../util/dump.inc
+.include ../stream/xram_read.inc
+.include ../read/char.inc
+.include ../util/dump.inc
 
 .equ panic_out, serial_tx
-.inc ../util/panic.inc
+.include ../util/panic.inc

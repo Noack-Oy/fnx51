@@ -20,8 +20,8 @@
 ; **********************
 ; * Header Definitions *
 ; **********************
-.inc ../global/variables.equ
-.inc ../serial/sfr.equ
+.include ../global/variables.equ
+.include ../serial/sfr.equ
 
 
 ; *************
@@ -29,7 +29,7 @@
 ; *************
 
 	.org	0
-.inc	../global/init.inc
+.include	../global/init.inc
 
 ; *** test/print.asm ***
 
@@ -304,13 +304,13 @@ test__space:
 ; *********************
 ; * Library Functions *
 ; *********************
-.inc ../serial/init.inc
-.inc ../serial/rx.inc
-.inc ../serial/tx.inc
-.inc ../print/char.inc
-.inc ../print/text.inc
-.inc ../print/hex.inc
-.inc ../print/int.inc
+.include ../serial/init.inc
+.include ../serial/rx.inc
+.include ../serial/tx.inc
+.include ../print/char.inc
+.include ../print/text.inc
+.include ../print/hex.inc
+.include ../print/int.inc
 
 .equ panic_out, serial_tx
-.inc ../util/panic.inc
+.include ../util/panic.inc

@@ -9,8 +9,8 @@
 ; **********************
 ; * Header Definitions *
 ; **********************
-.inc ../global/variables.equ
-.inc ../serial/sfr.equ
+.include ../global/variables.equ
+.include ../serial/sfr.equ
 
 
 ; *************
@@ -18,7 +18,7 @@
 ; *************
 
 .org 0
-.inc ../global/init.inc
+.include ../global/init.inc
 
 ; *** test/stream.asm ***
 
@@ -64,18 +64,18 @@ test_message_end:
 ; *********************
 ; * Library Functions *
 ; *********************
-.inc ../serial/init.inc
-.inc ../serial/rx.inc
-.inc ../serial/tx.inc
-.inc ../stream/imem_read.inc
-.inc ../stream/imem_write.inc
-.inc ../print/char.inc
-.inc ../print/text.inc
-.inc ../print/hex.inc
-.inc ../print/int.inc
-.inc ../read/char.inc
-.inc ../util/dump.inc
-.inc ../util/xch.inc
+.include ../serial/init.inc
+.include ../serial/rx.inc
+.include ../serial/tx.inc
+.include ../stream/imem_read.inc
+.include ../stream/imem_write.inc
+.include ../print/char.inc
+.include ../print/text.inc
+.include ../print/hex.inc
+.include ../print/int.inc
+.include ../read/char.inc
+.include ../util/dump.inc
+.include ../util/xch.inc
 
 .equ panic_out, serial_tx
-.inc ../util/panic.inc
+.include ../util/panic.inc

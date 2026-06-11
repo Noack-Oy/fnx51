@@ -15,7 +15,7 @@ test: $(sources:.asm=.out)
 include $(sources:.asm=.d)
 
 %.lst %.hex: %.asm
-	as31 -l $*.asm || (rm -vf $*.lst $*.hex ; exit 1)
+	zinc51 $*.asm -l $*.lst
 
 %.out: %.hex %.t.py
 	rm -vf $*.fail
@@ -32,7 +32,7 @@ endif
 
 %.d: %.asm
 	echo -n '$*.lst $*.hex: $*.asm ' > $@
-	grep -i '^\.inc' $< | awk '{print $$2}' | xargs >> $@
+	grep -i '^\.include' $< | awk '{print $$2}' | xargs >> $@
 
 clean:
 	rm -vf *.hex *.lst *.out *.fail

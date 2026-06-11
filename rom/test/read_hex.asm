@@ -9,8 +9,8 @@
 ; **********************
 ; * Header Definitions *
 ; **********************
-.inc ../global/variables.equ
-.inc ../serial/sfr.equ
+.include ../global/variables.equ
+.include ../serial/sfr.equ
 
 
 ; *************
@@ -18,7 +18,7 @@
 ; *************
 
 .org 0
-.inc ../global/init.inc
+.include ../global/init.inc
 
 ; *** test/read_int_hex.asm ***
 
@@ -33,10 +33,10 @@ loop:
 ; *********************
 ; * Library Functions *
 ; *********************
-.inc ../serial/init.inc
-.inc ../serial/tx.inc
-.inc ../serial/rx.inc
-.inc ../read/char.inc
-.inc ../read/hex.inc
-.inc ../print/char.inc
-.inc ../print/hex.inc
+.include ../serial/init.inc
+.include ../serial/tx.inc
+.include ../serial/rx.inc
+.include ../read/char.inc
+.include ../read/hex.inc
+.include ../print/char.inc
+.include ../print/hex.inc

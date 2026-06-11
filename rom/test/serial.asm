@@ -11,8 +11,8 @@
 ; **********************
 ; * Header Definitions *
 ; **********************
-.inc ../global/variables.equ
-.inc ../serial/sfr.equ
+.include ../global/variables.equ
+.include ../serial/sfr.equ
 
 
 ; *************
@@ -21,7 +21,7 @@
 
 	.org	0
 
-.inc ../global/init.inc
+.include ../global/init.inc
 
 ; *** test/serial.asm ***
 
@@ -30,7 +30,7 @@
 	mov	dptr,	#hello_text
 hello_loop:
 	clr	a
-	movc	a,	@dptr+a
+	movc	a,	@a+dptr
 	jz	hello_end
 	acall	serial_tx
 	inc	dptr
@@ -51,6 +51,6 @@ hello_text:
 ; *********************
 ; * Library Functions *
 ; *********************
-.inc ../serial/init.inc
-.inc ../serial/tx.inc
-.inc ../serial/rx.inc
+.include ../serial/init.inc
+.include ../serial/tx.inc
+.include ../serial/rx.inc

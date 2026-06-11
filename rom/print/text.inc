@@ -13,7 +13,7 @@ print_text:
 	clr	a
 	mov	r0,	a
 print_text__loop:
-	movc	a,	@dptr+a
+	movc	a,	@a+dptr
 	jz	print_text__end
 	acall	print_char
 	inc	r0

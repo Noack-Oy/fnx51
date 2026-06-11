@@ -1,291 +1,331 @@
-                   
-                   ; *******************************
-                   ; * Panic function Test Program *
-                   ; *******************************
-                   
-                   ; This program triggers the "panic" function,
-                   ; which handles unrecoverable errors
-                   ; by printng the address from where it was called
-                   ; and halting the system.
-                   
-                   ; **********************
-                   ; * Header Definitions *
-                   ; **********************
-                   
-                   ; *** global/variables.equ ***
-                   
-                   ; variables in internal RAM
-                   
-                   ; 0x00-0x1f: register banks 0-3
-                   ; 0x20-0x2f: bit addressable variables
-                   
-0000:              .equ    in,             0x30    ; pointer to input handling 
-0000:              .equ    out,            0x32    ; pointer to ouput handling 
-                   
-0000:              .equ    stream_in,      0x34    ; input stream position
-0000:              .equ    stream_out,     0x36    ; output stream position
-                   
-0000:              .equ    memory_list,    0x38    ; pointer to heap list head
-0000:              .equ    memory_start,   0x40    ; first allocatable address
-0000:              .equ    memory_end,     0x42    ; last allocatable address
-                   
-0000:              .equ    block_read,     0x44    ; pointers to block device d
-0000:              .equ    block_write,    0x46    ; code (read and write funct
-0000:              .equ    block_cache,    0x48    ; pointer to block cache dat
-                   
-0000:              .equ    fatfs_info,     0x50    ; pointer to FAT file system
-                   
-0000:              .equ    stack,          0x60    ; beginning of stack (grows 
-                   
-                   ; *** serial/sfr.equ ***
-                   
-                   ; Special function registers for serial interface.
-                   ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
-                   
-                   ; Internal Baud Rate Generator (BRG), see datasheet page 52.
-0000:                      .equ    BRL,    0x9A    ; baud rate reload value
-0000:                      .equ    BDRCON, 0x9B    ; BRG control register
-                   
-                   ; *************
-                   ; * Main Code *
-                   ; *************
-                   
-0000:                      .org    0
-                   
-                   
-                   ; *** global/init.inc ***
-                   
-                   ; Initialize stack pointer and global variables.
-                   ; This must be included early in the main program.
-                   
-                   global_init:
-0000: 75 81 60             mov     SP,#STACK
-                   
-                   ; Select register bank zero, clear processor flags
-0003: 75 D0 00             mov     PSW,#0
-                   
-                   ; Fill internal RAM with markers for uninitialized data
-0006: 78 00                mov     r0,#0 ; write pointer
-                   
-0008: 74 3F                mov     a,#0x3f ; '?' for uninitialized registers
-                   global_init__1:
-000A: 08                   inc     r0 ; first iteration skips address 0, r0 liv
-000B: F6                   mov     @r0,a
-000C: B8 1F FB             cjne    r0,#0x1f,global_init__1
-                   
-000F: 74 2A                mov     a,#0x2a ; '*' for uninitialized variables
-                   global_init__2:
-0011: 08                   inc     r0
-0012: F6                   mov     @r0,a
-0013: B8 5F FB             cjne    r0,#STACK-1,global_init__2
-                   
-0016: 74 7E                mov     a,#0x7e ; '~' for stack and above
-                   global_init__3:
-0018: 08                   inc     r0
-0019: F6                   mov     @r0,a
-001A: B8 FF FB             cjne    r0,#0xff,global_init__3
-                   
-                   ; *** test/panic.asm ***
-                   
-001D: 11 21                acall   serial_init
-                   
-001F: 11 97                acall   panic
-                   
-                   ; *********************
-                   ; * Library Functions *
-                   ; *********************
-                   
-                   ; *** serial/init.inc ***
-                   
-                   ; >> void serial_init() <<
-                   
-                   ; Initialize serial interface.
-                   ; - assumes 20MHz clock and X2 mode
-                   ; - uses internal baud rate generator
-                   ; - speed: 9600 bits per second
-                   ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
-                   ; ---
-                   ; See datasheet page 52 for details,
-                   ; also note oscillator diagram on page 16!
-                   
-                   serial_init:
-0021: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
-0024: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
-0027: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
-                   
-002A: 90 00 3D             mov     dptr,   #serial_rx
-002D: 85 82 30             mov     IN,     DPL
-0030: 85 83 31             mov     IN+1,   DPH
-                   
-0033: 90 00 45             mov     dptr,   #serial_tx
-0036: 85 82 32             mov     OUT,    DPL
-0039: 85 83 33             mov     OUT+1,  DPH
-                   
-003C: 22                   ret
-                   
-                   ; *** serial/rx.inc ***
-                   
-                   ; >> char serial_rx <<
-                   
-                   ; Receive byte into accumulator.
-                   
-                   serial_rx:
-003D: 30 98 FD             jnb     RI,     serial_rx
-0040: C2 98                clr     RI
-0042: E5 99                mov     a,      SBUF
-0044: 22                   ret
-                   
-                   ; *** serial/tx.inc ***
-                   
-                   ; >> void serial_tx(char a) <<
-                   
-                   ; Transmit byte from accumulator.
-                   
-                   serial_tx:
-0045: 30 99 FD             jnb     TI,     serial_tx
-0048: C2 99                clr     TI
-004A: F5 99                mov     SBUF,   a
-004C: 22                   ret
-                   
-                   ; *** print/char.inc ***
-                   
-                   ; >> void print_char(char a) <<
-                   
-                   ; Print char from accumulator.
-                   ; Indirect call to function behind OUT pointer.
-                   
-                   print_char:
-004D: C0 32                push    OUT
-004F: C0 33                push    OUT+1
-0051: 22                   ret
-                   
-                   ; *** print/text.inc ***
-                   
-                   ; >> void print_text(char* dptr) <<
-                   
-                   ; Print null-terminated string from program code.
-                   ; Aborts if no null terminator is found after 256 bytes.
-                   
-                   print_text:
-0052: C0 E0                push    ACC
-0054: C0 00                push    0
-                   
-0056: E4                   clr     a
-0057: F8                   mov     r0,     a
-                   print_text__loop:
-0058: 93                   movc    a,      @dptr+a
-0059: 60 06                jz      print_text__end
-005B: 11 4D                acall   print_char
-005D: 08                   inc     r0
-005E: E8                   mov     a,      r0
-005F: 70 F7                jnz     print_text__loop
-                   
-                   print_text__end:
-0061: D0 00                pop     0
-0063: D0 E0                pop     ACC
-0065: 22                   ret
-                   
-                   ; *** print/hex.inc ***
-                   
-                   ; >> void print_hex_8(char a) <<
-                   
-                   ; Print hexadecimal number from accumulator.
-                   
-                   print_hex_8:
-0066: C4                   swap    a       ; high nibble first
-0067: 11 6A                acall   print_hex_8__nibble
-0069: C4                   swap    a
-                   print_hex_8__nibble:
-006A: C0 E0                push    ACC
-006C: 54 0F                anl     a,      #0x0f
-006E: 24 90                add     a,      #0x90
-0070: D4                   da      a
-0071: 34 40                addc    a,      #0x40
-0073: D4                   da      a
-0074: 44 20                orl     a,      #0x20   ; lower case
-0076: 11 4D                acall   print_char
-0078: D0 E0                pop     ACC
-007A: 22                   ret
-                   
-                   ; >> void print_hex_16(int r0r1) <<
-                   
-                   ; Print hexadecimal number from r0-r1.
-                   
-                   print_hex_16:
-007B: C0 E0                push    ACC
-007D: E9                   mov     a,      r1      ; MSB first
-007E: 11 66                acall   print_hex_8
-0080: E8                   mov     a,      r0      ; LSB second
-0081: 11 66                acall   print_hex_8
-0083: D0 E0                pop     ACC
-0085: 22                   ret
-                   
-                   ; >> void print_hex_32(long r0r1r2r3) <<
-                   
-                   ; Print hexadecimal number from r0-r3.
-                   
-                   print_hex_32:
-0086: C0 E0                push    ACC
-0088: EB                   mov     a,      r3      ; MSB first
-0089: 11 66                acall   print_hex_8
-008B: EA                   mov     a,      r2
-008C: 11 66                acall   print_hex_8
-008E: E9                   mov     a,      r1
-008F: 11 66                acall   print_hex_8
-0091: E8                   mov     a,      r0      ; LSB last
-0092: 11 66                acall   print_hex_8
-0094: D0 E0                pop     ACC
-0096: 22                   ret
-                   
-0097:              .equ panic_out, serial_tx
-                   
-                   ; *** panic/panic.inc ***
-                   
-                   ; >> void panic() <<
-                   
-                   ; Unrecoverable error handler.
-                   ; Print caller address and halt.
-                   
-                   panic:
-0097: C2 AF                clr     ea      ; disable interrupts
-0099: F8                   mov     r0,a    ; save a
-                           ; display panic text
-009A: 90 00 45             mov     dptr,#panic_out
-009D: 85 82 32             mov     out,dpl
-00A0: 85 83 33             mov     out+1,dph
-00A3: 90 00 CA             mov     dptr,#panic_text
-00A6: 11 52                acall   print_text
-                           ; get return address from stack
-00A8: D0 E0                pop     acc
-00AA: FA                   mov     r2,a
-00AB: D0 E0                pop     acc
-                           ; subtract two to get call instruction address
-00AD: C3                   clr     c
-00AE: 94 02                subb    a,#2
-00B0: F9                   mov     r1,a
-00B1: EA                   mov     a,r2
-00B2: 94 00                subb    a,#0
-                           ; print caller address (to look up cause in .lst fil
-00B4: 11 66                acall   print_hex_8
-00B6: E9                   mov     a,r1
-00B7: 11 66                acall   print_hex_8
-                           ; print original value of a (error code / debug info
-00B9: 74 20                mov     a,#' '
-00BB: 11 4D                acall   print_char
-00BD: E8                   mov     a,r0
-00BE: 11 66                acall   print_hex_8
-                           ; newline
-00C0: 74 0D                mov     a,#13
-00C2: 11 4D                acall   print_char
-00C4: 74 0A                mov     a,#10
-00C6: 11 4D                acall   print_char
-                           ; hang
-00C8: 80 FE                sjmp    *
-                   
-                   panic_text:
-00CA: 0D 0A                .db     13, 10
-00CC: 20 21 21 21 
-      20 70 61 6E 
-      69 63 20 40 
-                           .db     " !!! panic @"
-00D8: 00                   .db     0
+ADDR  CODE               LINE  SOURCE
+0000                        1  
+0000                        2  ; *******************************
+0000                        3  ; * Panic function Test Program *
+0000                        4  ; *******************************
+0000                        5  
+0000                        6  ; This program triggers the "panic" function,
+0000                        7  ; which handles unrecoverable errors
+0000                        8  ; by printng the address from where it was called
+0000                        9  ; and halting the system.
+0000                       10  
+0000                       11  ; **********************
+0000                       12  ; * Header Definitions *
+0000                       13  ; **********************
+0000                       14  .include ../global/variables.equ
+                         ; ==== ../global/variables.equ ====
+0000                        1  
+0000                        2  ; *** global/variables.equ ***
+0000                        3  
+0000                        4  ; variables in internal RAM
+0000                        5  
+0000                        6  ; 0x00-0x1f: register banks 0-3
+0000                        7  ; 0x20-0x2f: bit addressable variables
+0000                        8  
+0030                        9  .equ	in,		0x30	; pointer to input handling routine
+0032                       10  .equ	out,		0x32	; pointer to ouput handling routine
+0000                       11  
+0034                       12  .equ	stream_in,	0x34	; input stream position
+0036                       13  .equ	stream_out,	0x36	; output stream position
+0000                       14  
+0038                       15  .equ	memory_list,	0x38	; pointer to heap list head
+0040                       16  .equ	memory_start,	0x40	; first allocatable address
+0042                       17  .equ	memory_end,	0x42	; last allocatable address
+0000                       18  
+0044                       19  .equ	block_read,	0x44	; pointers to block device driver
+0046                       20  .equ	block_write,	0x46	; code (read and write functions)
+0048                       21  .equ	block_cache,	0x48	; pointer to block cache data in xram
+0000                       22  
+0050                       23  .equ	fatfs_info,	0x50	; pointer to FAT file system metadata
+0000                       24  
+0060                       25  .equ	stack,		0x60	; beginning of stack (grows upwards)
+0000                       26  
+                         ; ==== panic.asm ====
+0000                       15  .include ../serial/sfr.equ
+                         ; ==== ../serial/sfr.equ ====
+0000                        1  
+0000                        2  ; *** serial/sfr.equ ***
+0000                        3  
+0000                        4  ; Special function registers for serial interface.
+0000                        5  ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
+0000                        6  
+0000                        7  ; Internal Baud Rate Generator (BRG), see datasheet page 52.
+009A                        8  	.equ	BRL,	0x9A	; baud rate reload value
+009B                        9  	.equ	BDRCON, 0x9B	; BRG control register
+0000                       10  
+                         ; ==== panic.asm ====
+0000                       16  
+0000                       17  ; *************
+0000                       18  ; * Main Code *
+0000                       19  ; *************
+0000                       20  
+0000                       21  	.org	0
+0000                       22  
+0000                       23  .include ../global/init.inc
+                         ; ==== ../global/init.inc ====
+0000                        1  
+0000                        2  ; *** global/init.inc ***
+0000                        3  
+0000                        4  ; Initialize stack pointer and global variables.
+0000                        5  ; This must be included early in the main program.
+0000                        6  
+0000                        7  global_init:
+0000  75 81 60              8  	mov	SP,#STACK
+0003                        9  
+0003                       10  ; Select register bank zero, clear processor flags
+0003  75 D0 00             11  	mov	PSW,#0
+0006                       12  
+0006                       13  ; Fill internal RAM with markers for uninitialized data
+0006  78 00                14  	mov	r0,#0 ; write pointer
+0008                       15  
+0008  74 3F                16  	mov	a,#0x3f ; '?' for uninitialized registers
+000A                       17  global_init__1:
+000A  08                   18  	inc	r0 ; first iteration skips address 0, r0 lives there
+000B  F6                   19  	mov	@r0,a
+000C  B8 1F FB             20  	cjne	r0,#0x1f,global_init__1
+000F                       21  
+000F  74 2A                22  	mov	a,#0x2a ; '*' for uninitialized variables
+0011                       23  global_init__2:
+0011  08                   24  	inc	r0
+0012  F6                   25  	mov	@r0,a
+0013  B8 5F FB             26  	cjne	r0,#STACK-1,global_init__2
+0016                       27  
+0016  74 7E                28  	mov	a,#0x7e ; '~' for stack and above
+0018                       29  global_init__3:
+0018  08                   30  	inc	r0
+0019  F6                   31  	mov	@r0,a
+001A  B8 FF FB             32  	cjne	r0,#0xff,global_init__3
+001D                       33  
+                         ; ==== panic.asm ====
+001D                       24  
+001D                       25  ; *** test/panic.asm ***
+001D                       26  
+001D  11 21                27  	acall	serial_init
+001F                       28  
+001F  11 97                29  	acall	panic
+0021                       30  
+0021                       31  ; *********************
+0021                       32  ; * Library Functions *
+0021                       33  ; *********************
+0021                       34  .include ../serial/init.inc
+                         ; ==== ../serial/init.inc ====
+0021                        1  
+0021                        2  ; *** serial/init.inc ***
+0021                        3  
+0021                        4  ; >> void serial_init() <<
+0021                        5  
+0021                        6  ; Initialize serial interface.
+0021                        7  ; - assumes 20MHz clock and X2 mode
+0021                        8  ; - uses internal baud rate generator
+0021                        9  ; - speed: 9600 bits per second
+0021                       10  ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
+0021                       11  ; ---
+0021                       12  ; See datasheet page 52 for details,
+0021                       13  ; also note oscillator diagram on page 16!
+0021                       14  
+0021                       15  serial_init:
+0021  75 98 52             16  	mov	SCON,	#0x52	; SM1, REN, TI
+0024  75 9A BF             17  	mov	BRL,	#191	; 9600 @20MHz CLK
+0027  75 9B 1E             18  	mov	BDRCON, #0x1e	; BRR, RBCK, TBCK, SPD
+002A                       19  
+002A  90 00 3D             20  	mov	dptr,	#serial_rx
+002D  85 82 30             21  	mov	IN,	DPL
+0030  85 83 31             22  	mov	IN+1,	DPH
+0033                       23  
+0033  90 00 45             24  	mov	dptr,	#serial_tx
+0036  85 82 32             25  	mov	OUT,	DPL
+0039  85 83 33             26  	mov	OUT+1,	DPH
+003C                       27  
+003C  22                   28  	ret
+003D                       29  
+                         ; ==== panic.asm ====
+003D                       35  .include ../serial/rx.inc
+                         ; ==== ../serial/rx.inc ====
+003D                        1  
+003D                        2  ; *** serial/rx.inc ***
+003D                        3  
+003D                        4  ; >> char serial_rx <<
+003D                        5  
+003D                        6  ; Receive byte into accumulator.
+003D                        7  
+003D                        8  serial_rx:
+003D  30 98 FD              9  	jnb	RI,	serial_rx
+0040  C2 98                10  	clr	RI
+0042  E5 99                11  	mov	a,	SBUF
+0044  22                   12  	ret
+0045                       13  
+                         ; ==== panic.asm ====
+0045                       36  .include ../serial/tx.inc
+                         ; ==== ../serial/tx.inc ====
+0045                        1  
+0045                        2  ; *** serial/tx.inc ***
+0045                        3  
+0045                        4  ; >> void serial_tx(char a) <<
+0045                        5  
+0045                        6  ; Transmit byte from accumulator.
+0045                        7  
+0045                        8  serial_tx:
+0045  30 99 FD              9  	jnb	TI,	serial_tx
+0048  C2 99                10  	clr	TI
+004A  F5 99                11  	mov	SBUF,	a
+004C  22                   12  	ret
+004D                       13  
+                         ; ==== panic.asm ====
+004D                       37  .include ../print/char.inc
+                         ; ==== ../print/char.inc ====
+004D                        1  
+004D                        2  ; *** print/char.inc ***
+004D                        3  
+004D                        4  ; >> void print_char(char a) <<
+004D                        5  
+004D                        6  ; Print char from accumulator.
+004D                        7  ; Indirect call to function behind OUT pointer.
+004D                        8  
+004D                        9  print_char:
+004D  C0 32                10  	push	OUT
+004F  C0 33                11  	push	OUT+1
+0051  22                   12  	ret
+0052                       13  
+                         ; ==== panic.asm ====
+0052                       38  .include ../print/text.inc
+                         ; ==== ../print/text.inc ====
+0052                        1  
+0052                        2  ; *** print/text.inc ***
+0052                        3  
+0052                        4  ; >> void print_text(char* dptr) <<
+0052                        5  
+0052                        6  ; Print null-terminated string from program code.
+0052                        7  ; Aborts if no null terminator is found after 256 bytes.
+0052                        8  
+0052                        9  print_text:
+0052  C0 E0                10  	push	ACC
+0054  C0 00                11  	push	0
+0056                       12  
+0056  E4                   13  	clr	a
+0057  F8                   14  	mov	r0,	a
+0058                       15  print_text__loop:
+0058  93                   16  	movc	a,	@a+dptr
+0059  60 06                17  	jz	print_text__end
+005B  11 4D                18  	acall	print_char
+005D  08                   19  	inc	r0
+005E  E8                   20  	mov	a,	r0
+005F  70 F7                21  	jnz	print_text__loop
+0061                       22  
+0061                       23  print_text__end:
+0061  D0 00                24  	pop	0
+0063  D0 E0                25  	pop	ACC
+0065  22                   26  	ret
+0066                       27  
+                         ; ==== panic.asm ====
+0066                       39  .include ../print/hex.inc
+                         ; ==== ../print/hex.inc ====
+0066                        1  
+0066                        2  ; *** print/hex.inc ***
+0066                        3  
+0066                        4  ; >> void print_hex_8(char a) <<
+0066                        5  
+0066                        6  ; Print hexadecimal number from accumulator.
+0066                        7  
+0066                        8  print_hex_8:
+0066  C4                    9  	swap	a	; high nibble first
+0067  11 6A                10  	acall	print_hex_8__nibble
+0069  C4                   11  	swap	a
+006A                       12  print_hex_8__nibble:
+006A  C0 E0                13  	push	ACC
+006C  54 0F                14  	anl	a,	#0x0f
+006E  24 90                15  	add	a,	#0x90
+0070  D4                   16  	da	a
+0071  34 40                17  	addc	a,	#0x40
+0073  D4                   18  	da	a
+0074  44 20                19  	orl	a,	#0x20	; lower case
+0076  11 4D                20  	acall	print_char
+0078  D0 E0                21  	pop	ACC
+007A  22                   22  	ret
+007B                       23  
+007B                       24  ; >> void print_hex_16(int r0r1) <<
+007B                       25  
+007B                       26  ; Print hexadecimal number from r0-r1.
+007B                       27  
+007B                       28  print_hex_16:
+007B  C0 E0                29  	push	ACC
+007D  E9                   30  	mov	a,	r1	; MSB first
+007E  11 66                31  	acall	print_hex_8
+0080  E8                   32  	mov	a,	r0	; LSB second
+0081  11 66                33  	acall	print_hex_8
+0083  D0 E0                34  	pop	ACC
+0085  22                   35  	ret
+0086                       36  
+0086                       37  ; >> void print_hex_32(long r0r1r2r3) <<
+0086                       38  
+0086                       39  ; Print hexadecimal number from r0-r3.
+0086                       40  
+0086                       41  print_hex_32:
+0086  C0 E0                42  	push	ACC
+0088  EB                   43  	mov	a,	r3	; MSB first
+0089  11 66                44  	acall	print_hex_8
+008B  EA                   45  	mov	a,	r2
+008C  11 66                46  	acall	print_hex_8
+008E  E9                   47  	mov	a,	r1
+008F  11 66                48  	acall	print_hex_8
+0091  E8                   49  	mov	a,	r0	; LSB last
+0092  11 66                50  	acall	print_hex_8
+0094  D0 E0                51  	pop	ACC
+0096  22                   52  	ret
+0097                       53  
+                         ; ==== panic.asm ====
+0097                       40  
+0045                       41  .equ panic_out, serial_tx
+0097                       42  .include ../util/panic.inc
+                         ; ==== ../util/panic.inc ====
+0097                        1  
+0097                        2  ; *** panic/panic.inc ***
+0097                        3  
+0097                        4  ; >> void panic() <<
+0097                        5  
+0097                        6  ; Unrecoverable error handler.
+0097                        7  ; Print caller address and halt.
+0097                        8  
+0097                        9  panic:
+0097  C2 AF                10  	clr	ea	; disable interrupts
+0099  F8                   11  	mov	r0,a	; save a
+009A                       12  	; display panic text
+009A  90 00 45             13  	mov	dptr,#panic_out
+009D  85 82 32             14  	mov	out,dpl
+00A0  85 83 33             15  	mov	out+1,dph
+00A3  90 00 CA             16  	mov	dptr,#panic_text
+00A6  11 52                17  	acall	print_text
+00A8                       18  	; get return address from stack
+00A8  D0 E0                19  	pop	acc
+00AA  FA                   20  	mov	r2,a
+00AB  D0 E0                21  	pop	acc
+00AD                       22  	; subtract two to get call instruction address
+00AD  C3                   23  	clr	c
+00AE  94 02                24  	subb	a,#2
+00B0  F9                   25  	mov	r1,a
+00B1  EA                   26  	mov	a,r2
+00B2  94 00                27  	subb	a,#0
+00B4                       28  	; print caller address (to look up cause in .lst file)
+00B4  11 66                29  	acall	print_hex_8
+00B6  E9                   30  	mov	a,r1
+00B7  11 66                31  	acall	print_hex_8
+00B9                       32  	; print original value of a (error code / debug info)
+00B9  74 20                33  	mov	a,#' '
+00BB  11 4D                34  	acall	print_char
+00BD  E8                   35  	mov	a,r0
+00BE  11 66                36  	acall	print_hex_8
+00C0                       37  	; newline
+00C0  74 0D                38  	mov	a,#13
+00C2  11 4D                39  	acall	print_char
+00C4  74 0A                40  	mov	a,#10
+00C6  11 4D                41  	acall	print_char
+00C8                       42  	; hang
+00C8  80 FE                43  	sjmp	*
+00CA                       44  
+00CA                       45  panic_text:
+00CA  0D 0A                46  	.db	13, 10
+00CC  20 21 21 21 20 70    47  	.db	" !!! panic @"
+00D2  61 6E 69 63 20 40
+00D8  00                   48  	.db	0
+00D9                       49  
+                         ; ==== panic.asm ====
+00D9                       43  

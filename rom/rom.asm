@@ -1,8 +1,8 @@
 
 ; *** headers ***
 
-.inc global/variables.equ
-.inc serial/sfr.equ
+.include global/variables.equ
+.include serial/sfr.equ
 
 ; *** interrupt vectors ***
 
@@ -14,7 +14,7 @@
 
 main:
 
-.inc global/init.inc
+.include global/init.inc
 
 	acall	serial_init
 	mov	dptr,#text
@@ -30,8 +30,8 @@ text:
 
 ; *** library ***
 
-.inc serial/init.inc
-.inc serial/rx.inc
-.inc serial/tx.inc
-.inc print/char.inc
-.inc print/text.inc
+.include serial/init.inc
+.include serial/rx.inc
+.include serial/tx.inc
+.include print/char.inc
+.include print/text.inc
