@@ -8,13 +8,12 @@
 
 print_text:
 	push	ACC
-	mov	a,	r0
-	push	ACC
+	push	0
 
 	clr	a
 	mov	r0,	a
 print_text__loop:
-	movc	a,	@dptr+a
+	movc	a,	@a+dptr
 	jz	print_text__end
 	acall	print_char
 	inc	r0
@@ -22,7 +21,6 @@ print_text__loop:
 	jnz	print_text__loop
 
 print_text__end:
-	pop	ACC
-	mov	r0,	a
+	pop	0
 	pop	ACC
 	ret

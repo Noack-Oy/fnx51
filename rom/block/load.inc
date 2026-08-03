@@ -13,10 +13,8 @@
 
 block_load:
 	push	acc
-	mov	r4,a
-	push	acc
-	mov	r5,a
-	push	acc
+	push	4
+	push	5
 
 	mov	dpl,block_cache
 	mov	dph,block_cache+1
@@ -86,10 +84,8 @@ block_load__do_read_5:
 	; dptr points to loaded block data now
 
 block_load__end:
-	pop	acc
-	mov	r5,a
-	pop	acc
-	mov	r4,a
+	pop	5
+	pop	4
 	pop	acc
 	ret
 

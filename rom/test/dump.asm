@@ -10,8 +10,8 @@
 ; **********************
 ; * Header Definitions *
 ; **********************
-.inc ../global/variables.equ
-.inc ../serial/sfr.equ
+.include ../global/variables.equ
+.include ../serial/sfr.equ
 
 
 ; *************
@@ -19,7 +19,7 @@
 ; *************
 
 .org 0
-.inc ../global/init.inc
+.include ../global/init.inc
 
 ; *** test/dump.asm ***
 
@@ -45,11 +45,11 @@
 ; *********************
 ; * Library Functions *
 ; *********************
-.inc ../serial/init.inc
-.inc ../serial/rx.inc
-.inc ../serial/tx.inc
-.inc ../print/char.inc
-.inc ../print/hex.inc
-.inc ../read/char.inc
-.inc ../util/dump.inc
-.inc ../util/xch.inc
+.include ../serial/init.inc
+.include ../serial/rx.inc
+.include ../serial/tx.inc
+.include ../print/char.inc
+.include ../print/hex.inc
+.include ../read/char.inc
+.include ../util/dump.inc
+.include ../util/xch.inc

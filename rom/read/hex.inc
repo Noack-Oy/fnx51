@@ -8,10 +8,8 @@
 
 read_hex_32:
 	push	acc
-	mov	a,	r4
-	push	acc
-	mov	a,	r5
-	push	acc
+	push	4
+	push	5
 
 	clr	a
 	mov	r0,	a
@@ -82,9 +80,7 @@ read_hex_32__3:
 
 
 read_hex_32__end:
-	pop	acc
-	mov	r5,	a
-	pop	acc
-	mov	r4,	a
+	pop	5
+	pop	4
 	pop	acc
 	ret

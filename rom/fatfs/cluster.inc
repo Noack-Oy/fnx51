@@ -13,20 +13,16 @@ fatfs_cluster_to_lba:
 	push	b
 	push	dpl
 	push	dph
-	mov	a,r4
-	push	acc
-	mov	a,r5
-	push	acc
-	mov	a,r6
-	push	acc
-	mov	a,r7
-	push	acc
+	push	4
+	push	5
+	push	6
+	push	7
 
 	; Load cluster_size from fatfs_info+4
 	mov	dpl,fatfs_info
 	mov	dph,fatfs_info+1
 	mov	a,#fatfs_info_cluster_size
-	acall	dptr_index
+	lcall	dptr_index
 	movx	a,@dptr
 	mov	b,a			; b = cluster_size
 
@@ -46,37 +42,33 @@ fatfs_cluster_to_lba__not_one:
 	sjmp	fatfs_cluster_to_lba__count_loop
 fatfs_cluster_to_lba__bad_size:
 	; Invalid cluster size (not a power of 2)
-	acall	panic
-	
+	lcall	panic
+
 fatfs_cluster_to_lba__shifts_counted:
 	; Now r4 has the shift count
 	; Shift r0-r3 left by r4 positions (cluster * cluster_size)
 	mov	a,r4
-	acall	shl_32
+	lcall	shl_32
 
 	; r0-r3 now contains cluster * cluster_size
 	; Now we need to add cluster_lba from fatfs_info+13
 	; Move shifted cluster to r4-r7
-	acall	xch_r0123_r4567
+	lcall	xch_r0123_r4567
 
 	; Load cluster_lba into r0-r3
 	mov	dpl,fatfs_info
 	mov	dph,fatfs_info+1
 	mov	a,#fatfs_info_cluster_lba
-	acall	dptr_index
-	acall	dptr_read_32		; r0-r3 = cluster_lba
+	lcall	dptr_index
+	lcall	dptr_read_32		; r0-r3 = cluster_lba
 
 	; Add cluster offset: r0-r3 += r4-r7
-	acall	add_32
+	lcall	add_32
 
-	pop	acc
-	mov	r7,a
-	pop	acc
-	mov	r6,a
-	pop	acc
-	mov	r5,a
-	pop	acc
-	mov	r4,a
+	pop	7
+	pop	6
+	pop	5
+	pop	4
 	pop	dph
 	pop	dpl
 	pop	b

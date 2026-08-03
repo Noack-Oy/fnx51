@@ -1,0 +1,71 @@
+# General Info
+
+This is the ROM code for a 8051 based single board computer using the
+AT89C51ED2 microcontroller. Only the rom directory is relevant, there
+are other things in the git repo that you can safely ignore.
+
+The actual rom.asm does not contain much code yet, currently we are
+working on individual functions for basic i/o and general utilities.
+
+The functions are grouped in subdirectories, and they are extensively
+covered by unit tests which can be found in the tests directory.
+
+There is no linker, includes at the bottom of .asm files (those are the
+ones that contain entry points and are meant to be assembled) are used
+instead. Files that are not meant to be assembled on their own have the
+.inc extension if they contain code. Files that contain constant
+definitions only have the .equ extension.
+
+
+# Test setup
+
+The tests run on real hardware. A remote host (a raspberry pi) is used
+as a test harness to control everything (including the reset pin) via
+UART over USB. Check the Makefile in tests/ to see how everything is
+works. The tests currently pass without issues and take only a few
+minutes to run.
+
+
+# Your Task - Improving the calling convention.
+
+Here is the current calling convention, starting with what should remain
+unchanged:
+
+- accumulator, registers r0-r7, B, and dptr (including the second one
+  from the "dual data pointer" feature") are callee-saved. This includes
+  parameters passed into the function, except return values of course
+  (these can be in the same register as a parameter)
+
+- the carry flag and other status flags are not required to be saved by
+  the callee, they can optionally be used to indicate result status
+
+- parameters are passed "fastcall"-style through registers, following
+  those preference rules:
+  accumulator for 8-bit values, dptr for pointers to data, r0-r7 for
+  everything else, grouped in pairs or quadruples for 16- and 32-bit
+  values
+
+Now what I want to change:
+
+- Currently the code is made agnostic of which register bank is
+  selected. This makes saving r0-r7 awkward (absolute addresses cannot
+  be used and they have to be shunted through ACC). Instead I want to
+  change the convention so that bank 0 must always be active when
+  calling a function.
+
+- There is a regbank_next and regbank_prev mechanism used to cycle
+  through register banks. This shall be removed. Instead,
+  "leaf"-functions, that don't call any other functions, are allowed to
+  temporarily use register bank 1, which does not need to be preserved.
+
+- Register bank 2 will be reserved for interrupts, and register bank 3
+  will be left reserved for userspace programs to be used later.
+
+
+Further directions:
+
+This is a big change that will probably touch every file in the
+codebase. You can use subagents, and all git features that you might
+need (but don't push to origin yet). Make sure the tests still pass in
+the end. You can use the .claude/ directory to keep notes.
+

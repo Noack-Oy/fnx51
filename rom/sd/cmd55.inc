@@ -5,7 +5,11 @@
 
 ; CMD55: application specific command (prefix)
 sd_cmd55:
-	acall	regbank_next
+	push	0
+	push	1
+	push	2
+	push	3
+	push	4
 	clr	a
 	mov	r0,a
 	mov	r1,a
@@ -15,5 +19,9 @@ sd_cmd55:
 	mov	a,#55
 	acall	sd_command
 	acall	sd_response1
-	acall	regbank_prev
+	pop	4
+	pop	3
+	pop	2
+	pop	1
+	pop	0
 	ret

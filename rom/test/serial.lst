@@ -1,171 +1,196 @@
-                   
-                   ; *********************************
-                   ; * Serial Interface Test Program *
-                   ; *********************************
-                   
-                   ; This program prints "Hello, world!",
-                   ; then echoes every byte received,
-                   ; but incremented by one
-                   
-                   
-                   ; **********************
-                   ; * Header Definitions *
-                   ; **********************
-                   
-                   ; *** global/variables.equ ***
-                   
-                   ; variables in internal RAM
-                   
-                   ; 0x00-0x1f: register banks 0-3
-                   ; 0x20-0x2f: bit addressable variables
-                   
-0000:              .equ    in,             0x30    ; pointer to input handling 
-0000:              .equ    out,            0x32    ; pointer to ouput handling 
-                   
-0000:              .equ    stream_in,      0x34    ; input stream position
-0000:              .equ    stream_out,     0x36    ; output stream position
-                   
-0000:              .equ    memory_list,    0x38    ; pointer to heap list head
-0000:              .equ    memory_start,   0x40    ; first allocatable address
-0000:              .equ    memory_end,     0x42    ; last allocatable address
-                   
-0000:              .equ    block_read,     0x44    ; pointers to block device d
-0000:              .equ    block_write,    0x46    ; code (read and write funct
-0000:              .equ    block_cache,    0x48    ; pointer to block cache dat
-                   
-0000:              .equ    fatfs_info,     0x50    ; pointer to FAT file system
-                   
-0000:              .equ    stack,          0x60    ; beginning of stack (grows 
-                   
-                   ; *** serial/sfr.equ ***
-                   
-                   ; Special function registers for serial interface.
-                   ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
-                   
-                   ; Internal Baud Rate Generator (BRG), see datasheet page 52.
-0000:                      .equ    BRL,    0x9A    ; baud rate reload value
-0000:                      .equ    BDRCON, 0x9B    ; BRG control register
-                   
-                   
-                   ; *************
-                   ; * Main Code *
-                   ; *************
-                   
-0000:                      .org    0
-                   
-                   
-                   ; *** global/init.inc ***
-                   
-                   ; Initialize stack pointer and global variables.
-                   ; This must be included early in the main program.
-                   
-                   global_init:
-0000: 75 81 60             mov     SP,#STACK
-                   
-                   ; Select register bank zero, clear processor flags
-0003: 75 D0 00             mov     PSW,#0
-                   
-                   ; Fill internal RAM with markers for uninitialized data
-0006: 78 00                mov     r0,#0 ; write pointer
-                   
-0008: 74 3F                mov     a,#0x3f ; '?' for uninitialized registers
-                   global_init__1:
-000A: 08                   inc     r0 ; first iteration skips address 0, r0 liv
-000B: F6                   mov     @r0,a
-000C: B8 1F FB             cjne    r0,#0x1f,global_init__1
-                   
-000F: 74 2A                mov     a,#0x2a ; '*' for uninitialized variables
-                   global_init__2:
-0011: 08                   inc     r0
-0012: F6                   mov     @r0,a
-0013: B8 5F FB             cjne    r0,#STACK-1,global_init__2
-                   
-0016: 74 7E                mov     a,#0x7e ; '~' for stack and above
-                   global_init__3:
-0018: 08                   inc     r0
-0019: F6                   mov     @r0,a
-001A: B8 FF FB             cjne    r0,#0xff,global_init__3
-                   
-                   ; *** test/serial.asm ***
-                   
-001D: 11 42                acall   serial_init
-                   
-001F: 90 00 32             mov     dptr,   #hello_text
-                   hello_loop:
-0022: E4                   clr     a
-0023: 93                   movc    a,      @dptr+a
-0024: 60 05                jz      hello_end
-0026: 11 5E                acall   serial_tx
-0028: A3                   inc     dptr
-0029: 80 F7                sjmp    hello_loop
-                   hello_end:
-                   
-                   echo_loop:
-002B: 11 66                acall   serial_rx
-002D: 04                   inc     a
-002E: 11 5E                acall   serial_tx
-0030: 80 F9                sjmp    echo_loop
-                   
-                   hello_text:
-0032: 48 65 6C 6C 
-      6F 2C 20 77 
-      6F 72 6C 64 
-      21                   .byte   "Hello, world!"
-003F: 0D 0A 00             .byte   13, 10, 0
-                   
-                   
-                   ; *********************
-                   ; * Library Functions *
-                   ; *********************
-                   
-                   ; *** serial/init.inc ***
-                   
-                   ; >> void serial_init() <<
-                   
-                   ; Initialize serial interface.
-                   ; - assumes 20MHz clock and X2 mode
-                   ; - uses internal baud rate generator
-                   ; - speed: 9600 bits per second
-                   ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
-                   ; ---
-                   ; See datasheet page 52 for details,
-                   ; also note oscillator diagram on page 16!
-                   
-                   serial_init:
-0042: 75 98 52             mov     SCON,   #0x52   ; SM1, REN, TI
-0045: 75 9A BF             mov     BRL,    #191    ; 9600 @20MHz CLK
-0048: 75 9B 1E             mov     BDRCON, #0x1e   ; BRR, RBCK, TBCK, SPD
-                   
-004B: 90 00 66             mov     dptr,   #serial_rx
-004E: 85 82 30             mov     IN,     DPL
-0051: 85 83 31             mov     IN+1,   DPH
-                   
-0054: 90 00 5E             mov     dptr,   #serial_tx
-0057: 85 82 32             mov     OUT,    DPL
-005A: 85 83 33             mov     OUT+1,  DPH
-                   
-005D: 22                   ret
-                   
-                   ; *** serial/tx.inc ***
-                   
-                   ; >> void serial_tx(char a) <<
-                   
-                   ; Transmit byte from accumulator.
-                   
-                   serial_tx:
-005E: 30 99 FD             jnb     TI,     serial_tx
-0061: C2 99                clr     TI
-0063: F5 99                mov     SBUF,   a
-0065: 22                   ret
-                   
-                   ; *** serial/rx.inc ***
-                   
-                   ; >> char serial_rx <<
-                   
-                   ; Receive byte into accumulator.
-                   
-                   serial_rx:
-0066: 30 98 FD             jnb     RI,     serial_rx
-0069: C2 98                clr     RI
-006B: E5 99                mov     a,      SBUF
-006D: 22                   ret
+ADDR  CODE               LINE  SOURCE
+0000                        1  
+0000                        2  ; *********************************
+0000                        3  ; * Serial Interface Test Program *
+0000                        4  ; *********************************
+0000                        5  
+0000                        6  ; This program prints "Hello, world!",
+0000                        7  ; then echoes every byte received,
+0000                        8  ; but incremented by one
+0000                        9  
+0000                       10  
+0000                       11  ; **********************
+0000                       12  ; * Header Definitions *
+0000                       13  ; **********************
+0000                       14  .include ../global/variables.equ
+                         ; ==== ../global/variables.equ ====
+0000                        1  
+0000                        2  ; *** global/variables.equ ***
+0000                        3  
+0000                        4  ; variables in internal RAM
+0000                        5  
+0000                        6  ; 0x00-0x1f: register banks 0-3
+0000                        7  ; 0x20-0x2f: bit addressable variables
+0000                        8  
+0030                        9  .equ	in,		0x30	; pointer to input handling routine
+0032                       10  .equ	out,		0x32	; pointer to ouput handling routine
+0000                       11  
+0034                       12  .equ	stream_in,	0x34	; input stream position
+0036                       13  .equ	stream_out,	0x36	; output stream position
+0000                       14  
+0038                       15  .equ	memory_list,	0x38	; pointer to heap list head
+0040                       16  .equ	memory_start,	0x40	; first allocatable address
+0042                       17  .equ	memory_end,	0x42	; last allocatable address
+0000                       18  
+0044                       19  .equ	block_read,	0x44	; pointers to block device driver
+0046                       20  .equ	block_write,	0x46	; code (read and write functions)
+0048                       21  .equ	block_cache,	0x48	; pointer to block cache data in xram
+0000                       22  
+0050                       23  .equ	fatfs_info,	0x50	; pointer to FAT file system metadata
+0000                       24  
+0060                       25  .equ	stack,		0x60	; beginning of stack (grows upwards)
+0000                       26  
+                         ; ==== serial.asm ====
+0000                       15  .include ../serial/sfr.equ
+                         ; ==== ../serial/sfr.equ ====
+0000                        1  
+0000                        2  ; *** serial/sfr.equ ***
+0000                        3  
+0000                        4  ; Special function registers for serial interface.
+0000                        5  ; See chapter 14 of AT89C51ED2 datasheet, page 48ff.
+0000                        6  
+0000                        7  ; Internal Baud Rate Generator (BRG), see datasheet page 52.
+009A                        8  	.equ	BRL,	0x9A	; baud rate reload value
+009B                        9  	.equ	BDRCON, 0x9B	; BRG control register
+0000                       10  
+                         ; ==== serial.asm ====
+0000                       16  
+0000                       17  
+0000                       18  ; *************
+0000                       19  ; * Main Code *
+0000                       20  ; *************
+0000                       21  
+0000                       22  	.org	0
+0000                       23  
+0000                       24  .include ../global/init.inc
+                         ; ==== ../global/init.inc ====
+0000                        1  
+0000                        2  ; *** global/init.inc ***
+0000                        3  
+0000                        4  ; Initialize stack pointer and global variables.
+0000                        5  ; This must be included early in the main program.
+0000                        6  
+0000                        7  global_init:
+0000  75 81 60              8  	mov	SP,#STACK
+0003                        9  
+0003                       10  ; Select register bank zero, clear processor flags
+0003  75 D0 00             11  	mov	PSW,#0
+0006                       12  
+0006                       13  ; Fill internal RAM with markers for uninitialized data
+0006  78 00                14  	mov	r0,#0 ; write pointer
+0008                       15  
+0008  74 3F                16  	mov	a,#0x3f ; '?' for uninitialized registers
+000A                       17  global_init__1:
+000A  08                   18  	inc	r0 ; first iteration skips address 0, r0 lives there
+000B  F6                   19  	mov	@r0,a
+000C  B8 1F FB             20  	cjne	r0,#0x1f,global_init__1
+000F                       21  
+000F  74 2A                22  	mov	a,#0x2a ; '*' for uninitialized variables
+0011                       23  global_init__2:
+0011  08                   24  	inc	r0
+0012  F6                   25  	mov	@r0,a
+0013  B8 5F FB             26  	cjne	r0,#STACK-1,global_init__2
+0016                       27  
+0016  74 7E                28  	mov	a,#0x7e ; '~' for stack and above
+0018                       29  global_init__3:
+0018  08                   30  	inc	r0
+0019  F6                   31  	mov	@r0,a
+001A  B8 FF FB             32  	cjne	r0,#0xff,global_init__3
+001D                       33  
+                         ; ==== serial.asm ====
+001D                       25  
+001D                       26  ; *** test/serial.asm ***
+001D                       27  
+001D  11 42                28  	acall	serial_init
+001F                       29  
+001F  90 00 32             30  	mov	dptr,	#hello_text
+0022                       31  hello_loop:
+0022  E4                   32  	clr	a
+0023  93                   33  	movc	a,	@a+dptr
+0024  60 05                34  	jz	hello_end
+0026  11 5E                35  	acall	serial_tx
+0028  A3                   36  	inc	dptr
+0029  80 F7                37  	sjmp	hello_loop
+002B                       38  hello_end:
+002B                       39  
+002B                       40  echo_loop:
+002B  11 66                41  	acall	serial_rx
+002D  04                   42  	inc	a
+002E  11 5E                43  	acall	serial_tx
+0030  80 F9                44  	sjmp	echo_loop
+0032                       45  
+0032                       46  hello_text:
+0032  48 65 6C 6C 6F 2C    47  	.byte	"Hello, world!"
+0038  20 77 6F 72 6C 64
+003E  21
+003F  0D 0A 00             48  	.byte	13, 10, 0
+0042                       49  
+0042                       50  
+0042                       51  ; *********************
+0042                       52  ; * Library Functions *
+0042                       53  ; *********************
+0042                       54  .include ../serial/init.inc
+                         ; ==== ../serial/init.inc ====
+0042                        1  
+0042                        2  ; *** serial/init.inc ***
+0042                        3  
+0042                        4  ; >> void serial_init() <<
+0042                        5  
+0042                        6  ; Initialize serial interface.
+0042                        7  ; - assumes 20MHz clock and X2 mode
+0042                        8  ; - uses internal baud rate generator
+0042                        9  ; - speed: 9600 bits per second
+0042                       10  ; Formula: BRL = 256 - (F_clk / (32 * Baud_Rate))
+0042                       11  ; ---
+0042                       12  ; See datasheet page 52 for details,
+0042                       13  ; also note oscillator diagram on page 16!
+0042                       14  
+0042                       15  serial_init:
+0042  75 98 52             16  	mov	SCON,	#0x52	; SM1, REN, TI
+0045  75 9A BF             17  	mov	BRL,	#191	; 9600 @20MHz CLK
+0048  75 9B 1E             18  	mov	BDRCON, #0x1e	; BRR, RBCK, TBCK, SPD
+004B                       19  
+004B  90 00 66             20  	mov	dptr,	#serial_rx
+004E  85 82 30             21  	mov	IN,	DPL
+0051  85 83 31             22  	mov	IN+1,	DPH
+0054                       23  
+0054  90 00 5E             24  	mov	dptr,	#serial_tx
+0057  85 82 32             25  	mov	OUT,	DPL
+005A  85 83 33             26  	mov	OUT+1,	DPH
+005D                       27  
+005D  22                   28  	ret
+005E                       29  
+                         ; ==== serial.asm ====
+005E                       55  .include ../serial/tx.inc
+                         ; ==== ../serial/tx.inc ====
+005E                        1  
+005E                        2  ; *** serial/tx.inc ***
+005E                        3  
+005E                        4  ; >> void serial_tx(char a) <<
+005E                        5  
+005E                        6  ; Transmit byte from accumulator.
+005E                        7  
+005E                        8  serial_tx:
+005E  30 99 FD              9  	jnb	TI,	serial_tx
+0061  C2 99                10  	clr	TI
+0063  F5 99                11  	mov	SBUF,	a
+0065  22                   12  	ret
+0066                       13  
+                         ; ==== serial.asm ====
+0066                       56  .include ../serial/rx.inc
+                         ; ==== ../serial/rx.inc ====
+0066                        1  
+0066                        2  ; *** serial/rx.inc ***
+0066                        3  
+0066                        4  ; >> char serial_rx <<
+0066                        5  
+0066                        6  ; Receive byte into accumulator.
+0066                        7  
+0066                        8  serial_rx:
+0066  30 98 FD              9  	jnb	RI,	serial_rx
+0069  C2 98                10  	clr	RI
+006B  E5 99                11  	mov	a,	SBUF
+006D  22                   12  	ret
+006E                       13  
+                         ; ==== serial.asm ====
+006E                       57  
