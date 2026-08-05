@@ -45,7 +45,11 @@ which mirrors the X channel, where the tick is every pixel so no second mux
 level is needed. That asymmetry is why a two-function job uses all three
 switches of the 4053.
 
-**Schematic only.** A board wired this way could not display anything with
-zoom off, so this is an error in the drawing rather than in anything that was
-ever built and measured. Nothing downstream of the netlist depends on it —
-`acm/` reads the corrected sense.
+**Caught before fabrication.** No board has been laid out — only this
+schematic and a partial breadboard — so nothing has been built to it. Worth
+noting that the fault is invisible in the *zoomed* case and only breaks the
+normal one: with zoom Y off the mux passes `~TCC` straight through and the
+canvas Y counter is enabled for 799 columns of 800, so the picture could never
+have come up at all. It would have been found on first power-up rather than
+lurking. Nothing downstream of the netlist depends on it — `acm/` reads the
+corrected sense.
