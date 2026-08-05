@@ -6,11 +6,17 @@ net is, so that `pcb/fnx51.net` can be re-exported once the sheet is edited.
 
 ---
 
-## U13 pin 3 (Z1) is wired to `~TCC`; it should be `TCC`
+## FIXED — U13 pin 3 (Z1) was wired to `~TCC`; it should be `TCC`
 
 **Sheet:** `video.kicad_sch` — the CD4053 that implements zoom.
 **Found:** 2026-08-05, tracing the zoom path while reimplementing the scanner
 on an FPGA (`../../acm/rtl/scanner.v`).
+**Fixed:** 2026-08-05 in `5698968`, "fix y coordinate counter input polarity".
+
+> **`pcb/fnx51.net` has not been re-exported and still carries the old
+> wiring.** Anything reading the netlist rather than the schematic sees `~TCC`
+> on U13 pin 3. `acm/` already reads the corrected sense, so nothing is wrong
+> downstream, but the two will not agree until the export is redone.
 
 U13 is a triple 2:1 multiplexer selecting the canvas counters' count enable
 between normal and zoomed. The X and Y channels pick the zoom term; the Z
