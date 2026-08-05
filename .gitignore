@@ -1,8 +1,13 @@
 __pycache__
 
-# VS Code Local History. It keeps a .git of its own, so `git add` on a
-# parent directory records it as a submodule -- a gitlink with no URL and a
-# commit that exists nowhere. See the commit that removed pcb/.history.
+# KiCad 10's Local History (Preferences > Common > Project Backup). KiCad keeps
+# automatic snapshots of the project here and manages them AS A GIT REPOSITORY
+# -- so `git add` on the project records .history as a gitlink rather than
+# recursing into it, and the result is a submodule entry with no URL pointing
+# at a commit that exists nowhere. That is what pcb/.history was.
+#
+# Ignoring it is the fix; do not delete it on a working machine unless you mean
+# to, because the snapshots are the only copy. File > Local History browses them.
 .history/
 
 # For PCBs designed using KiCad: https://www.kicad.org/
