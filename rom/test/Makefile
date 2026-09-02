@@ -7,6 +7,12 @@ sources = serial.asm print.asm panic.asm dump.asm \
 
 # Set REMOTE_HOST to run tests on remote machine, leave unset for local execution
 REMOTE_HOST ?= pi@192.168.1.159
+# The router forwards 22078 to the Pi's wired link, 22077 to its wifi (the way
+# back in after a USB controller wedge takes the wired NIC down). Keep the
+# comment off the assignment line: make would fold the spaces before a trailing
+# '#' into the value.
+REMOTE_PORT ?= 22078
+SSH := ssh -p $(REMOTE_PORT)
 REMOTE_DIR = /tmp/fnx51-test
 
 default: $(sources:.asm=.lst)
@@ -21,10 +27,10 @@ include $(sources:.asm=.d)
 	rm -vf $*.fail
 ifdef REMOTE_HOST
 	@echo "Setting up test on remote host $(REMOTE_HOST)..."
-	@ssh $(REMOTE_HOST) 'mkdir -p $(REMOTE_DIR)'
-	@rsync -au ../loader.py util.py $*.hex $*.t.py $(REMOTE_HOST):$(REMOTE_DIR)/
+	@$(SSH) $(REMOTE_HOST) 'mkdir -p $(REMOTE_DIR)'
+	@rsync -au -e '$(SSH)' ../loader.py util.py $*.hex $*.t.py $(REMOTE_HOST):$(REMOTE_DIR)/
 	@echo "Running test on remote host..."
-	(ssh $(REMOTE_HOST) 'cd $(REMOTE_DIR) && python3 -u $*.t.py' | tee $*.out) || mv -v $*.out $*.fail
+	($(SSH) $(REMOTE_HOST) 'cd $(REMOTE_DIR) && python3 -u $*.t.py' | tee $*.out) || mv -v $*.out $*.fail
 else
 	@echo "Running test locally..."
 	(python3 -u $*.t.py | tee $*.out) || mv -v $*.out $*.fail
